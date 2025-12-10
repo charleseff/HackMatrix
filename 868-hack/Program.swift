@@ -83,7 +83,7 @@ struct Program {
         case .push: return "Push enemies away 1 cell"
         case .pull: return "Pull enemies toward 1 cell"
         case .crash: return "Clear 8 surrounding cells"
-        case .warp: return "Swap with random enemy"
+        case .warp: return "Warp to random enemy"
         case .poly: return "Randomize enemy types"
         case .wait: return "Skip turn, enemies move"
         case .debug: return "Damage enemies on blocks"

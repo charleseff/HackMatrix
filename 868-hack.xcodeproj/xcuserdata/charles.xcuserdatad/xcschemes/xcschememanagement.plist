@@ -7,7 +7,25 @@
 		<key>868-hack.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
+		<key>limiting to attacks.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+		<key>limiting to push.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>561CF5092EE78EA70074CD5A</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

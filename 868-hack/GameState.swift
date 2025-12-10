@@ -105,6 +105,8 @@ class GameState {
             }
 
             var placed = 0
+            var usedPrograms = Set<ProgramType>()  // Track programs used in this stage
+
             while placed < blockCount {
                 let row = Int.random(in: 0..<Constants.gridSize)
                 let col = Int.random(in: 0..<Constants.gridSize)
@@ -116,9 +118,10 @@ class GameState {
                     continue
                 }
 
-                // Skip positions with enemies (they persist across stages)
+                // Skip positions with enemies or transmissions (they persist across stages)
                 let hasEnemy = enemies.contains(where: { $0.row == row && $0.col == col })
-                if hasEnemy {
+                let hasTransmission = transmissions.contains(where: { $0.row == row && $0.col == col })
+                if hasEnemy || hasTransmission {
                     continue
                 }
 
@@ -139,14 +142,30 @@ class GameState {
                                 transmissionSpawn: pointsAndSpawn
                             ))
                         } else {
-                            let programType = ProgramType.allCases.randomElement()!
-                            let program = Program(type: programType)
-                            cell.content = .block(.question(
-                                isData: false,
-                                points: nil,
-                                program: program,
-                                transmissionSpawn: program.enemySpawnCost
-                            ))
+                            // Get available programs (not used yet)
+                            let programPool = Constants.devModePrograms ?? ProgramType.allCases
+                            let availablePrograms = programPool.filter { !usedPrograms.contains($0) }
+
+                            // If no programs available, skip this block (make it data instead)
+                            if availablePrograms.isEmpty {
+                                let pointsAndSpawn = Int.random(in: 1...9)
+                                cell.content = .block(.question(
+                                    isData: true,
+                                    points: pointsAndSpawn,
+                                    program: nil,
+                                    transmissionSpawn: pointsAndSpawn
+                                ))
+                            } else {
+                                let programType = availablePrograms.randomElement()!
+                                usedPrograms.insert(programType)
+                                let program = Program(type: programType)
+                                cell.content = .block(.question(
+                                    isData: false,
+                                    points: nil,
+                                    program: program,
+                                    transmissionSpawn: program.enemySpawnCost
+                                ))
+                            }
                         }
                     } else {
                         // Regular block - visible
@@ -154,9 +173,20 @@ class GameState {
                             let pointsAndSpawn = Int.random(in: 1...9)
                             cell.content = .block(.data(points: pointsAndSpawn, transmissionSpawn: pointsAndSpawn))
                         } else {
-                            let programType = ProgramType.allCases.randomElement()!
-                            let program = Program(type: programType)
-                            cell.content = .block(.program(program, transmissionSpawn: program.enemySpawnCost))
+                            // Get available programs (not used yet)
+                            let programPool = Constants.devModePrograms ?? ProgramType.allCases
+                            let availablePrograms = programPool.filter { !usedPrograms.contains($0) }
+
+                            // If no programs available, skip this block (make it data instead)
+                            if availablePrograms.isEmpty {
+                                let pointsAndSpawn = Int.random(in: 1...9)
+                                cell.content = .block(.data(points: pointsAndSpawn, transmissionSpawn: pointsAndSpawn))
+                            } else {
+                                let programType = availablePrograms.randomElement()!
+                                usedPrograms.insert(programType)
+                                let program = Program(type: programType)
+                                cell.content = .block(.program(program, transmissionSpawn: program.enemySpawnCost))
+                            }
                         }
                     }
                     placed += 1
@@ -333,16 +363,21 @@ class GameState {
     }
 
     // For animated enemy movement - start turn without processing enemies
-    func beginAnimatedTurn() {
+    // Returns true if enemies should move this turn
+    func beginAnimatedTurn() -> Bool {
         turnCount += 1
 
-        if !stepActive {
+        let shouldEnemiesMove = !stepActive
+
+        if shouldEnemiesMove {
             processTransmissions()
             // Don't process enemy turn here - will be done step-by-step with animations
         }
 
         stepActive = false
         processScheduledTask()
+
+        return shouldEnemiesMove
     }
 
     // For animated enemy movement - finalize turn after animations complete
@@ -357,6 +392,9 @@ class GameState {
             enemy.decrementDisable()
             enemy.isStunned = false
         }
+
+        // Save snapshot for undo (after enemy turn completes)
+        saveSnapshot()
     }
 
     // For animated enemy movement - processes one step at a time
@@ -475,6 +513,35 @@ class GameState {
                 occupiedPositions: otherEnemyPositions
             ) {
                 desiredMoves.append((enemy, nextMove))
+            } else {
+                // Pathfinding failed - try to move towards player anyway
+                // Find the adjacent cell that's closest to the player
+                var bestMove: (row: Int, col: Int)?
+                var bestDistance = Int.max
+
+                for direction in Direction.allCases {
+                    let offset = direction.offset
+                    let newRow = enemy.row + offset.row
+                    let newCol = enemy.col + offset.col
+
+                    guard grid.isValidPosition(row: newRow, col: newCol) else { continue }
+
+                    let cell = grid.cells[newRow][newCol]
+                    if cell.hasBlock && !enemy.type.canMoveOnBlocks { continue }
+
+                    let posKey = "\(newRow),\(newCol)"
+                    if otherEnemyPositions.contains(posKey) { continue }
+
+                    let distance = abs(player.row - newRow) + abs(player.col - newCol)
+                    if distance < bestDistance {
+                        bestDistance = distance
+                        bestMove = (newRow, newCol)
+                    }
+                }
+
+                if let move = bestMove {
+                    desiredMoves.append((enemy, move))
+                }
             }
         }
 
@@ -713,17 +780,25 @@ class GameState {
         }
     }
 
+    /// Result of executing a program
+    struct ProgramExecutionResult {
+        let success: Bool
+        let affectedPositions: [(row: Int, col: Int)]
+    }
+
     /// Execute a program's effect
-    /// Returns true if successful, false otherwise
-    func executeProgram(_ type: ProgramType) -> Bool {
+    /// Returns execution result with affected positions for animations
+    func executeProgram(_ type: ProgramType) -> ProgramExecutionResult {
         let check = canExecuteProgram(type)
-        guard check.canExecute else { return false }
+        guard check.canExecute else { return ProgramExecutionResult(success: false, affectedPositions: []) }
 
         let program = Program(type: type)
 
         // Deduct resources
         player.credits -= program.cost.credits
         player.energy -= program.cost.energy
+
+        var affectedPositions: [(row: Int, col: Int)] = []
 
         // Execute program effect
         switch type {
@@ -760,6 +835,9 @@ class GameState {
                 let daemonRow = nearestDaemon.row
                 let daemonCol = nearestDaemon.col
 
+                // Add daemon position for explosion animation
+                affectedPositions.append((daemonRow, daemonCol))
+
                 // Remove the daemon
                 enemies.removeAll { $0.id == nearestDaemon.id }
 
@@ -771,6 +849,7 @@ class GameState {
                         let checkCol = daemonCol + colOffset
 
                         for enemy in enemies where enemy.row == checkRow && enemy.col == checkCol {
+                            affectedPositions.append((checkRow, checkCol))
                             enemy.takeDamage(1)
                             if enemy.hp > 0 {
                                 enemy.isStunned = true
@@ -786,6 +865,7 @@ class GameState {
         case .antiV:
             // Damage all Viruses and stun survivors
             for enemy in enemies where enemy.type == .virus {
+                affectedPositions.append((enemy.row, enemy.col))
                 enemy.takeDamage(1)
                 if enemy.hp > 0 {
                     enemy.isStunned = true
@@ -808,6 +888,20 @@ class GameState {
                 let newType = otherTypes.randomElement()!
                 enemy.type = newType
                 enemy.hp = newType.maxHP
+
+                // If converted to Cryptog, initialize last known position
+                if newType == .cryptog {
+                    // Check if currently visible to player
+                    let isVisible = enemy.row == player.row || enemy.col == player.col
+                    if isVisible {
+                        enemy.lastKnownRow = enemy.row
+                        enemy.lastKnownCol = enemy.col
+                    } else {
+                        // Not visible - set last known to current position (where it was just converted)
+                        enemy.lastKnownRow = enemy.row
+                        enemy.lastKnownCol = enemy.col
+                    }
+                }
             }
 
         case .reduc:
@@ -836,13 +930,263 @@ class GameState {
             let levelsLeft = Constants.totalStages - currentStage
             player.score += levelsLeft
 
-        // TODO: Complex programs need more implementation details
-        case .wait, .step, .push, .pull, .crash, .warp, .row, .col, .debug, .undo, .hack:
-            // These need more complex implementation - skip for now
-            return false
+        case .row:
+            // Attack all enemies in player's row
+            for enemy in enemies where enemy.row == player.row {
+                affectedPositions.append((enemy.row, enemy.col))
+                enemy.takeDamage(player.attackDamage)
+                if enemy.hp > 0 {
+                    enemy.isStunned = true
+                }
+            }
+            enemies.removeAll { $0.hp <= 0 }
+
+        case .col:
+            // Attack all enemies in player's column
+            for enemy in enemies where enemy.col == player.col {
+                affectedPositions.append((enemy.row, enemy.col))
+                enemy.takeDamage(player.attackDamage)
+                if enemy.hp > 0 {
+                    enemy.isStunned = true
+                }
+            }
+            enemies.removeAll { $0.hp <= 0 }
+
+        case .debug:
+            // Damage enemies standing on blocks
+            for enemy in enemies where grid.cells[enemy.row][enemy.col].hasBlock {
+                affectedPositions.append((enemy.row, enemy.col))
+                enemy.takeDamage(player.attackDamage)
+                if enemy.hp > 0 {
+                    enemy.isStunned = true
+                }
+            }
+            enemies.removeAll { $0.hp <= 0 }
+
+        case .hack:
+            // Damage enemies on siphoned cells and show explosions on all siphoned cells
+            // First, collect all siphoned cells for animation
+            for row in 0..<Constants.gridSize {
+                for col in 0..<Constants.gridSize {
+                    if grid.cells[row][col].isSiphoned {
+                        affectedPositions.append((row, col))
+                    }
+                }
+            }
+
+            // Then damage enemies on siphoned cells
+            for enemy in enemies where grid.cells[enemy.row][enemy.col].isSiphoned {
+                enemy.takeDamage(player.attackDamage)
+                if enemy.hp > 0 {
+                    enemy.isStunned = true
+                }
+            }
+            enemies.removeAll { $0.hp <= 0 }
+
+        case .push:
+            // Push all enemies one cell away from player
+            var newPositions: [UUID: (row: Int, col: Int)] = [:]
+
+            // Calculate desired push positions for all enemies
+            for enemy in enemies {
+                let rowDiff = enemy.row - player.row
+                let colDiff = enemy.col - player.col
+
+                // Determine push direction components (away from player)
+                let pushRowDir = rowDiff == 0 ? 0 : (rowDiff > 0 ? 1 : -1)
+                let pushColDir = colDiff == 0 ? 0 : (colDiff > 0 ? 1 : -1)
+
+                // Try primary direction (both row and col)
+                var candidates: [(row: Int, col: Int, dist: Int)] = []
+
+                let primaryRow = enemy.row + pushRowDir
+                let primaryCol = enemy.col + pushColDir
+                if grid.isValidPosition(row: primaryRow, col: primaryCol) {
+                    let dist = abs(primaryRow - player.row) + abs(primaryCol - player.col)
+                    candidates.append((primaryRow, primaryCol, dist))
+                }
+
+                // Try row-only push
+                if pushRowDir != 0 {
+                    let rowOnlyRow = enemy.row + pushRowDir
+                    let rowOnlyCol = enemy.col
+                    if grid.isValidPosition(row: rowOnlyRow, col: rowOnlyCol) {
+                        let dist = abs(rowOnlyRow - player.row) + abs(rowOnlyCol - player.col)
+                        candidates.append((rowOnlyRow, rowOnlyCol, dist))
+                    }
+                }
+
+                // Try col-only push
+                if pushColDir != 0 {
+                    let colOnlyRow = enemy.row
+                    let colOnlyCol = enemy.col + pushColDir
+                    if grid.isValidPosition(row: colOnlyRow, col: colOnlyCol) {
+                        let dist = abs(colOnlyRow - player.row) + abs(colOnlyCol - player.col)
+                        candidates.append((colOnlyRow, colOnlyCol, dist))
+                    }
+                }
+
+                // Pick the candidate that's furthest from player
+                if let best = candidates.max(by: { $0.dist < $1.dist }) {
+                    newPositions[enemy.id] = (best.row, best.col)
+                }
+            }
+
+            // Apply pushes (check for collisions with other pushed enemies)
+            var occupiedAfterPush = Set<String>()
+            for enemy in enemies {
+                if let newPos = newPositions[enemy.id] {
+                    let posKey = "\(newPos.row),\(newPos.col)"
+
+                    if !occupiedAfterPush.contains(posKey) {
+                        enemy.row = newPos.row
+                        enemy.col = newPos.col
+                        occupiedAfterPush.insert(posKey)
+                    }
+                    // If collision with another pushed enemy, stay in place
+                }
+            }
+
+        case .pull:
+            // Pull all enemies one cell toward player
+            var newPositions: [UUID: (row: Int, col: Int)] = [:]
+
+            // Calculate desired pull positions for all enemies
+            for enemy in enemies {
+                let rowDiff = enemy.row - player.row
+                let colDiff = enemy.col - player.col
+
+                // Determine pull direction components (toward player)
+                let pullRowDir = rowDiff == 0 ? 0 : (rowDiff > 0 ? -1 : 1)
+                let pullColDir = colDiff == 0 ? 0 : (colDiff > 0 ? -1 : 1)
+
+                // Try primary direction (both row and col)
+                var candidates: [(row: Int, col: Int, dist: Int)] = []
+
+                let primaryRow = enemy.row + pullRowDir
+                let primaryCol = enemy.col + pullColDir
+                if grid.isValidPosition(row: primaryRow, col: primaryCol) &&
+                   !(primaryRow == player.row && primaryCol == player.col) {
+                    let dist = abs(primaryRow - player.row) + abs(primaryCol - player.col)
+                    candidates.append((primaryRow, primaryCol, dist))
+                }
+
+                // Try row-only pull
+                if pullRowDir != 0 {
+                    let rowOnlyRow = enemy.row + pullRowDir
+                    let rowOnlyCol = enemy.col
+                    if grid.isValidPosition(row: rowOnlyRow, col: rowOnlyCol) &&
+                       !(rowOnlyRow == player.row && rowOnlyCol == player.col) {
+                        let dist = abs(rowOnlyRow - player.row) + abs(rowOnlyCol - player.col)
+                        candidates.append((rowOnlyRow, rowOnlyCol, dist))
+                    }
+                }
+
+                // Try col-only pull
+                if pullColDir != 0 {
+                    let colOnlyRow = enemy.row
+                    let colOnlyCol = enemy.col + pullColDir
+                    if grid.isValidPosition(row: colOnlyRow, col: colOnlyCol) &&
+                       !(colOnlyRow == player.row && colOnlyCol == player.col) {
+                        let dist = abs(colOnlyRow - player.row) + abs(colOnlyCol - player.col)
+                        candidates.append((colOnlyRow, colOnlyCol, dist))
+                    }
+                }
+
+                // Pick the candidate that's closest to player
+                if let best = candidates.min(by: { $0.dist < $1.dist }) {
+                    newPositions[enemy.id] = (best.row, best.col)
+                }
+            }
+
+            // Apply pulls (check for collisions)
+            var occupiedAfterPull = Set<String>()
+            for enemy in enemies {
+                if let newPos = newPositions[enemy.id] {
+                    let posKey = "\(newPos.row),\(newPos.col)"
+
+                    if !occupiedAfterPull.contains(posKey) {
+                        enemy.row = newPos.row
+                        enemy.col = newPos.col
+                        occupiedAfterPull.insert(posKey)
+                    }
+                    // If collision, enemy stays in place
+                }
+            }
+
+        case .crash:
+            // Destroy blocks, enemies, and transmissions in 8 surrounding cells
+            for rowOffset in -1...1 {
+                for colOffset in -1...1 {
+                    if rowOffset == 0 && colOffset == 0 { continue }
+
+                    let checkRow = player.row + rowOffset
+                    let checkCol = player.col + colOffset
+
+                    if grid.isValidPosition(row: checkRow, col: checkCol) {
+                        affectedPositions.append((checkRow, checkCol))
+                        let cell = grid.cells[checkRow][checkCol]
+
+                        // Destroy blocks and reveal resources underneath
+                        if case .block = cell.content {
+                            cell.content = .empty
+                            // Resources remain (they were already placed)
+                        }
+
+                        // Destroy enemies at this position
+                        enemies.removeAll { $0.row == checkRow && $0.col == checkCol }
+
+                        // Destroy transmissions at this position
+                        transmissions.removeAll { $0.row == checkRow && $0.col == checkCol }
+                    }
+                }
+            }
+
+        case .warp:
+            // Warp to random enemy or transmission and destroy it
+            var targets: [(row: Int, col: Int, isEnemy: Bool)] = []
+
+            for enemy in enemies {
+                targets.append((enemy.row, enemy.col, true))
+            }
+            for transmission in transmissions {
+                targets.append((transmission.row, transmission.col, false))
+            }
+
+            if let target = targets.randomElement() {
+                affectedPositions.append((target.row, target.col))
+
+                // Warp player to target position
+                player.row = target.row
+                player.col = target.col
+
+                // Destroy the target
+                if target.isEnemy {
+                    enemies.removeAll { $0.row == target.row && $0.col == target.col }
+                } else {
+                    transmissions.removeAll { $0.row == target.row && $0.col == target.col }
+                }
+            }
+
+        case .wait:
+            // Skip turn, enemies move - this will be handled by advancing the turn
+            // (No immediate effect here, but caller should advance turn)
+            break
+
+        case .step:
+            // Next turn enemies don't move
+            stepActive = true
+
+        case .undo:
+            // Restore previous game state
+            if restoreSnapshot() {
+                // Successfully restored - no affected positions for animation
+            } else {
+                return ProgramExecutionResult(success: false, affectedPositions: [])
+            }
         }
 
-        return true
+        return ProgramExecutionResult(success: true, affectedPositions: affectedPositions)
     }
 
     /// Find nearest enemy of a specific type
@@ -854,6 +1198,117 @@ class GameState {
                 let dist2 = abs(enemy2.row - player.row) + abs(enemy2.col - player.col)
                 return dist1 < dist2
             }
+    }
+
+    // MARK: - Snapshot Methods
+
+    func saveSnapshot() {
+        let snapshot = GameStateSnapshot(
+            playerRow: player.row,
+            playerCol: player.col,
+            playerHealth: player.health,
+            playerCredits: player.credits,
+            playerEnergy: player.energy,
+            playerSiphons: player.dataSiphons,
+            playerScore: player.score,
+            playerAttackDamage: player.attackDamage,
+            turnCount: turnCount,
+            ownedPrograms: ownedPrograms,
+            enemies: enemies.map { enemy in
+                EnemySnapshot(
+                    id: enemy.id,
+                    type: enemy.type,
+                    row: enemy.row,
+                    col: enemy.col,
+                    hp: enemy.hp,
+                    disabledTurns: enemy.disabledTurns,
+                    isStunned: enemy.isStunned,
+                    lastKnownRow: enemy.lastKnownRow,
+                    lastKnownCol: enemy.lastKnownCol
+                )
+            },
+            transmissions: transmissions.map { transmission in
+                let turnsRemaining: Int
+                if case .spawning(let turns) = transmission.state {
+                    turnsRemaining = turns
+                } else {
+                    turnsRemaining = 0
+                }
+                return TransmissionSnapshot(
+                    id: transmission.id,
+                    row: transmission.row,
+                    col: transmission.col,
+                    turnsRemaining: turnsRemaining,
+                    enemyType: transmission.enemyType
+                )
+            },
+            gridCells: grid.cells.map { row in
+                row.map { cell in
+                    CellSnapshot(
+                        content: cell.content,
+                        resources: cell.resources,
+                        isSiphoned: cell.isSiphoned,
+                        siphonCenter: cell.siphonCenter
+                    )
+                }
+            },
+            cryptogsRevealed: cryptogsRevealed,
+            scheduledTasksDisabled: scheduledTasksDisabled,
+            atkPlusUsedThisStage: atkPlusUsedThisStage,
+            transmissionsRevealed: transmissionsRevealed
+        )
+        gameHistory.append(snapshot)
+    }
+
+    func restoreSnapshot() -> Bool {
+        guard let snapshot = gameHistory.popLast() else { return false }
+
+        player.row = snapshot.playerRow
+        player.col = snapshot.playerCol
+        player.health = snapshot.playerHealth
+        player.credits = snapshot.playerCredits
+        player.energy = snapshot.playerEnergy
+        player.dataSiphons = snapshot.playerSiphons
+        player.score = snapshot.playerScore
+        player.attackDamage = snapshot.playerAttackDamage
+        turnCount = snapshot.turnCount
+        ownedPrograms = snapshot.ownedPrograms
+
+        // Restore enemies
+        enemies = snapshot.enemies.map { enemySnap in
+            let enemy = Enemy(type: enemySnap.type, row: enemySnap.row, col: enemySnap.col)
+            enemy.hp = enemySnap.hp
+            enemy.disabledTurns = enemySnap.disabledTurns
+            enemy.isStunned = enemySnap.isStunned
+            enemy.lastKnownRow = enemySnap.lastKnownRow
+            enemy.lastKnownCol = enemySnap.lastKnownCol
+            return enemy
+        }
+
+        // Restore transmissions
+        transmissions = snapshot.transmissions.map { transSnap in
+            let transmission = Transmission(row: transSnap.row, col: transSnap.col, turnsUntilSpawn: transSnap.turnsRemaining, enemyType: transSnap.enemyType)
+            return transmission
+        }
+
+        // Restore grid
+        for row in 0..<Constants.gridSize {
+            for col in 0..<Constants.gridSize {
+                let cellSnap = snapshot.gridCells[row][col]
+                let cell = grid.cells[row][col]
+                cell.content = cellSnap.content
+                cell.resources = cellSnap.resources
+                cell.isSiphoned = cellSnap.isSiphoned
+                cell.siphonCenter = cellSnap.siphonCenter
+            }
+        }
+
+        cryptogsRevealed = snapshot.cryptogsRevealed
+        scheduledTasksDisabled = snapshot.scheduledTasksDisabled
+        atkPlusUsedThisStage = snapshot.atkPlusUsedThisStage
+        transmissionsRevealed = snapshot.transmissionsRevealed
+
+        return true
     }
 
     func findAlternativeMove(enemy: Enemy, occupiedTargets: Set<String>, allEnemyPositions: Set<String>) -> (Int, Int)? {
@@ -889,6 +1344,41 @@ struct GameStateSnapshot {
     let playerEnergy: Int
     let playerSiphons: Int
     let playerScore: Int
+    let playerAttackDamage: Int
     let turnCount: Int
-    let ownedPrograms: Set<ProgramType>
+    let ownedPrograms: [ProgramType]
+    let enemies: [EnemySnapshot]
+    let transmissions: [TransmissionSnapshot]
+    let gridCells: [[CellSnapshot]]
+    let cryptogsRevealed: Bool
+    let scheduledTasksDisabled: Bool
+    let atkPlusUsedThisStage: Bool
+    let transmissionsRevealed: Bool
+}
+
+struct EnemySnapshot {
+    let id: UUID
+    let type: EnemyType
+    let row: Int
+    let col: Int
+    let hp: Int
+    let disabledTurns: Int
+    let isStunned: Bool
+    let lastKnownRow: Int?
+    let lastKnownCol: Int?
+}
+
+struct TransmissionSnapshot {
+    let id: UUID
+    let row: Int
+    let col: Int
+    let turnsRemaining: Int
+    let enemyType: EnemyType
+}
+
+struct CellSnapshot {
+    let content: CellContent
+    let resources: ResourceType
+    let isSiphoned: Bool
+    let siphonCenter: Bool
 }

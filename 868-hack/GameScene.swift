@@ -249,7 +249,7 @@ class GameScene: SKScene {
             if isVisible {
                 drawEnemy(enemy: enemy)
             } else if enemy.type == .cryptog, let lastRow = enemy.lastKnownRow, let lastCol = enemy.lastKnownCol {
-                // Draw purple border for last known position
+                // Draw purple border at last known position (where it was last visible)
                 let cellNode = cellNodes[lastRow][lastCol]
                 cellNode.strokeColor = .purple
                 cellNode.lineWidth = 3
@@ -258,7 +258,36 @@ class GameScene: SKScene {
 
         // Draw transmissions
         for transmission in gameState.transmissions {
-            drawEntity(emoji: "🌀", row: transmission.row, col: transmission.col, id: transmission.id)
+            if gameState.transmissionsRevealed {
+                // Show revealed transmission with enemy type overlay
+                let container = SKNode()
+                let cellNode = cellNodes[transmission.row][transmission.col]
+                container.position = cellNode.position
+                container.zPosition = 10
+
+                // Draw transmission emoji (background)
+                let transmissionLabel = SKLabelNode(text: "🌀")
+                transmissionLabel.fontSize = 40
+                transmissionLabel.verticalAlignmentMode = .center
+                transmissionLabel.horizontalAlignmentMode = .center
+                transmissionLabel.position = CGPoint(x: 0, y: 0)
+                transmissionLabel.alpha = 0.5  // Make it translucent so enemy shows through
+                container.addChild(transmissionLabel)
+
+                // Draw enemy emoji (foreground)
+                let enemyLabel = SKLabelNode(text: transmission.enemyType.emoji)
+                enemyLabel.fontSize = 32  // Slightly smaller
+                enemyLabel.verticalAlignmentMode = .center
+                enemyLabel.horizontalAlignmentMode = .center
+                enemyLabel.position = CGPoint(x: 0, y: 0)
+                container.addChild(enemyLabel)
+
+                addChild(container)
+                entityNodes[transmission.id] = container
+            } else {
+                // Draw normal transmission
+                drawEntity(emoji: "🌀", row: transmission.row, col: transmission.col, id: transmission.id)
+            }
         }
 
         // Update HUD
@@ -349,21 +378,10 @@ class GameScene: SKScene {
         let hud = SKNode()
         hud.name = "hud"
 
-        // Format owned programs list (in acquisition order)
-        let programsList: String
-        if gameState.ownedPrograms.isEmpty {
-            programsList = "None"
-        } else {
-            programsList = gameState.ownedPrograms
-                .map { $0.displayName }
-                .joined(separator: ", ")
-        }
-
         let hudText = """
         Stage: \(gameState.currentStage)/\(Constants.totalStages)  Turn: \(gameState.turnCount)
         Health: \(gameState.player.health.emoji)  Score: \(gameState.player.score)
         💰\(gameState.player.credits)  💠\(gameState.player.energy)  💎\(gameState.player.dataSiphons)
-        Programs: \(programsList)
         Controls: Arrows = Move/Attack  |  S = Siphon (+ pattern)
         """
 
@@ -430,8 +448,15 @@ class GameScene: SKScene {
             nameLabel.position = CGPoint(x: 0, y: 5)
             buttonBg.addChild(nameLabel)
 
-            // Add cost
-            let costText = "\(program.cost.credits)💰 \(program.cost.energy)💠"
+            // Add cost (only show non-zero resources)
+            var costParts: [String] = []
+            if program.cost.credits > 0 {
+                costParts.append("\(program.cost.credits)💰")
+            }
+            if program.cost.energy > 0 {
+                costParts.append("\(program.cost.energy)💠")
+            }
+            let costText = costParts.isEmpty ? "Free" : costParts.joined(separator: " ")
             let costLabel = SKLabelNode(text: costText)
             costLabel.fontName = "Menlo"
             costLabel.fontSize = 9
@@ -517,6 +542,50 @@ class GameScene: SKScene {
         }
     }
 
+    func animateExplosion(at position: (row: Int, col: Int), completion: (() -> Void)? = nil) {
+        let pos = getCellPosition(row: position.row, col: position.col)
+
+        // Create explosion circle
+        let explosion = SKShapeNode(circleOfRadius: Constants.cellSize / 2)
+        explosion.position = pos
+        explosion.fillColor = .init(red: 1.0, green: 0.6, blue: 0.0, alpha: 0.8)
+        explosion.strokeColor = .init(red: 1.0, green: 0.3, blue: 0.0, alpha: 1.0)
+        explosion.lineWidth = 2
+        explosion.zPosition = 100
+
+        addChild(explosion)
+
+        // Animate: expand and fade out
+        let expand = SKAction.scale(to: 1.5, duration: 0.2)
+        let fadeOut = SKAction.fadeOut(withDuration: 0.2)
+        let remove = SKAction.removeFromParent()
+
+        let group = SKAction.group([expand, fadeOut])
+        let sequence = SKAction.sequence([group, remove])
+
+        explosion.run(sequence) {
+            completion?()
+        }
+    }
+
+    func animateExplosions(at positions: [(row: Int, col: Int)], completion: @escaping () -> Void) {
+        guard !positions.isEmpty else {
+            completion()
+            return
+        }
+
+        var explosionsRemaining = positions.count
+
+        for position in positions {
+            animateExplosion(at: position) {
+                explosionsRemaining -= 1
+                if explosionsRemaining == 0 {
+                    completion()
+                }
+            }
+        }
+    }
+
     override func keyDown(with event: NSEvent) {
         // Block input during animations
         guard !isAnimating else { return }
@@ -534,12 +603,18 @@ class GameScene: SKScene {
             if gameState.performSiphon() {
                 // Begin animated turn (processes transmissions and scheduled tasks, but not enemy movement)
                 isAnimating = true
-                gameState.beginAnimatedTurn()
+                let shouldEnemiesMove = gameState.beginAnimatedTurn()
                 updateDisplay()
 
-                // Process enemy movement step-by-step with animations
-                enemiesWhoAttacked = Set<UUID>()
-                animateEnemySteps(currentStep: 0)
+                // Process enemy movement step-by-step with animations (if step wasn't used)
+                if shouldEnemiesMove {
+                    enemiesWhoAttacked = Set<UUID>()
+                    animateEnemySteps(currentStep: 0)
+                } else {
+                    // Skip enemy movement, just finalize turn
+                    gameState.finalizeAnimatedTurn()
+                    isAnimating = false
+                }
             }
             return
         }
@@ -566,20 +641,56 @@ class GameScene: SKScene {
         let location = event.location(in: self)
         let clickedNodes = nodes(at: location)
 
-        // Check if a program button was clicked
+        // Check if a program button was clicked (check node and parent)
         for node in clickedNodes {
-            if let nodeName = node.name, nodeName.hasPrefix("program_") {
-                let programName = String(nodeName.dropFirst("program_".count))
+            var checkNode: SKNode? = node
+            // Check up to 2 levels (node or parent could be the button)
+            for _ in 0..<2 {
+                if let nodeName = checkNode?.name, nodeName.hasPrefix("program_") {
+                    let programName = String(nodeName.dropFirst("program_".count))
 
-                // Find the program type
-                if let programType = ProgramType.allCases.first(where: { $0.rawValue == programName }) {
-                    // Try to execute the program
-                    if gameState.executeProgram(programType) {
-                        // Program executed successfully, update display
-                        updateDisplay()
+                    // Find the program type
+                    if let programType = ProgramType.allCases.first(where: { $0.rawValue == programName }) {
+                        print("Executing program: \(programType)")
+                        // Try to execute the program
+                        let result = gameState.executeProgram(programType)
+                        if result.success {
+                            print("Program executed successfully")
+
+                            // Special handling for wait program - advance turn with enemy movement
+                            if programType == .wait {
+                                isAnimating = true
+                                let shouldEnemiesMove = gameState.beginAnimatedTurn()
+                                updateDisplay()
+
+                                // Process enemy movement step-by-step with animations (if step wasn't used)
+                                if shouldEnemiesMove {
+                                    enemiesWhoAttacked = Set<UUID>()
+                                    animateEnemySteps(currentStep: 0)
+                                } else {
+                                    // Skip enemy movement, just finalize turn
+                                    gameState.finalizeAnimatedTurn()
+                                    isAnimating = false
+                                }
+                            }
+                            // Show explosion animations if there are affected positions
+                            else if !result.affectedPositions.isEmpty {
+                                isAnimating = true
+                                animateExplosions(at: result.affectedPositions) { [weak self] in
+                                    self?.updateDisplay()
+                                    self?.isAnimating = false
+                                }
+                            } else {
+                                // No animations needed, just update display
+                                updateDisplay()
+                            }
+                        } else {
+                            print("Program execution failed")
+                        }
                     }
+                    return
                 }
-                return
+                checkNode = checkNode?.parent
             }
         }
     }
@@ -615,12 +726,18 @@ class GameScene: SKScene {
                 self.gameState.transmissions.removeAll { $0.id == transmission.id }
 
                 // Begin animated turn (processes transmissions and scheduled tasks, but not enemy movement)
-                self.gameState.beginAnimatedTurn()
+                let shouldEnemiesMove = self.gameState.beginAnimatedTurn()
                 self.updateDisplay()
 
-                // Process enemy movement step-by-step with animations
-                self.enemiesWhoAttacked = Set<UUID>()
-                self.animateEnemySteps(currentStep: 0)
+                // Process enemy movement step-by-step with animations (if step wasn't used)
+                if shouldEnemiesMove {
+                    self.enemiesWhoAttacked = Set<UUID>()
+                    self.animateEnemySteps(currentStep: 0)
+                } else {
+                    // Skip enemy movement, just finalize turn
+                    self.gameState.finalizeAnimatedTurn()
+                    self.isAnimating = false
+                }
             }
             return
         }
@@ -644,12 +761,18 @@ class GameScene: SKScene {
                 }
 
                 // Begin animated turn (processes transmissions and scheduled tasks, but not enemy movement)
-                self.gameState.beginAnimatedTurn()
+                let shouldEnemiesMove = self.gameState.beginAnimatedTurn()
                 self.updateDisplay()
 
-                // Process enemy movement step-by-step with animations
-                self.enemiesWhoAttacked = Set<UUID>()
-                self.animateEnemySteps(currentStep: 0)
+                // Process enemy movement step-by-step with animations (if step wasn't used)
+                if shouldEnemiesMove {
+                    self.enemiesWhoAttacked = Set<UUID>()
+                    self.animateEnemySteps(currentStep: 0)
+                } else {
+                    // Skip enemy movement, just finalize turn
+                    self.gameState.finalizeAnimatedTurn()
+                    self.isAnimating = false
+                }
             }
             return
         }
@@ -710,12 +833,18 @@ class GameScene: SKScene {
 
     func handlePlayerMoveComplete() {
         // Begin turn (processes transmissions and scheduled tasks, but not enemy movement)
-        gameState.beginAnimatedTurn()
+        let shouldEnemiesMove = gameState.beginAnimatedTurn()
         updateDisplay()
 
-        // Process enemy movement step-by-step with animations
-        enemiesWhoAttacked = Set<UUID>()
-        animateEnemySteps(currentStep: 0)
+        // Process enemy movement step-by-step with animations (if step wasn't used)
+        if shouldEnemiesMove {
+            enemiesWhoAttacked = Set<UUID>()
+            animateEnemySteps(currentStep: 0)
+        } else {
+            // Skip enemy movement, just finalize turn
+            gameState.finalizeAnimatedTurn()
+            isAnimating = false
+        }
     }
 
     func animateEnemySteps(currentStep: Int) {
