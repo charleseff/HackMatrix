@@ -2,9 +2,9 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Headless CLI",
       "type": "lldb",
       "request": "launch",
-      "name": "Debug Headless CLI",
       "program": "${workspaceFolder}/DerivedData/868-hack/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack",
       "args": [
         "--headless-cli"
@@ -13,21 +13,20 @@
       "preLaunchTask": "Build 868-hack"
     },
     {
-      "type": "swift",
-      "request": "launch",
       "name": "Debug 868-hack",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/DerivedData/868-hack/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack",
       "args": [],
-      "cwd": "${workspaceFolder:868-hack-2}",
-      "preLaunchTask": "swift: Build Debug 868-hack",
-      "target": "868-hack",
-      "configuration": "debug"
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Build 868-hack"
     },
     {
+      "name": "Release 868-hack",
       "type": "swift",
       "request": "launch",
       "args": [],
       "cwd": "${workspaceFolder:868-hack-2}",
-      "name": "Release 868-hack",
       "target": "868-hack",
       "configuration": "release",
       "preLaunchTask": "swift: Build Release 868-hack"
