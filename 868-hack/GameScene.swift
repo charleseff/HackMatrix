@@ -388,14 +388,17 @@ class GameScene: SKScene {
         Stage: \(gameState.currentStage)/\(Constants.totalStages)  Turn: \(gameState.turnCount)
         Health: \(gameState.player.health.emoji)  Score: \(gameState.player.score)
         💰\(gameState.player.credits)  💠\(gameState.player.energy)  💎\(gameState.player.dataSiphons)
-        Controls: Arrows = Move/Attack  |  S = Siphon (+ pattern)
+        Controls: Arrows = Move/Attack  |  S = Siphon
+        1=push 2=pull  3=crash  4=warp  5=poly  6=wait  7=debug  8=row  9=col
+        Q=undo  W=step  E=siph+  R=exch  T=show  Y=reset  U=calm  I=d_bom  O=delay  P=anti-v
+        A=score  S=reduc  D=atk+  F=hack
         """
 
         let label = SKLabelNode(text: hudText)
         label.fontName = "Menlo-Bold"
-        label.fontSize = 13
+        label.fontSize = 11
         label.fontColor = .white
-        label.numberOfLines = 5
+        label.numberOfLines = 7
         label.horizontalAlignmentMode = .left
         label.verticalAlignmentMode = .top
         label.position = CGPoint(x: 10, y: size.height - 10)
@@ -631,7 +634,46 @@ class GameScene: SKScene {
         }
     }
 
-    override func keyDown(with event: NSEvent) {
+    func attemptToExecuteProgram(_ programType: ProgramType) {
+        print("Executing program: \(programType)")
+        // Try to execute the program
+        let result = gameState.executeProgram(programType)
+        if result.success {
+            print("Program executed successfully")
+
+            // Special handling for wait program - advance turn with enemy movement
+            if programType == .wait {
+                isAnimating = true
+                let shouldEnemiesMove = gameState.beginAnimatedTurn()
+                updateDisplay()
+
+                // Process enemy movement step-by-step with animations (if step wasn't used)
+                if shouldEnemiesMove {
+                    enemiesWhoAttacked = Set<UUID>()
+                    animateEnemySteps(currentStep: 0)
+                } else {
+                    // Skip enemy movement, just finalize turn
+                    gameState.finalizeAnimatedTurn()
+                    isAnimating = false
+                }
+            }
+            // Show explosion animations if there are affected positions
+            else if !result.affectedPositions.isEmpty {
+                isAnimating = true
+                animateExplosions(at: result.affectedPositions) { [weak self] in
+                    self?.updateDisplay()
+                    self?.isAnimating = false
+                }
+            } else {
+                // No animations needed, just update display
+                updateDisplay()
+            }
+        } else {
+            print("Program execution failed")
+        }
+    }
+
+override func keyDown(with event: NSEvent) {
         // Block input during animations
         guard !isAnimating else { return }
 
@@ -646,64 +688,14 @@ class GameScene: SKScene {
         // Handle siphon action
         if event.keyCode == 1 { // S key
             if gameState.performSiphon() {
-                // Begin animated turn (processes transmissions and scheduled tasks, but not enemy movement)
-                isAnimating = true
-                let shouldEnemiesMove = gameState.beginAnimatedTurn()
-                updateDisplay()
-
-                // Process enemy movement step-by-step with animations (if step isn't used)
-                if shouldEnemiesMove {
-                    enemiesWhoAttacked = Set<UUID>()
-                    animateEnemySteps(currentStep: 0)
-                } else {
-                    // Skip enemy movement, just finalize turn
-                    gameState.finalizeAnimatedTurn()
-                    isAnimating = false
-                }
+                executeTurnWithAnimation()
             }
             return
         }
 
         // Check for program keyboard shortcuts
         if let programType = getProgramForKeyCode(event.keyCode) {
-            print("Attempting to execute program via keyboard: \(programType)")
-            let result = gameState.executeProgram(programType)
-            if result.success {
-                print("Program executed successfully via keyboard")
-
-                // Special handling for wait program - advance turn with enemy movement
-                if programType == .wait {
-                    isAnimating = true
-                    let shouldEnemiesMove = gameState.beginAnimatedTurn()
-                    updateDisplay()
-
-                    if shouldEnemiesMove {
-                        enemiesWhoAttacked = Set<UUID>()
-                        animateEnemySteps(currentStep: 0)
-                    } else {
-                        gameState.finalizeAnimatedTurn()
-                        isAnimating = false
-                    }
-                } else if programType != .undo {
-                    // All other programs except undo advance the turn
-                    isAnimating = true
-                    let shouldEnemiesMove = gameState.beginAnimatedTurn()
-                    updateDisplay()
-
-                    if shouldEnemiesMove {
-                        enemiesWhoAttacked = Set<UUID>()
-                        animateEnemySteps(currentStep: 0)
-                    } else {
-                        gameState.finalizeAnimatedTurn()
-                        isAnimating = false
-                    }
-                } else {
-                    // Undo doesn't advance turn, just update display
-                    updateDisplay()
-                }
-            } else {
-                print("Failed to execute program.")
-            }
+            attemptToExecuteProgram(programType)
             return
         }
 
@@ -722,7 +714,9 @@ class GameScene: SKScene {
         }
     }
 
-    override func mouseDown(with event: NSEvent) {
+
+
+override func mouseDown(with event: NSEvent) {
         // Block input during animations or game over
         guard !isAnimating && !isGameOver else { return }
 
@@ -739,42 +733,7 @@ class GameScene: SKScene {
 
                     // Find the program type
                     if let programType = ProgramType.allCases.first(where: { $0.rawValue == programName }) {
-                        print("Executing program: \(programType)")
-                        // Try to execute the program
-                        let result = gameState.executeProgram(programType)
-                        if result.success {
-                            print("Program executed successfully")
-
-                            // Special handling for wait program - advance turn with enemy movement
-                            if programType == .wait {
-                                isAnimating = true
-                                let shouldEnemiesMove = gameState.beginAnimatedTurn()
-                                updateDisplay()
-
-                                // Process enemy movement step-by-step with animations (if step wasn't used)
-                                if shouldEnemiesMove {
-                                    enemiesWhoAttacked = Set<UUID>()
-                                    animateEnemySteps(currentStep: 0)
-                                } else {
-                                    // Skip enemy movement, just finalize turn
-                                    gameState.finalizeAnimatedTurn()
-                                    isAnimating = false
-                                }
-                            }
-                            // Show explosion animations if there are affected positions
-                            else if !result.affectedPositions.isEmpty {
-                                isAnimating = true
-                                animateExplosions(at: result.affectedPositions) { [weak self] in
-                                    self?.updateDisplay()
-                                    self?.isAnimating = false
-                                }
-                            } else {
-                                // No animations needed, just update display
-                                updateDisplay()
-                            }
-                        } else {
-                            print("Program execution failed")
-                        }
+                        attemptToExecuteProgram(programType)
                     }
                     return
                 }
@@ -973,6 +932,21 @@ class GameScene: SKScene {
         // If no enemies moved, complete immediately
         if animationsRunning == 0 {
             completion()
+        }
+    }
+
+    /// Execute turn with animation (extracted to remove duplication)
+    func executeTurnWithAnimation() {
+        isAnimating = true
+        let shouldEnemiesMove = gameState.beginAnimatedTurn()
+        updateDisplay()
+
+        if shouldEnemiesMove {
+            enemiesWhoAttacked = Set<UUID>()
+            animateEnemySteps(currentStep: 0)
+        } else {
+            gameState.finalizeAnimatedTurn()
+            isAnimating = false
         }
     }
 
