@@ -89,8 +89,9 @@ The observation is a dictionary with three components:
 2. **Grid state** (6×6×20):
    - 20 features per cell including enemies, blocks, transmissions, resources
 
-3. **Flags** (2 values):
-   - `[cryptogsRevealed, transmissionsRevealed]`
+3. **Flags** (1 value):
+   - `[showActivated]`
+   # todo(cff): does this need to be a flag vs just a player state?
 
 ### Action Space
 

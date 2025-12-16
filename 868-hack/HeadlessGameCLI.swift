@@ -91,8 +91,7 @@ class HeadlessGameCLI {
             "turn": obs.turn,
             "dataSiphons": obs.dataSiphons,
             "baseAttack": obs.baseAttack,
-            "cryptogsRevealed": obs.cryptogsRevealed,
-            "transmissionsRevealed": obs.transmissionsRevealed
+            "showActivated": obs.showActivated,
         ]
 
         // Encode cells as nested arrays

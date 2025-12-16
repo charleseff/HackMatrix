@@ -130,8 +130,7 @@ class HeadlessGame {
             baseAttack: gameState.player.attackDamage,
             cells: cells,
             cryptogHints: cryptogHints,
-            cryptogsRevealed: gameState.cryptogsRevealed,
-            transmissionsRevealed: gameState.transmissionsRevealed
+            showActivated: gameState.showActivated,
         )
     }
 
@@ -144,7 +143,7 @@ class HeadlessGame {
             // Check visibility rules
             if enemy.type == .cryptog {
                 // Cryptog only visible if in same row/col OR revealed
-                if (row == gameState.player.row || col == gameState.player.col) || gameState.cryptogsRevealed {
+                if (row == gameState.player.row || col == gameState.player.col) || gameState.showActivated {
                     enemyObs = EnemyObservation(
                         type: enemyTypeToString(enemy.type),
                         hp: enemy.hp,
@@ -212,7 +211,7 @@ class HeadlessGame {
             transmissionObs = TransmissionObservation(
                 turnsUntilSpawn: turnsRemaining,
                 // Only reveal enemy type if transmissions revealed
-                enemyType: gameState.transmissionsRevealed ? enemyTypeToString(transmission.enemyType) : nil
+                enemyType: gameState.showActivated ? enemyTypeToString(transmission.enemyType) : nil
             )
         }
 
@@ -322,8 +321,7 @@ struct GameObservation {
     let cells: [[CellObservation]]
     let cryptogHints: [(row: Int, col: Int)]  // Last known positions for purple borders
 
-    let cryptogsRevealed: Bool
-    let transmissionsRevealed: Bool
+    let showActivated: Bool
 }
 
 struct CellObservation {
@@ -365,5 +363,5 @@ struct BlockObservation {
 
 struct TransmissionObservation {
     let turnsUntilSpawn: Int
-    let enemyType: String?  // Only if transmissionsRevealed, EnemyType rawValue
+    let enemyType: String?  // Only if showActivated, EnemyType rawValue
 }

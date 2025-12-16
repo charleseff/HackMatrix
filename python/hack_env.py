@@ -55,7 +55,7 @@ class HackEnv(gym.Env):
             # Flags (2 values)
             "flags": spaces.Box(
                 low=0, high=1,
-                shape=(2,),  # cryptogsRevealed, transmissionsRevealed
+                shape=(1,),  # showActivated
                 dtype=np.int32
             )
         })
@@ -172,8 +172,7 @@ class HackEnv(gym.Env):
 
         # Flags
         flags = np.array([
-            1 if obs_dict["cryptogsRevealed"] else 0,
-            1 if obs_dict["transmissionsRevealed"] else 0
+            1 if obs_dict["showActivated"] else 0,
         ], dtype=np.int32)
 
         return {

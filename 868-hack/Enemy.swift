@@ -84,12 +84,12 @@ class Enemy {
         }
     }
 
-    func isVisible(playerRow: Int, playerCol: Int, cryptogsRevealed: Bool) -> Bool {
+    func isVisible(playerRow: Int, playerCol: Int, showActivated: Bool) -> Bool {
         if type != .cryptog {
             return true
         }
 
-        if cryptogsRevealed {
+        if showActivated {
             return true
         }
 

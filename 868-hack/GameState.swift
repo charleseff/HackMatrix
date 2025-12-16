@@ -8,13 +8,12 @@ class GameState {
     var currentStage: Int
     var turnCount: Int
     var ownedPrograms: [ProgramType]  // Array to preserve acquisition order
-    var cryptogsRevealed: Bool
+    var showActivated: Bool
     var scheduledTasksDisabled: Bool
     var stepActive: Bool
     var gameHistory: [GameStateSnapshot]
     var pendingSiphonTransmissions: Int
     var atkPlusUsedThisStage: Bool
-    var transmissionsRevealed: Bool  // For show program
 
     init() {
         self.grid = Grid()
@@ -23,13 +22,12 @@ class GameState {
         self.enemies = []
         self.transmissions = []
         self.ownedPrograms = []
-        self.cryptogsRevealed = false
+        self.showActivated = false
         self.scheduledTasksDisabled = false
         self.stepActive = false
         self.gameHistory = []
         self.pendingSiphonTransmissions = 0
         self.atkPlusUsedThisStage = false
-        self.transmissionsRevealed = false
 
         let corners = grid.getCornerPositions()
         let playerCorner = corners.randomElement()!
@@ -153,11 +151,10 @@ class GameState {
     func initializeStage() {
         // Keep enemies and transmissions (they persist across stages)
         turnCount = 0
-        cryptogsRevealed = false
+        showActivated = false
         scheduledTasksDisabled = false
         stepActive = false
         atkPlusUsedThisStage = false
-        transmissionsRevealed = false
 
         grid = Grid()
 
@@ -823,7 +820,7 @@ class GameState {
             return player.credits >= 4
 
         case .show:
-            return !cryptogsRevealed || !transmissionsRevealed
+            return !showActivated
 
         case .reset:
             return player.health.rawValue < 3
@@ -921,8 +918,7 @@ class GameState {
 
         case .show:
             // Reveal Cryptogs and transmissions
-            cryptogsRevealed = true
-            transmissionsRevealed = true
+            showActivated = true
 
         case .siphPlus:
             // Gain 1 data siphon
@@ -1364,16 +1360,15 @@ class GameState {
                     )
                 }
             },
-            cryptogsRevealed: cryptogsRevealed,
+            showActivated: showActivated,
             scheduledTasksDisabled: scheduledTasksDisabled,
             atkPlusUsedThisStage: atkPlusUsedThisStage,
-            transmissionsRevealed: transmissionsRevealed
         )
         gameHistory.append(snapshot)
     }
 
     func restoreSnapshot() -> Bool {
-        guard let snapshot = gameHistory.popLast() else { return false }
+        guard let snapshot: GameStateSnapshot = gameHistory.popLast() else { return false }
 
         player.row = snapshot.playerRow
         player.col = snapshot.playerCol
@@ -1415,10 +1410,9 @@ class GameState {
             }
         }
 
-        cryptogsRevealed = snapshot.cryptogsRevealed
+        showActivated = snapshot.showActivated
         scheduledTasksDisabled = snapshot.scheduledTasksDisabled
         atkPlusUsedThisStage = snapshot.atkPlusUsedThisStage
-        transmissionsRevealed = snapshot.transmissionsRevealed
 
         return true
     }
@@ -1568,10 +1562,9 @@ struct GameStateSnapshot {
     let enemies: [EnemySnapshot]
     let transmissions: [TransmissionSnapshot]
     let gridCells: [[CellSnapshot]]
-    let cryptogsRevealed: Bool
+    let showActivated: Bool
     let scheduledTasksDisabled: Bool
     let atkPlusUsedThisStage: Bool
-    let transmissionsRevealed: Bool
 }
 
 struct EnemySnapshot {

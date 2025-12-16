@@ -253,7 +253,7 @@ class GameScene: SKScene {
             let isVisible = enemy.isVisible(
                 playerRow: gameState.player.row,
                 playerCol: gameState.player.col,
-                cryptogsRevealed: gameState.cryptogsRevealed
+                showActivated: gameState.showActivated
             )
 
             if isVisible {
@@ -268,7 +268,7 @@ class GameScene: SKScene {
 
         // Draw transmissions
         for transmission in gameState.transmissions {
-            if gameState.transmissionsRevealed {
+            if gameState.showActivated {
                 // Show revealed transmission with enemy type overlay
                 let container = SKNode()
                 let cellNode = cellNodes[transmission.row][transmission.col]
