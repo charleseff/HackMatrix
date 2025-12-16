@@ -5,7 +5,7 @@
       "name": "Debug Headless CLI",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/DerivedData/868-hack/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack",
+      "program": "${workspaceFolder}/DerivedData/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack",
       "args": [
         "--headless-cli"
       ],
@@ -16,8 +16,17 @@
       "name": "Debug 868-hack",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/DerivedData/868-hack/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack",
+      "program": "${workspaceFolder}/DerivedData/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack",
       "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Build 868-hack"
+    },
+    {
+      "name": "debug scenario",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/DerivedData/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack",
+      "args": ["--debug-scenario"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "Build 868-hack"
     },

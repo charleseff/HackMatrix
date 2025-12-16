@@ -10,7 +10,7 @@
         "-scheme", "868-hack",
         "-configuration", "Debug",
         "-derivedDataPath", "${workspaceFolder}/DerivedData",
-        "build"
+        "clean", "build"
       ],
       "group": {
         "kind": "build",
@@ -22,12 +22,21 @@
       "label": "Run GUI",
       "type": "shell",
       "command": "open",
-      "args": ["${workspaceFolder}/DerivedData/868-hack/Build/Products/Debug/868-hack.app"],
+      "args": ["${workspaceFolder}/DerivedData/Build/Products/Debug/868-hack.app"],
       "dependsOn": "Build 868-hack",
       "problemMatcher": [],
       "presentation": {
         "reveal": "never"
       }
     }
+    /* {
+      "type": "swift",
+      "label": "Swift Build All - Release",
+      "detail": "swift build --build-tests",
+      "args": ["build", "--build-tests", "-c", "release"],
+      "env": {},
+      "cwd": "${workspaceFolder}",
+      "group": "build"
+    } */
   ]
 }
