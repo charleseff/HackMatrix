@@ -78,10 +78,6 @@ class Enemy {
         hp = max(0, hp - amount)
     }
 
-    func disable(turns: Int) {
-        disabledTurns = max(disabledTurns, turns)
-    }
-
     func decrementDisable() {
         if disabledTurns > 0 {
             disabledTurns -= 1
