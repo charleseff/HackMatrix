@@ -1,5 +1,44 @@
 import Foundation
 
+// MARK: - Action Space
+
+enum GameAction: Equatable, Hashable {
+    case direction(Direction)
+    case siphon
+    case program(ProgramType)
+
+    // Convert to integer index for ML (0-30)
+    func toIndex() -> Int {
+        switch self {
+        case .direction(.up): return 0
+        case .direction(.down): return 1
+        case .direction(.left): return 2
+        case .direction(.right): return 3
+        case .siphon: return 4
+        case .program(let type):
+            // Programs indexed 5-30 (26 programs)
+            let programIndex = ProgramType.allCases.firstIndex(of: type) ?? 0
+            return 5 + programIndex
+        }
+    }
+
+    // Convert from integer index
+    static func fromIndex(_ index: Int) -> GameAction? {
+        switch index {
+        case 0: return .direction(.up)
+        case 1: return .direction(.down)
+        case 2: return .direction(.left)
+        case 3: return .direction(.right)
+        case 4: return .siphon
+        case 5...30:
+            let programIndex = index - 5
+            guard programIndex < ProgramType.allCases.count else { return nil }
+            return .program(ProgramType.allCases[programIndex])
+        default: return nil
+        }
+    }
+}
+
 class GameState {
     var player: Player
     var grid: Grid
@@ -561,15 +600,19 @@ class GameState {
     }
 
     func moveEnemiesSimultaneously(step: Int, enemiesWhoAttacked: Set<UUID>) {
+        // Filter to enemies that should move this step
+        let enemiesToMove = enemies.filter { enemy in
+            !enemy.isDisabled &&
+            !enemy.isStunned &&
+            !enemiesWhoAttacked.contains(enemy.id) &&
+            step < enemy.type.moveSpeed &&
+            !isAdjacentToPlayer(enemy)
+        }
+
         var desiredMoves: [(enemy: Enemy, target: (row: Int, col: Int))] = []
         let allEnemyPositions = getOccupiedPositions(for: nil)
 
-        for enemy in enemies {
-            guard !enemy.isDisabled && !enemy.isStunned else { continue }
-            guard !enemiesWhoAttacked.contains(enemy.id) else { continue }
-            guard step < enemy.type.moveSpeed else { continue }
-            guard !isAdjacentToPlayer(enemy) else { continue }
-
+        for enemy in enemiesToMove {
             let otherEnemyPositions = getOccupiedPositions(for: enemy)
 
             if let nextMove = Pathfinding.findNextMove(
@@ -851,6 +894,159 @@ class GameState {
     struct ProgramExecutionResult {
         let success: Bool
         let affectedPositions: [(row: Int, col: Int)]
+    }
+
+    /// Result of a single enemy step (for animation)
+    struct EnemyStepResult {
+        let step: Int  // 0, 1, etc (virus moves twice per turn)
+        let movements: [(enemyId: UUID, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int)]
+        let attacks: [(enemyId: UUID, damage: Int)]
+    }
+
+    /// Result of processing any game action
+    struct ActionResult {
+        let success: Bool
+        let exitReached: Bool
+        let playerDied: Bool
+        let affectedPositions: [(row: Int, col: Int)]  // for explosion animations
+        let enemySteps: [EnemyStepResult]  // for enemy movement animations
+
+        static let failed = ActionResult(
+            success: false,
+            exitReached: false,
+            playerDied: false,
+            affectedPositions: [],
+            enemySteps: []
+        )
+    }
+
+    /// Process a game action - single entry point for all action processing
+    /// Runs player action AND enemy turn (if applicable), returns all data for animation
+    func processAction(_ action: GameAction) -> ActionResult {
+        var success = true
+        var exitReached = false
+        var affectedPositions: [(row: Int, col: Int)] = []
+        var shouldRunEnemyTurn = false
+
+        // 1. Handle player action
+        switch action {
+        case .direction(let direction):
+            let result = tryMove(direction: direction)
+            success = result.success
+            exitReached = result.exitReached
+            shouldRunEnemyTurn = success && !exitReached
+
+        case .siphon:
+            success = performSiphon()
+            shouldRunEnemyTurn = success
+
+        case .program(let programType):
+            let execResult = executeProgram(programType)
+            success = execResult.success
+            affectedPositions = execResult.affectedPositions
+            // Only wait program advances enemy turn
+            shouldRunEnemyTurn = programType == .wait && success
+        }
+
+        if !success {
+            return .failed
+        }
+
+        // 2. Run enemy turn if needed
+        var enemySteps: [EnemyStepResult] = []
+        if shouldRunEnemyTurn {
+            enemySteps = runEnemyTurn()
+        }
+
+        // 3. Return everything
+        return ActionResult(
+            success: true,
+            exitReached: exitReached,
+            playerDied: player.health == .dead,
+            affectedPositions: affectedPositions,
+            enemySteps: enemySteps
+        )
+    }
+
+    /// Run full enemy turn, capturing step data for animation
+    private func runEnemyTurn() -> [EnemyStepResult] {
+        guard !stepActive else {
+            stepActive = false
+            return []
+        }
+
+        turnCount += 1
+        processTransmissions()
+
+        // Run all enemy steps, capturing movement/attack data
+        var results: [EnemyStepResult] = []
+        var enemiesWhoAttacked = Set<UUID>()
+        let maxSteps = getMaxEnemySteps()
+
+        for step in 0..<maxSteps {
+            let stepResult = executeEnemyStepWithCapture(step: step, enemiesWhoAttacked: &enemiesWhoAttacked)
+            results.append(stepResult)
+        }
+
+        maybeExecuteScheduledTask()
+
+        // Finalize turn
+        if pendingSiphonTransmissions > 0 {
+            spawnRandomTransmissions(count: pendingSiphonTransmissions)
+            pendingSiphonTransmissions = 0
+        }
+        for enemy in enemies {
+            enemy.decrementDisable()
+            enemy.isStunned = false
+        }
+        saveSnapshot()
+
+        return results
+    }
+
+    /// Execute one enemy step and capture movement/attack data
+    /// enemiesWhoAttacked tracks enemies that attacked this turn (for virus: if it attacks on step 0, skip step 1)
+    private func executeEnemyStepWithCapture(step: Int, enemiesWhoAttacked: inout Set<UUID>) -> EnemyStepResult {
+        var movements: [(enemyId: UUID, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int)] = []
+        var attacks: [(enemyId: UUID, damage: Int)] = []
+
+        let maxSteps = enemies.map { $0.type.moveSpeed }.max() ?? 1
+        guard step < maxSteps else {
+            return EnemyStepResult(step: step, movements: [], attacks: [])
+        }
+
+        // First check for attacks this step
+        for enemy in enemies {
+            guard !enemy.isDisabled && !enemy.isStunned else { continue }
+            guard !enemiesWhoAttacked.contains(enemy.id) else { continue }
+            guard step < enemy.type.moveSpeed else { continue }
+
+            if isAdjacentToPlayer(enemy) {
+                player.health.takeDamage()
+                enemiesWhoAttacked.insert(enemy.id)
+                attacks.append((enemyId: enemy.id, damage: 1))
+            }
+        }
+
+        // Capture positions before movement
+        var positionsBefore: [UUID: (row: Int, col: Int)] = [:]
+        for enemy in enemies {
+            positionsBefore[enemy.id] = (enemy.row, enemy.col)
+        }
+
+        // Move enemies who didn't attack (reusing existing simultaneous movement logic)
+        moveEnemiesSimultaneously(step: step, enemiesWhoAttacked: enemiesWhoAttacked)
+
+        // Capture movements by comparing before/after positions
+        for enemy in enemies {
+            if let before = positionsBefore[enemy.id] {
+                if enemy.row != before.row || enemy.col != before.col {
+                    movements.append((enemyId: enemy.id, fromRow: before.row, fromCol: before.col, toRow: enemy.row, toCol: enemy.col))
+                }
+            }
+        }
+
+        return EnemyStepResult(step: step, movements: movements, attacks: attacks)
     }
 
     /// Execute a program's effect

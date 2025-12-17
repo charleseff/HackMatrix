@@ -14,59 +14,40 @@ class HeadlessGame {
         return getObservation()
     }
 
-    // Execute action and advance game state
+    // Execute action and advance game state (including enemy turn)
     // Returns: (observation, reward, isDone, info)
     func step(action: GameAction) -> (GameObservation, Double, Bool, [String: Any]) {
         let oldScore = gameState.player.score
-        let oldStage = gameState.currentStage
 
         var isDone = false
         var info: [String: Any] = [:]
 
-        // Execute the action
-        switch action {
-        case .move(let direction):
-            let result = gameState.tryMove(direction: direction)
-            if result.exitReached {
-                // Reached exit - advance to next stage
-                let continues = gameState.completeStage()
-                isDone = !continues  // Game ends on victory
-                info["stage_complete"] = true
-            }
+        // Process action (handles player action + enemy turn)
+        let result = gameState.processAction(action)
 
-        case .siphon:
-            _ = gameState.performSiphon()
-
-        case .program(let programType):
-            if gameState.canExecuteProgram(programType).canExecute {
-                _ = gameState.executeProgram(programType)
-            } else {
-                // Invalid action - penalize slightly
-                info["invalid_action"] = true
-            }
+        if !result.success {
+            info["invalid_action"] = true
         }
 
-        // Check if player died
-        if gameState.player.health == .dead {
+        if result.exitReached {
+            let continues = gameState.completeStage()
+            isDone = !continues
+            info["stage_complete"] = true
+        }
+
+        if result.playerDied {
             isDone = true
             info["death"] = true
         }
 
         // Calculate reward
-        // Philosophy: Only winning (stage 8 completion) matters, but provide
-        // small score signals during play to help agent learn
         let scoreDelta = Double(gameState.player.score - oldScore)
+        var reward = scoreDelta * 0.01
 
-        var reward = scoreDelta * 0.01  // Small reward for gaining points during play
-
-        // Episode end rewards
         if isDone {
-            if gameState.player.health == .dead {
-                // Death: No reward (any points accumulated don't matter)
+            if result.playerDied {
                 reward = 0.0
             } else {
-                // Victory (completed stage 8): BIG reward based on final score
-                // If isDone && not dead, player must have won
                 reward = Double(gameState.player.score) * 10.0
             }
         }
@@ -84,10 +65,10 @@ class HeadlessGame {
         let playerCol = gameState.player.col
 
         // Check each direction
-        if playerRow > 0 { actions.append(.move(.up)) }
-        if playerRow < 5 { actions.append(.move(.down)) }
-        if playerCol > 0 { actions.append(.move(.left)) }
-        if playerCol < 5 { actions.append(.move(.right)) }
+        if playerRow > 0 { actions.append(.direction(.up)) }
+        if playerRow < 5 { actions.append(.direction(.down)) }
+        if playerCol > 0 { actions.append(.direction(.left)) }
+        if playerCol < 5 { actions.append(.direction(.right)) }
 
         // Siphon - only if player has data siphons available
         if gameState.player.dataSiphons > 0 {
@@ -262,45 +243,6 @@ class HeadlessGame {
         case .daemon: return "daemon"
         case .glitch: return "glitch"
         case .cryptog: return "cryptog"
-        }
-    }
-}
-
-// MARK: - Action Space
-
-enum GameAction: Equatable, Hashable {
-    case move(Direction)
-    case siphon
-    case program(ProgramType)
-
-    // Convert to integer index for ML (0-30)
-    func toIndex() -> Int {
-        switch self {
-        case .move(.up): return 0
-        case .move(.down): return 1
-        case .move(.left): return 2
-        case .move(.right): return 3
-        case .siphon: return 4
-        case .program(let type):
-            // Programs indexed 5-30 (26 programs)
-            let programIndex = ProgramType.allCases.firstIndex(of: type) ?? 0
-            return 5 + programIndex
-        }
-    }
-
-    // Convert from integer index
-    static func fromIndex(_ index: Int) -> GameAction? {
-        switch index {
-        case 0: return .move(.up)
-        case 1: return .move(.down)
-        case 2: return .move(.left)
-        case 3: return .move(.right)
-        case 4: return .siphon
-        case 5...30:
-            let programIndex = index - 5
-            guard programIndex < ProgramType.allCases.count else { return nil }
-            return .program(ProgramType.allCases[programIndex])
-        default: return nil
         }
     }
 }

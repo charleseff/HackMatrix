@@ -2,286 +2,137 @@
 
 ## Goal
 
-Single source of truth for game action processing. Clear separation:
-- **Input Layer**: Translates input to GameAction (no game logic)
-- **Game Logic Layer**: GameState processes everything
-- **Presentation Layer**: GameScene only animates results
+`processAction()` is THE function that advances the game until next user input. Both HeadlessGame and GUI call it. Enemy turn logic runs inside it. Returns data for GUI to animate.
 
-## Completed
-
-- [x] Fix stepActive bug in beginAnimatedEnemyTurn (turnCount/scheduledTasks now respect stepActive)
+**Key insight:** Game state advances synchronously, animation is just replay of what happened.
 
 ---
 
-## Phase 1: Add processAction to GameState
+## Current Status
 
-**File:** GameState.swift
+### Completed
+- [x] Fix stepActive bug in beginAnimatedEnemyTurn
+- [x] Move GameAction enum to GameState.swift (renamed `.move` → `.direction`)
+- [x] Add `EnemyStepResult` struct
+- [x] Add `ActionResult` struct with `playerDied` and `enemySteps`
+- [x] Add `runEnemyTurn()` helper
+- [x] Add `executeEnemyStepWithCapture()` method
+- [x] Update `processAction()` to include enemy turn
+- [x] Update `HeadlessGame.step()` to use `processAction()`
+- [x] Refactor `moveEnemiesSimultaneously()` to filter enemies upfront
 
-### Add ActionResult struct
+### Remaining
+- [ ] Update GameScene to use `handleAction()` + `animateActionResult()`
+  - This requires enriching `ActionResult` with player action details:
+    - Whether player moved vs attacked
+    - What was attacked (enemy/transmission position)
+    - Player movement (from/to positions)
+  - OR keep some pre-check logic in GameScene for player animations
 
+---
+
+## What's Done
+
+### GameState.swift
+
+**New structs:**
 ```swift
+struct EnemyStepResult {
+    let step: Int  // 0, 1, etc (virus moves twice per turn)
+    let movements: [(enemyId: UUID, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int)]
+    let attacks: [(enemyId: UUID, damage: Int)]
+}
+
 struct ActionResult {
     let success: Bool
     let exitReached: Bool
-    let shouldAdvanceEnemyTurn: Bool
-    let affectedPositions: [(Int, Int)]  // for explosion animations
-
-    static let failed = ActionResult(
-        success: false,
-        exitReached: false,
-        shouldAdvanceEnemyTurn: false,
-        affectedPositions: []
-    )
+    let playerDied: Bool
+    let affectedPositions: [(row: Int, col: Int)]
+    let enemySteps: [EnemyStepResult]
 }
 ```
 
-### Add processAction method
-
+**processAction()** now handles player action + enemy turn:
 ```swift
 func processAction(_ action: GameAction) -> ActionResult {
-    switch action {
-    case .move(let direction):
-        let result = tryMove(direction: direction)
-        if result.blocked {
-            return .failed
-        }
-        return ActionResult(
-            success: true,
-            exitReached: result.exitReached,
-            shouldAdvanceEnemyTurn: !result.exitReached,
-            affectedPositions: []
-        )
-
-    case .siphon:
-        let success = performSiphon()
-        return ActionResult(
-            success: success,
-            exitReached: false,
-            shouldAdvanceEnemyTurn: success,
-            affectedPositions: []
-        )
-
-    case .program(let programType):
-        let execResult = executeProgram(programType)
-        // Only wait program advances enemy turn (undo doesn't, other programs don't)
-        let shouldAdvance = programType == .wait && execResult.success
-        return ActionResult(
-            success: execResult.success,
-            exitReached: false,
-            shouldAdvanceEnemyTurn: shouldAdvance,
-            affectedPositions: execResult.affectedPositions
-        )
-    }
+    // 1. Handle player action (direction/siphon/program)
+    // 2. Run enemy turn if needed via runEnemyTurn()
+    // 3. Return ActionResult with all data
 }
 ```
 
----
+**runEnemyTurn()** executes full enemy turn and captures step data for animation.
 
-## Phase 2: Add Synchronous Enemy Turn
+**executeEnemyStepWithCapture()** executes one enemy step and captures movements/attacks.
 
-**File:** GameState.swift
+### HeadlessGame.swift
 
-For HeadlessGame - no animations, just execute the full enemy turn.
-
-```swift
-func executeSynchronousEnemyTurn() {
-    guard !stepActive else {
-        stepActive = false
-        return
-    }
-
-    turnCount += 1
-    processTransmissions()
-    processEnemyTurn()
-    maybeExecuteScheduledTask()
-
-    // Spawn pending siphon transmissions
-    if pendingSiphonTransmissions > 0 {
-        spawnRandomTransmissions(count: pendingSiphonTransmissions)
-        pendingSiphonTransmissions = 0
-    }
-
-    // Reset enemy status
-    for enemy in enemies {
-        enemy.decrementDisable()
-        enemy.isStunned = false
-    }
-
-    saveSnapshot()
-}
-```
-
----
-
-## Phase 3: Update HeadlessGame
-
-**File:** HeadlessGame.swift
-
-Replace step() to use processAction + executeSynchronousEnemyTurn:
-
+**step()** is now simple:
 ```swift
 func step(action: GameAction) -> (GameObservation, Double, Bool, [String: Any]) {
-    let oldScore = gameState.player.score
-    var isDone = false
-    var info: [String: Any] = [:]
-
     let result = gameState.processAction(action)
-
-    if !result.success {
-        info["invalid_action"] = true
-    }
-
-    if result.exitReached {
-        let continues = gameState.completeStage()
-        isDone = !continues
-        info["stage_complete"] = true
-    }
-
-    if result.shouldAdvanceEnemyTurn {
-        gameState.executeSynchronousEnemyTurn()
-    }
-
-    if gameState.player.health == .dead {
-        isDone = true
-        info["death"] = true
-    }
-
-    let scoreDelta = Double(gameState.player.score - oldScore)
-    var reward = scoreDelta * 0.01
-
-    if isDone {
-        if gameState.player.health == .dead {
-            reward = 0.0
-        } else {
-            reward = Double(gameState.player.score) * 10.0
-        }
-    }
-
-    let observation = getObservation()
+    // Handle result.success, result.exitReached, result.playerDied
+    // Calculate reward
     return (observation, reward, isDone, info)
 }
 ```
 
-**Tests after this phase:**
-- Turn counter increments after move/siphon/wait
-- Turn counter does NOT increment after other programs
-- Enemies move in headless mode
-- Transmissions spawn in headless mode
-- Python wrapper (test_env.py) still works
+**Critical ML bug fixed:** Enemies now move during headless training!
 
 ---
 
-## Phase 4: Refactor GameScene Input
+## What Remains: GameScene Refactor
 
-**File:** GameScene.swift
+### Challenge
 
-### Add handleAction helper
+GameScene currently checks state *before* actions to determine animations:
+- `handlePlayerMove()` calls `findTargetInLineOfFire()` before `tryMove()`
+- Then animates attack or movement based on what was found
+
+With `processAction()` doing everything at once, we need to either:
+
+1. **Enrich ActionResult** with player action details:
+   ```swift
+   struct ActionResult {
+       // ... existing fields ...
+       let playerAction: PlayerActionResult?  // NEW
+   }
+
+   struct PlayerActionResult {
+       let type: PlayerActionType  // .moved, .attacked, .siphoned, .program
+       let fromPosition: (row: Int, col: Int)
+       let toPosition: (row: Int, col: Int)?
+       let targetPosition: (row: Int, col: Int)?  // for attacks
+   }
+   ```
+
+2. **Keep pre-check logic** in GameScene for player animations, use `processAction()` only for enemy turn data
+
+3. **Defer GameScene refactor** - HeadlessGame works correctly now, GUI can be updated later
+
+### If We Continue
 
 ```swift
+// GameScene simplified flow:
 private func handleAction(_ action: GameAction) {
     let result = gameState.processAction(action)
+    if !result.success { return }
+    if result.exitReached { handleStageComplete(); return }
+    animateActionResult(result)
+}
 
-    if !result.success {
-        return
-    }
-
-    if result.exitReached {
-        handleStageComplete()
-        return
-    }
-
-    updateDisplay()
-
-    if !result.affectedPositions.isEmpty {
-        isAnimating = true
-        animateExplosions(at: result.affectedPositions) { [weak self] in
-            guard let self = self else { return }
-            if result.shouldAdvanceEnemyTurn {
-                self.executeEnemyTurnWithAnimation()
-            } else {
-                self.isAnimating = false
-            }
-        }
-        return
-    }
-
-    if result.shouldAdvanceEnemyTurn {
-        executeEnemyTurnWithAnimation()
-    }
+private func animateActionResult(_ result: ActionResult) {
+    // 1. Animate player action (from result.playerAction)
+    // 2. Animate explosions (from result.affectedPositions)
+    // 3. Animate enemy steps (from result.enemySteps)
 }
 ```
 
-### Simplify keyDown
-
-```swift
-override func keyDown(with event: NSEvent) {
-    guard !isAnimating else { return }
-
-    if isGameOver && event.keyCode == 15 {
-        restartGame()
-        return
-    }
-
-    guard gameState.player.health != .dead else { return }
-
-    let action: GameAction?
-
-    if event.keyCode == 1 {
-        action = .siphon
-    } else if let programType = getProgramForKeyCode(event.keyCode) {
-        action = .program(programType)
-    } else {
-        switch event.keyCode {
-        case 126: action = .move(.up)
-        case 125: action = .move(.down)
-        case 123: action = .move(.left)
-        case 124: action = .move(.right)
-        default: action = nil
-        }
-    }
-
-    if let action = action {
-        handleAction(action)
-    }
-}
-```
-
-### Simplify mouseDown
-
-Similar - extract to just create GameAction, then call handleAction.
-
 ---
 
-## Phase 5 (Future): Decouple Animation from Game Logic
+## Benefits Achieved
 
-Current problem: `executeAndAnimateEnemyStep()` calls `gameState.executeEnemyStep()` - view driving model.
-
-Solution: Callback-based architecture where GameState drives execution and provides animation hooks. Defer this for now.
-
----
-
-## Files Modified
-
-1. **GameState.swift**
-   - Add ActionResult struct
-   - Add processAction() method
-   - Add executeSynchronousEnemyTurn() method
-
-2. **HeadlessGame.swift**
-   - Replace step() with processAction-based implementation
-
-3. **GameScene.swift**
-   - Add handleAction() helper
-   - Simplify keyDown
-   - Simplify mouseDown
-
----
-
-## Execution Order
-
-1. ~~Fix stepActive bug~~ (DONE)
-2. Phase 1: Add processAction to GameState
-3. Phase 2: Add executeSynchronousEnemyTurn
-4. Phase 3: Update HeadlessGame (fixes ML training bug)
-5. Phase 4: Refactor GameScene input
-6. Phase 5: Decouple animation (future)
+- ✅ Single code path for game logic (`processAction()`)
+- ✅ HeadlessGame is trivially simple
+- ✅ Enemy turn bug fixed (enemies now move in ML training)
+- ⏳ GUI animates from data (pending GameScene refactor)
