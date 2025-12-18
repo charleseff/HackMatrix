@@ -16,7 +16,7 @@ class HackEnv(gym.Env):
 
     metadata = {"render_modes": []}
 
-    def __init__(self, app_path: str = "../DerivedData/868-hack/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack"):
+    def __init__(self, app_path: str = "../DerivedData/Build/Products/Debug/868-hack.app/Contents/MacOS/868-hack"):
         """
         Initialize the environment.
 

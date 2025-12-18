@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(python test_env.py:*)",
+      "Bash(source:*)",
+      "Bash(xargs ls:*)"
     ]
   }
 }
