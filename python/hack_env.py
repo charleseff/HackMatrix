@@ -82,7 +82,7 @@ class HackEnv(gym.Env):
         stderr_log = open(f"/tmp/swift_{mode}.log", "w")
 
         self.process = subprocess.Popen(
-            [self.app_path, flag],
+            [self.app_path, flag, "--debug-scenario"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=stderr_log,  # Write Swift debug output to log file

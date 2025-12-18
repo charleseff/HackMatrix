@@ -427,9 +427,10 @@ class GameScene: SKScene {
         buttonsNode.name = "programButtons"
 
         // Use programs in acquisition order
-        let buttonWidth: CGFloat = 80
-        let buttonHeight: CGFloat = 35
-        let buttonSpacing: CGFloat = 5
+        let buttonWidth: CGFloat = 65
+        let buttonHeight: CGFloat = 32
+        let buttonSpacing: CGFloat = 3
+        let buttonsPerRow = 8  // Fit within 600px window: 8 * 68 = 544px
         let startX: CGFloat = 10
         let startY: CGFloat = size.height - 120 // Below HUD
 
@@ -437,9 +438,9 @@ class GameScene: SKScene {
             let program = Program(type: programType)
             let check = gameState.canExecuteProgram(programType)
 
-            // Calculate position (wrap to new row every 10 buttons)
-            let column = index % 10
-            let row = index / 10
+            // Calculate position (wrap to new row based on buttonsPerRow)
+            let column = index % buttonsPerRow
+            let row = index / buttonsPerRow
             let xPos = startX + CGFloat(column) * (buttonWidth + buttonSpacing)
             let yPos = startY - CGFloat(row) * (buttonHeight + buttonSpacing)
 

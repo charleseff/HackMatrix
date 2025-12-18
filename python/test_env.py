@@ -24,12 +24,12 @@ def test_basic_functionality(visual=False, steps=5, delay=0.0):
     env = HackEnv(visual=visual)
     print("✓ Environment created")
 
-    # Reset
-    obs, info = env.reset()
-    print(f"✓ Environment reset")
-    print(f"  Player state: {obs['player']}")
-    print(f"  Grid shape: {obs['grid'].shape}")
-    print(f"  Flags: {obs['flags']}")
+    # Reset not needed:
+    # obs, info = env.reset()
+    # print(f"✓ Environment reset")
+    # print(f"  Player state: {obs['player']}")
+    # print(f"  Grid shape: {obs['grid'].shape}")
+    # print(f"  Flags: {obs['flags']}")
 
     # Get valid actions
     valid_actions = env.get_valid_actions()
@@ -66,7 +66,7 @@ def test_basic_functionality(visual=False, steps=5, delay=0.0):
 if __name__ == "__main__":
     # Check for --visual flag
     visual = "--visual" in sys.argv
-    steps = 20 if visual else 5
-    delay = 0.5 if visual else 0.0
+    steps = 1000 if visual else 5
+    delay = 0
 
     test_basic_functionality(visual=visual, steps=steps, delay=delay)

@@ -91,12 +91,12 @@ class GameState {
         state.player = Player(row: 3, col: 1)
         state.player.health = .full
         state.player.score = 5
-        state.player.credits = 12
-        state.player.energy = 16
+        state.player.credits = 120
+        state.player.energy = 160
         state.player.dataSiphons = 0
 
         // Add owned programs (example - adjust as needed)
-        state.ownedPrograms = [.col, .row, .warp]
+        state.ownedPrograms = [.col, .row, .warp, .crash, .exch, .show, .reset, .dBomb, .antiV, .calm, .delay, .atkPlus, .debug, .reduc, .score, .hack]
 
         // Place enemies
         let virus = Enemy(type: .virus, row: 1, col: 1)
