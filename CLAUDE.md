@@ -4,6 +4,18 @@
 
 - **Plan files** go in `plans/` directory
 
+### Git Workflow
+
+- **Always create a new branch** for any non-trivial work
+- Branch naming: descriptive kebab-case (e.g., `reward-system-refactor`, `fix-movement-bug`)
+- Workflow:
+  1. Create branch: `git checkout -b feature-name`
+  2. Make changes and test thoroughly
+  3. Review code before committing
+  4. Commit with descriptive messages
+  5. Merge to main when complete and tested
+  6. Delete feature branch after merge
+
 ---
 
 ## Turn Structure
