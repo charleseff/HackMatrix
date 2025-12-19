@@ -12,6 +12,36 @@ enum ProgramType: String, CaseIterable {
     var displayName: String {
         return rawValue.uppercased()
     }
+
+    /// Explicit action index for this program (used in ML training)
+    /// Actions 0-4 are reserved for directions and siphon
+    var actionIndex: Int {
+        switch self {
+        case .push: return 5
+        case .pull: return 6
+        case .crash: return 7
+        case .warp: return 8
+        case .poly: return 9
+        case .wait: return 10
+        case .debug: return 11
+        case .row: return 12
+        case .col: return 13
+        case .undo: return 14
+        case .step: return 15
+        case .siphPlus: return 16
+        case .exch: return 17
+        case .show: return 18
+        case .reset: return 19
+        case .calm: return 20
+        case .dBomb: return 21
+        case .delay: return 22
+        case .antiV: return 23
+        case .score: return 24
+        case .reduc: return 25
+        case .atkPlus: return 26
+        case .hack: return 27
+        }
+    }
 }
 
 struct ProgramCost {

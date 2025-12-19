@@ -30,6 +30,7 @@ class ObservationBuilder {
             turn: gameState.turnCount,
             dataSiphons: gameState.player.dataSiphons,
             baseAttack: gameState.player.attackDamage,
+            score: gameState.player.score,
             cells: cells,
             cryptogHints: cryptogHints,
             showActivated: gameState.showActivated
@@ -81,6 +82,7 @@ class ObservationBuilder {
                     isSiphoned: cell.isSiphoned,
                     points: points,
                     programType: nil,
+                    programActionIndex: nil,
                     transmissionSpawnCount: transmissionSpawn
                 )
 
@@ -91,6 +93,7 @@ class ObservationBuilder {
                     isSiphoned: cell.isSiphoned,
                     points: 0,  // Programs don't give points
                     programType: program.type.rawValue,
+                    programActionIndex: program.type.actionIndex,
                     transmissionSpawnCount: transmissionSpawn
                 )
 
@@ -101,6 +104,7 @@ class ObservationBuilder {
                     isSiphoned: cell.isSiphoned,
                     points: cell.isSiphoned ? points : nil,
                     programType: cell.isSiphoned ? program?.type.rawValue : nil,
+                    programActionIndex: cell.isSiphoned ? program?.type.actionIndex : nil,
                     transmissionSpawnCount: cell.isSiphoned ? transmissionSpawn : nil
                 )
             }

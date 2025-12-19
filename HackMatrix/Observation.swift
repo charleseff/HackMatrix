@@ -13,6 +13,7 @@ struct GameObservation {
     let turn: Int
     let dataSiphons: Int
     let baseAttack: Int
+    let score: Int
 
     let cells: [[CellObservation]]
     let cryptogHints: [(row: Int, col: Int)]  // Last known positions for purple borders
@@ -53,7 +54,8 @@ struct BlockObservation {
     // - Program blocks: always visible (regardless of isSiphoned)
     // - Question blocks: only visible if isSiphoned
     let points: Int?
-    let programType: String?
+    let programType: String?  // Program name (for debugging)
+    let programActionIndex: Int?  // Explicit action index (5-27) for ML training
     let transmissionSpawnCount: Int?
 }
 

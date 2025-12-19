@@ -37,23 +37,24 @@ class HackEnv(gym.Env):
         self.debug_scenario = debug_scenario
         self.process: Optional[subprocess.Popen] = None
 
-        # Action space: 31 discrete actions (4 moves + 1 siphon + 26 programs)
-        self.action_space = spaces.Discrete(31)
+        # Action space: 28 discrete actions (4 moves + 1 siphon + 23 programs)
+        self.action_space = spaces.Discrete(28)
 
         # Observation space: Multi-part observation
         # We'll use a Dict space with the main components
         self.observation_space = spaces.Dict({
-            # Player state (9 values)
+            # Player state (10 values)
             "player": spaces.Box(
-                low=np.array([0, 0, 0, 0, 0, 1, 0, 0, 1]),  # row, col, hp, credits, energy, stage, turn, siphons, attack
-                high=np.array([5, 5, 3, 999, 999, 8, 9999, 99, 2]),
+                low=np.array([0, 0, 0, 0, 0, 1, 0, 0, 1, 0]),  # row, col, hp, credits, energy, stage, turn, siphons, attack, score
+                high=np.array([5, 5, 3, 999, 999, 8, 9999, 99, 2, 9999]),
                 dtype=np.int32
             ),
 
             # Grid state: 6x6x20 (20 features per cell)
-            # Features: enemy_type(4), enemy_hp(1), enemy_stunned(1),
-            #           block_type(3), block_points(1), block_siphoned(1),
-            #           transmission_turns(1), transmission_type(4),
+            # Features: enemy_type(1), enemy_hp(1), enemy_stunned(1),
+            #           block_type(1), block_points(1), block_siphoned(1),
+            #           program_action_index(1), transmission_spawn_count(1),
+            #           transmission_turns(1),
             #           credits(1), energy(1), is_siphon(1), is_exit(1)
             "grid": spaces.Box(
                 low=0, high=999,
@@ -136,7 +137,8 @@ class HackEnv(gym.Env):
             obs_dict["stage"],
             obs_dict["turn"],
             obs_dict["dataSiphons"],
-            obs_dict["baseAttack"]
+            obs_dict["baseAttack"],
+            obs_dict["score"]
         ], dtype=np.int32)
 
         # Grid state (6x6x20)
@@ -165,10 +167,12 @@ class HackEnv(gym.Env):
                     features.extend([
                         block_types.get(block["blockType"], 0),
                         block.get("points", 0),
-                        1 if block["isSiphoned"] else 0
+                        1 if block["isSiphoned"] else 0,
+                        block.get("programActionIndex", 0),  # Action index (5-27) from Swift, 0 if not a program
+                        block.get("transmissionSpawnCount", 0)  # Transmission spawn count
                     ])
                 else:
-                    features.extend([0, 0, 0])
+                    features.extend([0, 0, 0, 0, 0])
 
                 # Transmission features (2)
                 if "transmission" in cell:

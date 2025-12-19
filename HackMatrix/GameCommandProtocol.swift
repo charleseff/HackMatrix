@@ -96,6 +96,7 @@ class StdinCommandReader {
             "turn": obs.turn,
             "dataSiphons": obs.dataSiphons,
             "baseAttack": obs.baseAttack,
+            "score": obs.score,
             "showActivated": obs.showActivated,
         ]
 
@@ -126,6 +127,7 @@ class StdinCommandReader {
                     ]
                     if let points = block.points { blockDict["points"] = points }
                     if let program = block.programType { blockDict["programType"] = program }
+                    if let actionIndex = block.programActionIndex { blockDict["programActionIndex"] = actionIndex }
                     if let spawn = block.transmissionSpawnCount { blockDict["transmissionSpawnCount"] = spawn }
                     cellDict["block"] = blockDict
                 }
