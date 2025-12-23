@@ -1,8 +1,8 @@
 """
-Test script for the HackMatrix environment.
+Test script for the HackMatrix environment - takes random actions to verify functionality.
 """
 
-from hack_env import HackEnv
+from hackmatrix import HackEnv
 import numpy as np
 import time
 import sys

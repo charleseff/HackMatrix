@@ -1,8 +1,8 @@
 """
-Test script to inspect observation structure and verify all game state is captured.
+Inspect observation space structure and verify all game state is captured.
 """
 
-from hack_env import HackEnv
+from hackmatrix import HackEnv
 import json
 import numpy as np
 

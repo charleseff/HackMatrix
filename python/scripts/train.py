@@ -12,7 +12,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from hack_env import HackEnv
+from hackmatrix import HackEnv
 
 
 def mask_fn(env: HackEnv) -> np.ndarray:

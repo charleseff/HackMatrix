@@ -7,7 +7,7 @@ import sys
 import argparse
 from pathlib import Path
 from sb3_contrib import MaskablePPO
-from hack_env import HackEnv
+from hackmatrix import HackEnv
 
 
 def watch_agent(model_path: str, episodes: int = 3, max_steps: int = 500, debug: bool = False, info: bool = False):
