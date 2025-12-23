@@ -2,20 +2,24 @@ import Foundation
 
 struct Pathfinding {
     /// Find the next move for an enemy to get closer to the player using BFS
-    /// When multiple moves are equally good, randomly picks one
+    /// When multiple moves are equally good, applies tie-breaking based on enemy type:
+    /// - Cryptogs prefer moves that keep them hidden (not in same row/col as player)
+    /// - Glitches prefer moves on top of blocks
+    /// - Other enemies pick randomly
     static func findNextMove(
         from start: (row: Int, col: Int),
         to target: (row: Int, col: Int),
         grid: Grid,
         canMoveOnBlocks: Bool,
-        occupiedPositions: Set<String>
+        occupiedPositions: Set<String>,
+        enemyType: EnemyType? = nil
     ) -> (row: Int, col: Int)? {
 
         // Try pathfinding with enemy collision avoidance first
         let candidateMoves = findPath(from: start, to: target, grid: grid, canMoveOnBlocks: canMoveOnBlocks, occupiedPositions: occupiedPositions)
         if !candidateMoves.isEmpty {
-            // Randomly pick one of the equally good moves
-            let chosenKey = candidateMoves.randomElement()!
+            // Apply tie-breaking if multiple moves available
+            let chosenKey = selectBestMove(from: candidateMoves, enemyType: enemyType, playerPosition: target, grid: grid)
             let parts = chosenKey.split(separator: ",")
             return (Int(parts[0])!, Int(parts[1])!)
         }
@@ -30,14 +34,50 @@ struct Pathfinding {
         }
 
         if !validMoves.isEmpty {
-            // Randomly pick one of the valid moves
-            let chosenKey = validMoves.randomElement()!
+            // Apply tie-breaking if multiple moves available
+            let chosenKey = selectBestMove(from: validMoves, enemyType: enemyType, playerPosition: target, grid: grid)
             let parts = chosenKey.split(separator: ",")
             return (Int(parts[0])!, Int(parts[1])!)
         }
 
         // No path found at all - stay in place
         return nil
+    }
+
+    /// Select best move from candidates based on enemy type preferences
+    private static func selectBestMove(from candidates: Set<String>, enemyType: EnemyType?, playerPosition: (row: Int, col: Int), grid: Grid) -> String {
+        guard candidates.count > 1, let type = enemyType else {
+            // Only one option or no type info - return random
+            return candidates.randomElement()!
+        }
+
+        let candidateArray = Array(candidates)
+
+        switch type {
+        case .cryptog:
+            // Prefer moves that keep Cryptog hidden (not in same row/col as player)
+            let hiddenMoves = candidateArray.filter { moveKey in
+                let parts = moveKey.split(separator: ",")
+                let row = Int(parts[0])!
+                let col = Int(parts[1])!
+                return row != playerPosition.row && col != playerPosition.col
+            }
+            return hiddenMoves.isEmpty ? candidates.randomElement()! : hiddenMoves.randomElement()!
+
+        case .glitch:
+            // Prefer moves on top of blocks
+            let blockMoves = candidateArray.filter { moveKey in
+                let parts = moveKey.split(separator: ",")
+                let row = Int(parts[0])!
+                let col = Int(parts[1])!
+                return grid.cells[row][col].hasBlock
+            }
+            return blockMoves.isEmpty ? candidates.randomElement()! : blockMoves.randomElement()!
+
+        default:
+            // No special preference - random selection
+            return candidates.randomElement()!
+        }
     }
 
     /// Internal pathfinding implementation using BFS

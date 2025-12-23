@@ -1025,7 +1025,8 @@ class GameState {
                     to: (player.row, player.col),
                     grid: grid,
                     canMoveOnBlocks: enemy.type.canMoveOnBlocks,
-                    occupiedPositions: occupiedPositions
+                    occupiedPositions: occupiedPositions,
+                    enemyType: enemy.type
                 ) {
                     // Move the enemy immediately
                     enemy.row = nextMove.row
