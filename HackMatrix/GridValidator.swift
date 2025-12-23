@@ -1,16 +1,16 @@
 import Foundation
 
 struct GridValidator {
-    /// Check if all non-block, non-exit cells are connected (no isolated areas)
-    /// Exit is treated as a wall because stepping on it ends the stage
+    /// Check if all non-block cells are connected (no isolated areas)
+    /// Exit is treated as walkable to ensure player can reach it
     static func isPathConnected(grid: Grid) -> Bool {
         var walkableCells: [(Int, Int)] = []
 
-        // Find all walkable cells (not blocks, not exit)
+        // Find all walkable cells (not blocks)
         for row in 0..<Constants.gridSize {
             for col in 0..<Constants.gridSize {
                 let cell = grid.cells[row][col]
-                if !cell.hasBlock && !cell.isExit {
+                if !cell.hasBlock {
                     walkableCells.append((row, col))
                 }
             }
@@ -39,7 +39,7 @@ struct GridValidator {
                 guard !visited.contains(key) else { continue }
 
                 let cell = grid.cells[newRow][newCol]
-                guard !cell.hasBlock && !cell.isExit else { continue }
+                guard !cell.hasBlock else { continue }
 
                 visited.insert(key)
                 queue.append((newRow, newCol))
