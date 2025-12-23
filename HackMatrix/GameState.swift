@@ -1873,7 +1873,7 @@ extension GameState {
                 currentActionEnemiesKilled += 1
             }
         }
-        removeDeadEnemies()
+        enemies.removeAll(where: { $0.hp <= 0 })
     }
 
     /// Remove specific enemy and track kill (excludes scheduled task spawns)

@@ -48,7 +48,7 @@ class HeadlessGame {
 
         if result.stageAdvanced {
             infoLog(
-                "Stage advanced. Step \(String(describing: action)) -> reward: \(String(format: "%.3f", result.reward)), done: \(isDone), stage: \(observation.stage), credits: \(gameState.player.credits), energy: \(gameState.player.energy)"
+                "Advanced to stage \(observation.stage)"
             )
         } else {
             debugLog(

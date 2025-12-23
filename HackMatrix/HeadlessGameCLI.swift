@@ -28,10 +28,9 @@ class HeadlessGameCLI: GameCommandExecutor {
     // MARK: - GameCommandExecutor
 
     func executeReset() -> GameObservation {
-        infoLog("Reset called - creating new game")
         game = HeadlessGame()
         let obs = game!.reset()
-        infoLog("Reset complete - stage \(obs.stage)")
+        infoLog("Reset")
         return obs
     }
 
