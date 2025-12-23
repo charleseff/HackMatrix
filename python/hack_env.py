@@ -275,6 +275,27 @@ class HackEnv(gym.Env):
         if not terminated:
             info["action_mask"] = self._get_action_mask()
 
+        # Visual CLI mode: Print action, reward, and key observation values
+        if self.visual:
+            action_names = ["Up", "Down", "Left", "Right", "Siphon"] + [f"Prog{i}" for i in range(5, 31)]
+            action_name = action_names[action] if action < len(action_names) else f"Unknown({action})"
+
+            # Decode player state for display
+            player = observation["player"]
+            print(f"\n{'='*60}")
+            print(f"ACTION: {action_name} (index={action})")
+            print(f"REWARD: {reward:+.3f}")
+            print(f"Player: row={player[0]:.2f} col={player[1]:.2f} hp={player[2]:.2f} "
+                  f"credits={player[3]:.2f} energy={player[4]:.2f} stage={player[5]:.2f}")
+            print(f"Status: siphons={player[6]:.2f} attack={player[7]:.2f} "
+                  f"show={int(player[8])} calm={int(player[9])}")
+            owned_programs = np.where(observation["programs"] == 1)[0] + 5
+            print(f"Owned Programs: {list(owned_programs)}")
+            if terminated:
+                print(f"TERMINATED: {'Victory!' if player[5] > 0.875 else 'Defeated'}")
+            print(f"{'='*60}\n")
+            sys.stdout.flush()
+
         return observation, reward, terminated, truncated, info
 
     def get_valid_actions(self) -> List[int]:
