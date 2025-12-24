@@ -149,6 +149,16 @@ def train(
         model.save(interrupted_model_path)
         print(f"Model saved to: {interrupted_model_path}")
 
+    except RuntimeError as e:
+        print(f"\n❌ Training crashed: {e}")
+        print("Swift process likely crashed - check logs for details")
+        crash_model_path = os.path.join(run_model_dir, "crash_recovery_model")
+        model.save(crash_model_path)
+        print(f"✓ Model saved to: {crash_model_path}")
+        print(f"\nTo resume training:")
+        print(f"  python scripts/train.py --resume {crash_model_path} --timesteps <remaining>")
+        raise  # Re-raise to show full traceback
+
     finally:
         env.close()
         eval_env.close()
