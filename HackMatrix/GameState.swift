@@ -827,6 +827,7 @@ class GameState {
         let playerAction: PlayerActionResult?  // nil if action failed
         let affectedPositions: [(row: Int, col: Int)]  // for explosion animations
         let enemySteps: [EnemyStepResult]  // for enemy movement animations
+        let dataSiphonCollected: Bool  // whether a data siphon was collected this action
         let reward: Double  // calculated reward for RL training
 
         static let failed = ActionResult(
@@ -838,6 +839,7 @@ class GameState {
             playerAction: nil,
             affectedPositions: [],
             enemySteps: [],
+            dataSiphonCollected: false,
             reward: 0.0
         )
     }
@@ -867,6 +869,7 @@ class GameState {
         var programsAcquired = 0
         var creditsGained = 0
         var energyGained = 0
+        var dataSiphonCollected = false
 
         // 1. Handle player action
         switch action {
@@ -876,6 +879,7 @@ class GameState {
             exitReached = result.exitReached
             movedTo = result.movedTo
             attackedTarget = result.attackedTarget
+            dataSiphonCollected = result.dataSiphonCollected
             shouldRunEnemyTurn = success && !exitReached
 
         case .siphon:
@@ -936,7 +940,8 @@ class GameState {
             programsAcquired: programsAcquired,
             creditsGained: creditsGained,
             energyGained: energyGained,
-            totalKills: totalKills
+            totalKills: totalKills,
+            dataSiphonCollected: dataSiphonCollected
         )
 
         return ActionResult(
@@ -948,6 +953,7 @@ class GameState {
             playerAction: playerAction,
             affectedPositions: affectedPositions,
             enemySteps: enemySteps,
+            dataSiphonCollected: dataSiphonCollected,
             reward: reward
         )
     }
@@ -1640,7 +1646,7 @@ class GameState {
     }
 
     /// Try to move player in direction, or attack if target in line of fire
-    func tryAttackOrMove(direction: Direction) -> (success: Bool, exitReached: Bool, movedTo: (row: Int, col: Int)?, attackedTarget: (row: Int, col: Int)?) {
+    func tryAttackOrMove(direction: Direction) -> (success: Bool, exitReached: Bool, movedTo: (row: Int, col: Int)?, attackedTarget: (row: Int, col: Int)?, dataSiphonCollected: Bool) {
         // Check for transmission in line of fire
         let targetResult = findTargetInLineOfFire(direction: direction)
 
@@ -1648,7 +1654,7 @@ class GameState {
             // Destroy the transmission (1 HP)
             let targetPos = (transmission.row, transmission.col)
             removeTransmission(where: { $0.id == transmission.id })
-            return (true, false, nil, targetPos)
+            return (true, false, nil, targetPos, false)
         }
 
         if let enemy = targetResult.enemy {
@@ -1663,7 +1669,7 @@ class GameState {
                 // Remove dead enemy
                 removeEnemy(where: { $0.id == enemy.id })
             }
-            return (true, false, nil, targetPos)
+            return (true, false, nil, targetPos, false)
         }
 
         // No target to attack, try to move
@@ -1677,22 +1683,24 @@ class GameState {
 
             // Collect resources/siphons
             let cell = grid.cells[newRow][newCol]
+            var collectedSiphon = false
             if cell.hasDataSiphon {
                 player.dataSiphons += 1
                 cell.content = .empty
+                collectedSiphon = true
             }
 
             let movedTo = (newRow, newCol)
 
             // Check for exit
             if cell.isExit {
-                return (true, true, movedTo, nil)
+                return (true, true, movedTo, nil, collectedSiphon)
             }
 
-            return (true, false, movedTo, nil)
+            return (true, false, movedTo, nil, collectedSiphon)
         }
 
-        return (false, false, nil, nil)
+        return (false, false, nil, nil, false)
     }
 
     /// Complete current stage and advance to next (or mark victory)
@@ -1825,24 +1833,29 @@ extension GameState {
     ///   - gameWon: Whether player won the game
     ///   - stageAdvanced: Whether stage was completed
     /// - Returns: Reward value for RL training
-    func calculateReward(oldScore: Int, oldHP: Int, playerDied: Bool, gameWon: Bool, stageAdvanced: Bool, blocksSiphoned: Int, programsAcquired: Int, creditsGained: Int, energyGained: Int, totalKills: Int) -> Double {
+    func calculateReward(oldScore: Int, oldHP: Int, playerDied: Bool, gameWon: Bool, stageAdvanced: Bool, blocksSiphoned: Int, programsAcquired: Int, creditsGained: Int, energyGained: Int, totalKills: Int, dataSiphonCollected: Bool) -> Double {
         let scoreDelta = Double(player.score - oldScore)
         var reward = scoreDelta * 0.1
 
         // Reward shaping: encourage siphoning and acquiring programs
-        reward += Double(blocksSiphoned) * 0.05  // Small reward for siphoning blocks
-        reward += Double(programsAcquired) * 0.1  // Larger reward for acquiring new programs
+        reward += Double(blocksSiphoned) * 0.1  // Small reward for siphoning blocks
+        reward += Double(programsAcquired) * 0.2  // Larger reward for acquiring new programs
 
         // Reward collecting resources during siphoning
-        reward += Double(creditsGained) * 0.01  // Small reward for collecting credits
-        reward += Double(energyGained) * 0.01   // Small reward for collecting energy
+        reward += Double(creditsGained) * 0.05  // Small reward for collecting credits
+        reward += Double(energyGained) * 0.05   // Small reward for collecting energy
+
+        // Data siphon reward: significant reward for collecting data siphons
+        if dataSiphonCollected {
+            reward += 1.0
+        }
 
         // Kill rewards: encourage eliminating threats (excludes scheduled task spawns)
-        reward += Double(totalKills) * 0.2  // Enemies + transmissions killed
+        reward += Double(totalKills) * 0.3  // Enemies + transmissions killed
 
         // HP-based rewards: encourage avoiding damage and valuing HP
         let hpChange = player.health.rawValue - oldHP
-        reward += Double(hpChange) * 2.0  // -2 for taking damage, +2 for healing
+        reward += Double(hpChange) * 1.0  // -2 for taking damage, +2 for healing
 
         // Terminal state rewards
         if playerDied {
