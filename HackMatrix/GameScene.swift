@@ -654,6 +654,9 @@ override func keyDown(with event: NSEvent) {
             return
         }
 
+        // Block all other input if game is over
+        guard !isGameOver else { return }
+
         // Handle siphon action
         if event.keyCode == 1 { // S key
             tryExecuteActionAndAnimate(.siphon)
@@ -731,7 +734,7 @@ override func mouseDown(with event: NSEvent) {
         guard !isAnimating else { return }
         guard gameState.player.health != .dead else { return }
 
-        let result = gameState.tryExecuteAction(action)
+        let result: GameState.ActionResult = gameState.tryExecuteAction(action)
         guard result.success else { return }
 
         // Log reward for manual testing/debugging
@@ -887,6 +890,8 @@ override func mouseDown(with event: NSEvent) {
     }
 
     func showVictory() {
+        isGameOver = true
+
         // Save high score (completed all stages)
         HighScoreManager.shared.addScore(
             score: gameState.player.score,
@@ -894,10 +899,35 @@ override func mouseDown(with event: NSEvent) {
             stage: gameState.currentStage
         )
 
-        let victoryLabel = SKLabelNode(text: "VICTORY! Final Score: \(gameState.player.score)")
-        victoryLabel.fontSize = 48
+        // Hide game board - remove all children (grid, UI, etc.)
+        removeAllChildren()
+
+        // Create victory screen with stats
+        let victoryLabel = SKLabelNode(text: "🎉 VICTORY! 🎉")
+        victoryLabel.fontSize = 56
         victoryLabel.fontColor = .green
-        victoryLabel.position = CGPoint(x: 0, y: 0)
+        victoryLabel.position = CGPoint(x: size.width / 2, y: size.height / 2 + 100)
         addChild(victoryLabel)
+
+        // Show final score
+        let scoreLabel = SKLabelNode(text: "Final Score: \(gameState.player.score)")
+        scoreLabel.fontSize = 40
+        scoreLabel.fontColor = .white
+        scoreLabel.position = CGPoint(x: size.width / 2, y: size.height / 2 + 30)
+        addChild(scoreLabel)
+
+        // Show stats
+        let statsLabel = SKLabelNode(text: "Stage 8/8 Complete")
+        statsLabel.fontSize = 28
+        statsLabel.fontColor = .cyan
+        statsLabel.position = CGPoint(x: size.width / 2, y: size.height / 2 - 30)
+        addChild(statsLabel)
+
+        // Add restart instruction
+        let restartLabel = SKLabelNode(text: "Press R to start new game")
+        restartLabel.fontSize = 24
+        restartLabel.fontColor = .white
+        restartLabel.position = CGPoint(x: size.width / 2, y: size.height / 2 - 100)
+        addChild(restartLabel)
     }
 }
