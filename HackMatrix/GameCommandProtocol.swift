@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Game Command Protocol
+
 // Protocol for game command execution
 // Implemented by both HeadlessGameCLI and GameScene for stdin/stdout control
 protocol GameCommandExecutor: AnyObject {
@@ -8,17 +10,23 @@ protocol GameCommandExecutor: AnyObject {
     func executeGetValidActions() -> [Int]
 }
 
+// MARK: - Command Structure
+
 // Command structure for JSON decoding
 struct Command: Codable {
     let action: String
     let actionIndex: Int?
 }
 
+// MARK: - Stdin Command Reader
+
 // Shared stdin/stdout command reader
 // Reads JSON commands from stdin, calls executor, writes JSON to stdout
 class StdinCommandReader {
     weak var executor: GameCommandExecutor?
     private var outputFile: FileHandle?
+
+    // MARK: Command Processing
 
     func start() {
         // Save original stdout for JSON output
@@ -84,6 +92,8 @@ class StdinCommandReader {
             sendError("Unknown command: \(command.action)")
         }
     }
+
+    // MARK: Observation Encoding
 
     private func encodeObservation(_ obs: GameObservation) -> [String: Any] {
         var result: [String: Any] = [
@@ -156,6 +166,8 @@ class StdinCommandReader {
 
         return result
     }
+
+    // MARK: JSON Response Handling
 
     private func sendResponse(_ data: [String: Any]) {
         guard let output = outputFile else { return }

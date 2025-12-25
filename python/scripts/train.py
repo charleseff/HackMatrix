@@ -2,6 +2,8 @@
 Train a MaskablePPO agent to play HackMatrix with action masking.
 """
 
+# MARK: Imports
+
 import os
 from datetime import datetime
 import numpy as np
@@ -16,10 +18,14 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from hackmatrix import HackEnv
 
 
+# MARK: Helper Functions
+
 def mask_fn(env: HackEnv) -> np.ndarray:
     """Return action mask for current state."""
     return env._get_action_mask()
 
+
+# MARK: Training Function
 
 def train(
         total_timesteps: int = 1_000_000,
@@ -46,6 +52,7 @@ def train(
         info: Enable info-level logging (less verbose)
         num_envs: Number of parallel environments (1=single, 4-8=parallel)
     """
+    # MARK: Setup Directories
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
 
@@ -64,6 +71,7 @@ def train(
         run_model_dir = os.path.join(model_dir, f"maskable_ppo_{timestamp}")
         os.makedirs(run_model_dir, exist_ok=True)
 
+    # MARK: Configure Logging
     if debug:
         print("⚠️  Debug mode: ENABLED (verbose logging)")
     elif info:
@@ -73,6 +81,8 @@ def train(
         print(f"🚀 Parallel mode: {num_envs} environments")
     else:
         print("📍 Single environment mode")
+
+    # MARK: Create Environments
 
     def make_env():
         """Create and wrap the environment."""
@@ -92,6 +102,8 @@ def train(
     print("Creating eval environment...")
     # Always use single environment for evaluation (deterministic)
     eval_env = DummyVecEnv([make_env])
+
+    # MARK: Initialize Model
 
     if resume_path:
         print(f"Resuming training from: {resume_path}")
@@ -119,6 +131,8 @@ def train(
             ent_coef=0.1,  # High exploration to prevent entropy collapse
         )
 
+    # MARK: Setup Callbacks
+
     # Adjust save_freq for parallel environments (save_freq is per-environment)
     # With 4 envs and save_freq=10000, we save every 10000/(4 envs) = 2500 steps per env
     checkpoint_save_freq = max(save_freq // num_envs, 1)
@@ -144,6 +158,8 @@ def train(
         n_eval_episodes=5,
         use_masking=True  # Enable action masking during evaluation
     )
+
+    # MARK: Training Loop
 
     print(f"\nStarting training for {total_timesteps:,} timesteps...")
     print(f"Logs: {run_log_dir}")
@@ -191,6 +207,8 @@ def train(
         except (BrokenPipeError, EOFError):
             pass  # Subprocesses already dead after Ctrl-C
 
+
+# MARK: Command-Line Interface
 
 if __name__ == "__main__":
     import argparse

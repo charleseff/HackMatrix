@@ -39,7 +39,11 @@ enum GameAction: Equatable, Hashable {
     }
 }
 
+// MARK: - GameState
+
 class GameState {
+    // MARK: Properties
+
     var player: Player
     var grid: Grid
     var enemies: [Enemy]
@@ -60,6 +64,8 @@ class GameState {
     var totalEnemiesKilled: Int = 0
     var totalProgramUses: Int = 0
 
+    // MARK: Initialization
+
     init() {
         self.grid = Grid()
         self.currentStage = 1
@@ -79,6 +85,11 @@ class GameState {
         self.player = Player(row: playerCorner.0, col: playerCorner.1)
 
         initializeStage()
+        debugLog("GameState", "🟢 ALLOCATED")
+    }
+
+    deinit {
+        debugLog("GameState", "🔴 DEALLOCATED (had \(gameHistory.count) snapshots)")
     }
 
     /// Debug initializer to reproduce specific scenarios
@@ -193,6 +204,8 @@ class GameState {
 
         return state
     }
+
+    // MARK: - Stage Setup
 
     func initializeStage() {
         // Keep enemies and transmissions (they persist across stages)
@@ -491,6 +504,8 @@ class GameState {
         }
     }
 
+    // MARK: - Enemy & Transmission Management
+
     func maybeExecuteScheduledTask() {
         guard !scheduledTasksDisabled else { return }
 
@@ -582,6 +597,8 @@ class GameState {
         return positions
     }
 
+    // MARK: - Siphon Operations
+
     func performSiphon() -> (success: Bool, blocksSiphoned: Int, programsAcquired: Int, creditsGained: Int, energyGained: Int) {
         // Check if player has data siphons
         guard player.dataSiphons > 0 else {
@@ -671,7 +688,7 @@ class GameState {
         return (true, blocksSiphoned, programsAcquired, creditsGained, energyGained)
     }
 
-    // MARK: - Program Execution
+    // MARK: - Program Validation
 
     /// Check if a program can be executed
     func canExecuteProgram(_ type: ProgramType) -> (canExecute: Bool, reason: String?) {
@@ -800,6 +817,8 @@ class GameState {
         }
     }
 
+    // MARK: - Result Types
+
     /// Result of executing a program
     struct ProgramExecutionResult {
         let success: Bool
@@ -849,6 +868,8 @@ class GameState {
             reward: 0.0
         )
     }
+
+    // MARK: - Action Execution
 
     /// Execute a game action - single entry point for all action processing
     /// Runs player action AND enemy turn (if applicable), returns all data for animation
@@ -1097,6 +1118,8 @@ class GameState {
 
         return EnemyStepResult(step: step, movements: movements, attacks: attacks)
     }
+
+    // MARK: - Program Execution
 
     /// Execute a program's effect
     /// Returns execution result with affected positions for animations
@@ -1742,6 +1765,8 @@ class GameState {
         }
     }
 
+    // MARK: - Valid Actions
+
     /// Get valid actions based on current state
     func getValidActions() -> [GameAction] {
         var actions: [GameAction] = []
@@ -1798,6 +1823,8 @@ class GameState {
         return actions
     }
 }
+
+// MARK: - Supporting Structures
 
 struct GameStateSnapshot {
     let playerRow: Int

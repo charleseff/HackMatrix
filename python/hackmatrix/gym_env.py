@@ -3,6 +3,8 @@ Gymnasium environment wrapper for HackMatrix game.
 Communicates with Swift game via JSON over subprocess.
 """
 
+# MARK: Imports
+
 import json
 import os
 import subprocess
@@ -12,15 +14,21 @@ from typing import Any, Dict, List, Optional, Tuple
 import gymnasium as gym
 from gymnasium import spaces
 
+# MARK: Constants
+
 # Default app path relative to this file (Xcode default location)
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_APP_PATH = os.path.join(_SCRIPT_DIR, "..", "..", "DerivedData", "HackMatrix", "Build", "Products", "Debug", "HackMatrix.app", "Contents", "MacOS", "HackMatrix")
 
 
+# MARK: HackEnv Class
+
 class HackEnv(gym.Env):
     """HackMatrix Gymnasium environment."""
 
     metadata = {"render_modes": []}
+
+    # MARK: Initialization
 
     def __init__(self, app_path: str = _DEFAULT_APP_PATH, visual: bool = False, debug_scenario: bool = False, debug: bool = False, info: bool = False):
         """
@@ -82,6 +90,8 @@ class HackEnv(gym.Env):
         })
 
         self._start_process()
+
+    # MARK: Process Management
 
     def _start_process(self):
         """Start the Swift subprocess."""
@@ -145,6 +155,8 @@ class HackEnv(gym.Env):
             raise RuntimeError(f"Swift error: {response['error']}")
 
         return response
+
+    # MARK: Observation Conversion
 
     def _observation_to_array(self, obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
         """Convert JSON observation to numpy arrays."""
@@ -256,6 +268,8 @@ class HackEnv(gym.Env):
             "grid": grid
         }
 
+    # MARK: Environment Interface
+
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[Dict[str, np.ndarray], Dict]:
         """Reset the environment."""
         super().reset(seed=seed)
@@ -305,6 +319,8 @@ class HackEnv(gym.Env):
 
         return observation, reward, terminated, truncated, info
 
+    # MARK: Action Mask
+
     def get_valid_actions(self) -> List[int]:
         """Get list of valid action indices."""
         response = self._send_command({"action": "getValidActions"})
@@ -323,6 +339,8 @@ class HackEnv(gym.Env):
             sys.stderr.flush()
 
         return mask
+
+    # MARK: Cleanup
 
     def close(self):
         """Clean up resources."""

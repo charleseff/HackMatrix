@@ -2,6 +2,8 @@ import SpriteKit
 import SwiftUI
 
 class GameScene: SKScene {
+    // MARK: Properties
+
     var gameState: GameState!
     var cellNodes: [[SKShapeNode]] = []
     var entityNodes: [UUID: SKNode] = [:]
@@ -12,6 +14,8 @@ class GameScene: SKScene {
 
     // Visual CLI mode controller
     private var visualController: VisualGameController?
+
+    // MARK: - Initialization & Setup
 
     // Called when scene is first presented - initialize game state and UI
     override func didMove(to view: SKView) {
@@ -74,6 +78,8 @@ class GameScene: SKScene {
             cellNodes.append(rowNodes)
         }
     }
+
+    // MARK: - Display & Rendering
 
     func updateDisplay() {
         // Clear entity nodes
@@ -388,6 +394,8 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - HUD & UI
+
     func updateHUD() {
         // Remove old HUD
         childNode(withName: "hud")?.removeFromParent()
@@ -607,6 +615,8 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - Input Handling
+
     // Map keyboard keys to programs for ML-friendly input
     func getProgramForKeyCode(_ keyCode: UInt16) -> ProgramType? {
         // Number keys 1-9 (key codes 18-26) -> first 9 programs
@@ -703,6 +713,8 @@ override func mouseDown(with event: NSEvent) {
             }
         }
     }
+
+    // MARK: - Game Flow Helpers
 
     func restartGame() {
         // Remove all nodes
@@ -865,6 +877,8 @@ override func mouseDown(with event: NSEvent) {
             }
         }
     }
+
+    // MARK: - Game Over Screens
 
     func showGameOver() {
         isGameOver = true
