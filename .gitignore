@@ -11,10 +11,11 @@ DerivedData/
 python/venv/
 python/__pycache__/
 *.pyc
+*.egg-info/
 
 # ML training artifacts
 python/logs/
 python/models/
 old_training_incomplete_obs/
-logs/
+logs*/
 models/
