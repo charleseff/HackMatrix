@@ -25,7 +25,7 @@ class HeadlessGame {
         var info: [String: Any] = [:]
 
         // Process action (handles player action + enemy turn)
-        let result = gameState.tryExecuteAction(action)
+        let result: GameState.ActionResult = gameState.tryExecuteAction(action)
 
         if !result.success {
             // Invalid action - terminate episode to prevent infinite loops

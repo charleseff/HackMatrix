@@ -54,10 +54,6 @@ class GameState {
     var pendingSiphonTransmissions: Int
     var atkPlusUsedThisStage: Bool
 
-    // Kill tracking for current action (excludes scheduled task spawns)
-    private var currentActionEnemiesKilled: Int = 0
-    private var currentActionTransmissionsKilled: Int = 0
-
     // Lifetime stats tracking (for debugging/logging)
     var totalDataSiphonsCollected: Int = 0
     var totalSiphonUses: Int = 0
@@ -95,7 +91,7 @@ class GameState {
         state.enemies = []
         state.transmissions = []
         state.turnCount = 15
-        state.currentStage = 2
+        state.currentStage = 8
 
         // Set player position
         state.player = Player(row: 3, col: 1)
@@ -669,7 +665,7 @@ class GameState {
         // Consume the data siphon
         player.dataSiphons -= 1
         totalSiphonUses += 1
-        infoLog("GameState", "Used data siphon (total uses: \(totalSiphonUses), remaining: \(player.dataSiphons))")
+        // infoLog("GameState", "Used data siphon (total uses: \(totalSiphonUses), remaining: \(player.dataSiphons))")
 
         // Don't advance turn here - let caller handle animated turn flow
         return (true, blocksSiphoned, programsAcquired, creditsGained, energyGained)
@@ -808,6 +804,8 @@ class GameState {
     struct ProgramExecutionResult {
         let success: Bool
         let affectedPositions: [(row: Int, col: Int)]
+        let enemiesKilled: Int
+        let transmissionsKilled: Int
     }
 
     /// Result of a single enemy step (for animation)
@@ -855,9 +853,9 @@ class GameState {
     /// Execute a game action - single entry point for all action processing
     /// Runs player action AND enemy turn (if applicable), returns all data for animation
     func tryExecuteAction(_ action: GameAction) -> ActionResult {
-        // Reset kill counters for this action
-        currentActionEnemiesKilled = 0
-        currentActionTransmissionsKilled = 0
+        // Track kills for this action (local variables, not instance vars)
+        var enemiesKilled = 0
+        var transmissionsKilled = 0
 
         // Capture player position, score, and HP before action
         let fromRow = player.row
@@ -888,6 +886,8 @@ class GameState {
             movedTo = result.movedTo
             attackedTarget = result.attackedTarget
             dataSiphonCollected = result.dataSiphonCollected
+            enemiesKilled += result.enemiesKilled
+            transmissionsKilled += result.transmissionsKilled
             shouldRunEnemyTurn = success && !exitReached
 
         case .siphon:
@@ -904,6 +904,8 @@ class GameState {
             let execResult = executeProgram(programType)
             success = execResult.success
             affectedPositions = execResult.affectedPositions
+            enemiesKilled += execResult.enemiesKilled
+            transmissionsKilled += execResult.transmissionsKilled
             // Only wait program advances enemy turn
             shouldRunEnemyTurn = programType == .wait && success
         }
@@ -937,7 +939,7 @@ class GameState {
 
         // 4. Calculate reward and return everything
         let playerDied = player.health == .dead
-        let totalKills = currentActionEnemiesKilled + currentActionTransmissionsKilled
+        let totalKills = enemiesKilled + transmissionsKilled
         let reward = calculateReward(
             oldScore: oldScore,
             oldHP: oldHP,
@@ -1100,7 +1102,9 @@ class GameState {
     /// Returns execution result with affected positions for animations
     func executeProgram(_ type: ProgramType) -> ProgramExecutionResult {
         let check = canExecuteProgram(type)
-        guard check.canExecute else { return ProgramExecutionResult(success: false, affectedPositions: []) }
+        guard check.canExecute else {
+            return ProgramExecutionResult(success: false, affectedPositions: [], enemiesKilled: 0, transmissionsKilled: 0)
+        }
 
         let program = Program(type: type)
 
@@ -1110,6 +1114,8 @@ class GameState {
         totalProgramUses += 1
 
         var affectedPositions: [(row: Int, col: Int)] = []
+        var enemiesKilled = 0
+        var transmissionsKilled = 0
 
         // Execute program effect
         switch type {
@@ -1150,7 +1156,7 @@ class GameState {
                 affectedPositions.append((daemonRow, daemonCol))
 
                 // Remove the daemon
-                removeEnemy(where: { $0.id == nearestDaemon.id })
+                enemiesKilled += removeEnemy(where: { $0.id == nearestDaemon.id })
 
                 // Damage and stun enemies in 8 surrounding cells
                 for rowOffset in -1...1 {
@@ -1170,7 +1176,7 @@ class GameState {
                 }
 
                 // Remove dead enemies
-                removeDeadEnemies()
+                enemiesKilled += removeDeadEnemies()
             }
 
         case .antiV:
@@ -1182,7 +1188,7 @@ class GameState {
                     enemy.isStunned = true
                 }
             }
-            removeDeadEnemies()
+            enemiesKilled += removeDeadEnemies()
 
         case .delay:
             // Extend transmissions +3 turns
@@ -1250,7 +1256,7 @@ class GameState {
                     enemy.isStunned = true
                 }
             }
-            removeDeadEnemies()
+            enemiesKilled += removeDeadEnemies()
 
         case .col:
             // Attack all enemies in player's column
@@ -1261,7 +1267,7 @@ class GameState {
                     enemy.isStunned = true
                 }
             }
-            removeDeadEnemies()
+            enemiesKilled += removeDeadEnemies()
 
         case .debug:
             // Damage enemies standing on blocks
@@ -1272,7 +1278,7 @@ class GameState {
                     enemy.isStunned = true
                 }
             }
-            removeDeadEnemies()
+            enemiesKilled += removeDeadEnemies()
 
         case .hack:
             // Damage enemies on siphoned cells and show explosions on all siphoned cells
@@ -1292,7 +1298,7 @@ class GameState {
                     enemy.isStunned = true
                 }
             }
-            removeDeadEnemies()
+            enemiesKilled += removeDeadEnemies()
 
         case .push:
             // Push all enemies one cell away from player
@@ -1445,10 +1451,10 @@ class GameState {
                         }
 
                         // Destroy enemies at this position
-                        removeEnemy(where: { $0.row == checkRow && $0.col == checkCol })
+                        enemiesKilled += removeEnemy(where: { $0.row == checkRow && $0.col == checkCol })
 
                         // Destroy transmissions at this position
-                        removeTransmission(where: { $0.row == checkRow && $0.col == checkCol })
+                        transmissionsKilled += removeTransmission(where: { $0.row == checkRow && $0.col == checkCol })
                     }
                 }
             }
@@ -1473,9 +1479,9 @@ class GameState {
 
                 // Destroy the target
                 if target.isEnemy {
-                    removeEnemy(where: { $0.row == target.row && $0.col == target.col })
+                    enemiesKilled += removeEnemy(where: { $0.row == target.row && $0.col == target.col })
                 } else {
-                    removeTransmission(where: { $0.row == target.row && $0.col == target.col })
+                    transmissionsKilled += removeTransmission(where: { $0.row == target.row && $0.col == target.col })
                 }
             }
 
@@ -1493,11 +1499,11 @@ class GameState {
             if restoreSnapshot() {
                 // Successfully restored - no affected positions for animation
             } else {
-                return ProgramExecutionResult(success: false, affectedPositions: [])
+                return ProgramExecutionResult(success: false, affectedPositions: [], enemiesKilled: 0, transmissionsKilled: 0)
             }
         }
 
-        return ProgramExecutionResult(success: true, affectedPositions: affectedPositions)
+        return ProgramExecutionResult(success: true, affectedPositions: affectedPositions, enemiesKilled: enemiesKilled, transmissionsKilled: transmissionsKilled)
     }
 
     /// Find nearest enemy of a specific type
@@ -1657,15 +1663,18 @@ class GameState {
     }
 
     /// Try to move player in direction, or attack if target in line of fire
-    func tryAttackOrMove(direction: Direction) -> (success: Bool, exitReached: Bool, movedTo: (row: Int, col: Int)?, attackedTarget: (row: Int, col: Int)?, dataSiphonCollected: Bool) {
+    func tryAttackOrMove(direction: Direction) -> (success: Bool, exitReached: Bool, movedTo: (row: Int, col: Int)?, attackedTarget: (row: Int, col: Int)?, dataSiphonCollected: Bool, enemiesKilled: Int, transmissionsKilled: Int) {
+        var enemiesKilled = 0
+        var transmissionsKilled = 0
+
         // Check for transmission in line of fire
         let targetResult = findTargetInLineOfFire(direction: direction)
 
         if let transmission = targetResult.transmission {
             // Destroy the transmission (1 HP)
             let targetPos = (transmission.row, transmission.col)
-            removeTransmission(where: { $0.id == transmission.id })
-            return (true, false, nil, targetPos, false)
+            transmissionsKilled += removeTransmission(where: { $0.id == transmission.id })
+            return (true, false, nil, targetPos, false, enemiesKilled, transmissionsKilled)
         }
 
         if let enemy = targetResult.enemy {
@@ -1678,9 +1687,9 @@ class GameState {
                 enemy.isStunned = true
             } else {
                 // Remove dead enemy
-                removeEnemy(where: { $0.id == enemy.id })
+                enemiesKilled += removeEnemy(where: { $0.id == enemy.id })
             }
-            return (true, false, nil, targetPos, false)
+            return (true, false, nil, targetPos, false, enemiesKilled, transmissionsKilled)
         }
 
         // No target to attack, try to move
@@ -1698,7 +1707,7 @@ class GameState {
             if cell.hasDataSiphon {
                 player.dataSiphons += 1
                 totalDataSiphonsCollected += 1
-                infoLog("GameState", "Collected data siphon from cell (total collected: \(totalDataSiphonsCollected), have: \(player.dataSiphons))")
+                // infoLog("GameState", "Collected data siphon from cell (total collected: \(totalDataSiphonsCollected), have: \(player.dataSiphons))")
                 cell.content = .empty
                 collectedSiphon = true
             }
@@ -1707,13 +1716,13 @@ class GameState {
 
             // Check for exit
             if cell.isExit {
-                return (true, true, movedTo, nil, collectedSiphon)
+                return (true, true, movedTo, nil, collectedSiphon, enemiesKilled, transmissionsKilled)
             }
 
-            return (true, false, movedTo, nil, collectedSiphon)
+            return (true, false, movedTo, nil, collectedSiphon, enemiesKilled, transmissionsKilled)
         }
 
-        return (false, false, nil, nil, false)
+        return (false, false, nil, nil, false, enemiesKilled, transmissionsKilled)
     }
 
     /// Complete current stage and advance to next (or mark victory)
@@ -1847,43 +1856,72 @@ extension GameState {
     ///   - stageAdvanced: Whether stage was completed
     /// - Returns: Reward value for RL training
     func calculateReward(oldScore: Int, oldHP: Int, playerDied: Bool, gameWon: Bool, stageAdvanced: Bool, blocksSiphoned: Int, programsAcquired: Int, creditsGained: Int, energyGained: Int, totalKills: Int, dataSiphonCollected: Bool) -> Double {
-        let scoreDelta = Double(player.score - oldScore)
-        var reward = scoreDelta * 0.1
 
-        // Reward shaping: encourage siphoning and acquiring programs
-        // reward += Double(blocksSiphoned) * 0.1  // Small reward for siphoning blocks
-        // reward += Double(programsAcquired) * 0.2  // Larger reward for acquiring new programs
+        /* ============================================================================
+         * BACKUP: Original reward structure (pre-2024-12-23)
+         * Kept for reference in case we want to revert or compare performance
+         * ============================================================================
+         *
+         * let scoreDelta = Double(player.score - oldScore)
+         * var reward = scoreDelta * 0.1
+         *
+         * if dataSiphonCollected {
+         *     reward += 1.0
+         * }
+         *
+         * reward += Double(totalKills) * 0.3
+         *
+         * let hpChange = player.health.rawValue - oldHP
+         * reward += Double(hpChange) * 1.0
+         *
+         * if playerDied {
+         *     reward = 0.0
+         * } else if gameWon {
+         *     reward = Double(player.score) * 10.0 + 10
+         * } else if stageAdvanced {
+         *     reward += 1
+         *     let resourceBonus = Double(player.credits + player.energy) * 0.02
+         *     reward += resourceBonus
+         * }
+         * ============================================================================
+         */
 
-        // Reward collecting resources during siphoning
-        // reward += Double(creditsGained) * 0.05  // Small reward for collecting credits
-        // reward += Double(energyGained) * 0.05   // Small reward for collecting energy
+        // NEW REWARD STRUCTURE (2024-12-23)
+        // Objective: Maximize score while winning the game
+        // Philosophy: Reward outcomes (stages, score, victory), not tactics
+        // Let agent discover optimal strategies (siphons, programs, combat) through exploration
 
-        // Data siphon reward: significant reward for collecting data siphons
-        if dataSiphonCollected {
-            reward += 1.0
+        var reward = 0.0
+
+        // 1. PROGRESSIVE STAGE COMPLETION (guides agent toward winning)
+        // Exponential scaling creates strong gradient toward later stages
+        // Early stages easy to reach, later stages increasingly valuable
+        if stageAdvanced {
+            let stageRewards: [Double] = [1, 2, 4, 8, 16, 32, 64, 100]
+            let completedStage = currentStage - 1  // Stage just completed (1-8)
+            if completedStage >= 1 && completedStage <= 8 {
+                reward += stageRewards[completedStage - 1]
+            }
         }
 
-        // Kill rewards: encourage eliminating threats (excludes scheduled task spawns)
-        reward += Double(totalKills) * 0.3  // Enemies + transmissions killed
+        // 2. SCORE GAIN (encourages collecting points during gameplay)
+        // Meaningful but not dominant - provides feedback for collecting valuable blocks
+        let scoreDelta = Double(player.score - oldScore)
+        reward += scoreDelta * 0.5
 
-        // HP-based rewards: encourage avoiding damage and valuing HP
-        let hpChange = player.health.rawValue - oldHP
-        reward += Double(hpChange) * 1.0  // -2 for taking damage, +2 for healing
+        // 3. VICTORY BONUSES (massive rewards for winning)
+        if gameWon {
+            // Base victory bonus for completing all 8 stages
+            reward += 500.0
 
-        // Terminal state rewards
+            // SCORE BONUS - This is what the game is really about!
+            // High-scoring wins are worth MUCH more than low-scoring wins
+            reward += Double(player.score) * 100.0
+        }
+
+        // 4. DEATH PENALTY (make failure clearly negative)
         if playerDied {
-            // Death gives no reward
-            reward = 0.0
-        } else if gameWon {
-            // Winning gives massive reward based on final score
-            reward = Double(player.score) * 10.0 + 10
-        } else if stageAdvanced {
-            // Completing a non-final stage gives bonus reward
-            reward += 1
-
-            // Resource conservation bonus: encourage keeping resources for later stages
-            let resourceBonus = Double(player.credits + player.energy) * 0.02
-            reward += resourceBonus
+            reward += -10.0
         }
 
         return reward
@@ -1892,34 +1930,44 @@ extension GameState {
     // MARK: - Kill Tracking Helpers
 
     /// Remove dead enemies and track kills (excludes scheduled task spawns)
-    func removeDeadEnemies() {
+    /// Returns: Number of enemies killed (excluding scheduled task spawns)
+    func removeDeadEnemies() -> Int {
         let deadEnemies = enemies.filter { $0.hp <= 0 }
+        var killed = 0
         for enemy in deadEnemies {
             if !enemy.isFromScheduledTask {
-                currentActionEnemiesKilled += 1
+                killed += 1
                 totalEnemiesKilled += 1
             }
         }
         enemies.removeAll(where: { $0.hp <= 0 })
+        return killed
     }
 
     /// Remove specific enemy and track kill (excludes scheduled task spawns)
-    func removeEnemy(where predicate: (Enemy) -> Bool) {
+    /// Returns: 1 if an enemy was killed (and wasn't from scheduled task), 0 otherwise
+    func removeEnemy(where predicate: (Enemy) -> Bool) -> Int {
+        var killed = 0
         if let enemy = enemies.first(where: predicate) {
             if !enemy.isFromScheduledTask {
-                currentActionEnemiesKilled += 1
+                killed = 1
+                totalEnemiesKilled += 1
             }
         }
         enemies.removeAll(where: predicate)
+        return killed
     }
 
     /// Remove specific transmission and track kill (excludes scheduled task spawns)
-    func removeTransmission(where predicate: (Transmission) -> Bool) {
+    /// Returns: 1 if a transmission was killed (and wasn't from scheduled task), 0 otherwise
+    func removeTransmission(where predicate: (Transmission) -> Bool) -> Int {
+        var killed = 0
         if let transmission = transmissions.first(where: predicate) {
             if !transmission.isFromScheduledTask {
-                currentActionTransmissionsKilled += 1
+                killed = 1
             }
         }
         transmissions.removeAll(where: predicate)
+        return killed
     }
 }
