@@ -6,7 +6,7 @@
       "type": "shell",
       "command": "xcodebuild",
       "args": [
-        "-project", "${workspaceFolder}/HackMatrix.xcodeproj",
+        // "-project", "${workspaceFolder}/HackMatrix.xcodeproj",
         "-scheme", "HackMatrix",
         "-configuration", "Debug",
         "clean", "build"
