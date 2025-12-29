@@ -31,26 +31,26 @@ class StdinCommandReader {
     func start() {
         // Save original stdout for JSON output
         let originalStdout = dup(STDOUT_FILENO)
-        outputFile = FileHandle(fileDescriptor: originalStdout, closeOnDealloc: false)
 
         // Redirect print statements to stderr so stdout is clean for JSON
         dup2(STDERR_FILENO, STDOUT_FILENO)
 
+        outputFile = FileHandle(fileDescriptor: originalStdout, closeOnDealloc: true)
+
+        // autoreleasepool is CRITICAL here to prevent memory leak
+        // Foundation's JSON/String operations create Objective-C bridged objects
+        // that must be released each iteration to prevent accumulation
         while let line = readLine() {
-            // Autoreleasepool drains Objective-C bridge objects from JSONSerialization
-            // Without this, memory accumulates ~1.2MB per episode during training
             autoreleasepool {
                 guard let data = line.data(using: .utf8),
                       let command = try? JSONDecoder().decode(Command.self, from: data) else {
-                    sendError("Invalid JSON command")
-                    return  // Exits autoreleasepool closure, continues while loop
+                    sendError("Invalid command")
+                    return
                 }
-
                 handleCommand(command)
             }
         }
 
-        // Restore stdout
         close(originalStdout)
     }
 
