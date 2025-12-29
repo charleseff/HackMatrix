@@ -20,7 +20,7 @@ def print_action_menu():
     print("ACTIONS:")
     print("  W/A/S/D or 0-3: Move (W=Up, S=Down, A=Left, D=Right)")
     print("  4: Siphon")
-    print("  5-30: Programs (check owned programs in output)")
+    print("  5-27: Programs (check owned programs in output)")
     print()
     print("COMMANDS:")
     print("  v: Show valid actions")
@@ -33,8 +33,8 @@ def print_valid_actions(valid_actions):
     action_names = {
         0: "Up(W)", 1: "Down(S)", 2: "Left(A)", 3: "Right(D)", 4: "Siphon"
     }
-    # Add program names for 5-30
-    for i in range(5, 31):
+    # Add program names for 5-27
+    for i in range(5, 28):
         action_names[i] = f"Prog{i}"
 
     valid_names = [action_names.get(a, f"Action{a}") for a in valid_actions]

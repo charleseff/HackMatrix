@@ -7,7 +7,7 @@ enum GameAction: Equatable, Hashable {
     case siphon
     case program(ProgramType)
 
-    // Convert to integer index for ML (0-30)
+    // Convert to integer index for ML (0-27)
     func toIndex() -> Int {
         switch self {
         case .direction(.up): return 0
@@ -16,7 +16,7 @@ enum GameAction: Equatable, Hashable {
         case .direction(.right): return 3
         case .siphon: return 4
         case .program(let type):
-            // Programs indexed 5-30 (26 programs)
+            // Programs indexed 5-27 (23 programs)
             let programIndex = ProgramType.allCases.firstIndex(of: type) ?? 0
             return 5 + programIndex
         }
@@ -53,6 +53,7 @@ class GameState {
     var gameHistory: [GameStateSnapshot]
     var pendingSiphonTransmissions: Int
     var atkPlusUsedThisStage: Bool
+    var exitPosition: (row: Int, col: Int) = (0, 0)  // Set during stage initialization
 
     // Lifetime stats tracking (for debugging/logging)
     var totalDataSiphonsCollected: Int = 0
@@ -187,6 +188,7 @@ class GameState {
 
         // Row 0 (bottom row)
         state.grid.cells[0][0].content = .exit
+        state.exitPosition = (row: 0, col: 0)
         state.grid.cells[0][1].content = .block(.program(Program(type: .row), transmissionSpawn: 2))
         state.grid.cells[0][2].content = .empty
         state.grid.cells[0][2].resources = .energy(1)
@@ -218,6 +220,7 @@ class GameState {
         let exitCorner = availableCorners.randomElement()!
         availableCorners.removeAll { $0.0 == exitCorner.0 && $0.1 == exitCorner.1 }
         grid.cells[exitCorner.0][exitCorner.1].content = .exit
+        exitPosition = (row: exitCorner.0, col: exitCorner.1)
 
         for corner in availableCorners {
             grid.cells[corner.0][corner.1].content = .dataSiphon
@@ -868,6 +871,13 @@ class GameState {
         let oldScore = player.score
         let oldHP = player.health.rawValue
 
+        // Calculate distance to exit before action (for reward shaping)
+        let oldDistanceToExit = Pathfinding.findDistance(
+            from: (row: fromRow, col: fromCol),
+            to: exitPosition,
+            grid: grid
+        ) ?? 0
+
         var success = true
         var exitReached = false
         var affectedPositions: [(row: Int, col: Int)] = []
@@ -945,6 +955,24 @@ class GameState {
         // 4. Calculate reward and return everything
         let playerDied = player.health == .dead
         let totalKills = enemiesKilled + transmissionsKilled
+
+        // Calculate distance shaping
+        let distanceToExitDelta: Int
+        if playerDied {
+            // No shaping on death - death penalty handles it
+            distanceToExitDelta = 0
+        } else if exitReached {
+            // Reached exit: distance went from oldDistance to 0
+            distanceToExitDelta = oldDistanceToExit
+        } else {
+            let newDistanceToExit = Pathfinding.findDistance(
+                from: (row: player.row, col: player.col),
+                to: exitPosition,
+                grid: grid
+            ) ?? 0
+            distanceToExitDelta = oldDistanceToExit - newDistanceToExit
+        }
+
         let reward = RewardCalculator.calculate(
             oldScore: oldScore,
             currentScore: player.score,
@@ -958,7 +986,8 @@ class GameState {
             creditsGained: creditsGained,
             energyGained: energyGained,
             totalKills: totalKills,
-            dataSiphonCollected: dataSiphonCollected
+            dataSiphonCollected: dataSiphonCollected,
+            distanceToExitDelta: distanceToExitDelta
         )
 
         return ActionResult(

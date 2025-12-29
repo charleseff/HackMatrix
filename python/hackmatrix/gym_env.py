@@ -66,25 +66,25 @@ class HackEnv(gym.Env):
                 dtype=np.float32
             ),
 
-            # Program inventory (26 values, binary vector)
-            # Indices 0-25 correspond to program action indices 5-30
+            # Program inventory (23 values, binary vector)
+            # Indices 0-22 correspond to program action indices 5-27
             "programs": spaces.Box(
                 low=0,
                 high=1,
-                shape=(26,),
+                shape=(23,),
                 dtype=np.int32
             ),
 
-            # Grid state: 6x6x43 (43 features per cell, normalized to [0, 1])
+            # Grid state: 6x6x40 (40 features per cell, normalized to [0, 1])
             # Enemy: one-hot types (4) + hp + stunned = 6
             # Block: one-hot types (3) + points + siphoned = 5
-            # Program: one-hot (26) + transmission_spawncount + transmission_turns = 28
+            # Program: one-hot (23) + transmission_spawncount + transmission_turns = 25
             # Resources: credits + energy = 2
             # Special: is_data_siphon + is_exit = 2
             "grid": spaces.Box(
                 low=0.0,
                 high=1.0,
-                shape=(6, 6, 43),
+                shape=(6, 6, 40),
                 dtype=np.float32
             )
         })
@@ -174,17 +174,17 @@ class HackEnv(gym.Env):
             1.0 if obs_dict.get("scheduledTasksDisabled", False) else 0.0  # Binary flag
         ], dtype=np.float32)
 
-        # Program inventory (26 values, binary vector)
-        programs = np.zeros(26, dtype=np.int32)
+        # Program inventory (23 values, binary vector)
+        programs = np.zeros(23, dtype=np.int32)
         if "ownedPrograms" in obs_dict:
             for action_idx in obs_dict["ownedPrograms"]:
-                # Action indices 5-30 are programs
-                # Map to array indices 0-25
-                if 5 <= action_idx <= 30:
+                # Action indices 5-27 are programs
+                # Map to array indices 0-22
+                if 5 <= action_idx <= 27:
                     programs[action_idx - 5] = 1
 
-        # Grid state (6x6x43, normalized to [0, 1])
-        grid = np.zeros((6, 6, 43), dtype=np.float32)
+        # Grid state (6x6x40, normalized to [0, 1])
+        grid = np.zeros((6, 6, 40), dtype=np.float32)
 
         for row_idx, row in enumerate(obs_dict["cells"]):
             for col_idx, cell in enumerate(row):
@@ -221,13 +221,13 @@ class HackEnv(gym.Env):
                 else:
                     features.extend([0.0, 0.0, 0.0, 0.0, 0.0])
 
-                # Program features (26 features) - one-hot encoding for program type
-                program_one_hot = [0.0] * 26
+                # Program features (23 features) - one-hot encoding for program type
+                program_one_hot = [0.0] * 23
                 if "block" in cell:
                     block = cell["block"]
                     program_idx = block.get("programActionIndex", 0)
-                    # Action indices 5-30 are programs, map to array indices 0-25
-                    if 5 <= program_idx <= 30:
+                    # Action indices 5-27 are programs, map to array indices 0-22
+                    if 5 <= program_idx <= 27:
                         program_one_hot[program_idx - 5] = 1.0
                 features.extend(program_one_hot)
 
@@ -260,7 +260,7 @@ class HackEnv(gym.Env):
                     1.0 if cell.get("isExit", False) else 0.0
                 ])
 
-                grid[row_idx, col_idx, :] = features[:43]
+                grid[row_idx, col_idx, :] = features[:40]
 
         return {
             "player": player,
@@ -298,7 +298,7 @@ class HackEnv(gym.Env):
 
         # Visual CLI mode: Print action, reward, and key observation values
         if self.visual:
-            action_names = ["Up", "Down", "Left", "Right", "Siphon"] + [f"Prog{i}" for i in range(5, 31)]
+            action_names = ["Up", "Down", "Left", "Right", "Siphon"] + [f"Prog{i}" for i in range(5, 28)]
             action_name = action_names[action] if action < len(action_names) else f"Unknown({action})"
 
             # Decode player state for display

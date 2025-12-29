@@ -83,7 +83,7 @@ class StdinCommandReader {
             sendResponse(["validActions": actions])
 
         case "getActionSpace":
-            sendResponse(["actionSpaceSize": 31])  // 4 moves + 1 siphon + 26 programs
+            sendResponse(["actionSpaceSize": 28])  // 4 moves + 1 siphon + 23 programs
 
         case "getObservationSpace":
             sendResponse([

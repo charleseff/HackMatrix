@@ -94,10 +94,10 @@ The observation is a dictionary with three components:
 
 ### Action Space
 
-31 discrete actions:
+28 discrete actions:
 - 0-3: Movement (up, down, left, right)
 - 4: Siphon
-- 5-30: Programs (in ProgramType.allCases order)
+- 5-27: Programs (in ProgramType.allCases order)
 
 Use `env.get_valid_actions()` to get valid actions for current state.
 

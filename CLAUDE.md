@@ -140,7 +140,7 @@ Swift responds with JSON on stdout:
 {"validActions": [0, 2, 4]}
 ```
 
-### Action Space (31 actions)
+### Action Space (28 actions)
 
 | Index | Action |
 |-------|--------|
@@ -149,7 +149,7 @@ Swift responds with JSON on stdout:
 | 2 | Move left |
 | 3 | Move right |
 | 4 | Siphon |
-| 5-30 | Programs (26 total) |
+| 5-27 | Programs (23 total) |
 
 ### Observation Space
 

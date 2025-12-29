@@ -21,6 +21,7 @@ struct RewardCalculator {
     ///   - energyGained: Energy gained this step
     ///   - totalKills: Number of enemies killed (excludes scheduled task spawns)
     ///   - dataSiphonCollected: Whether a data siphon was collected this step
+    ///   - distanceToExitDelta: Change in path distance to exit (oldDist - newDist, positive = closer)
     /// - Returns: Reward value for RL training
     static func calculate(
         oldScore: Int,
@@ -35,7 +36,8 @@ struct RewardCalculator {
         creditsGained: Int,
         energyGained: Int,
         totalKills: Int,
-        dataSiphonCollected: Bool
+        dataSiphonCollected: Bool,
+        distanceToExitDelta: Int
     ) -> Double {
 
         /* ============================================================================
@@ -101,7 +103,12 @@ struct RewardCalculator {
             reward += 1.0
         }
 
-        // 4. VICTORY BONUSES (massive rewards for winning)
+        // 4. DISTANCE SHAPING (guides agent toward exit)
+        // Small reward for getting closer, penalty for getting farther
+        // Also rewards destroying blocks that create shorter paths
+        reward += Double(distanceToExitDelta) * 0.05
+
+        // 5. VICTORY BONUSES (massive rewards for winning)
         if gameWon {
             // Base victory bonus for completing all 8 stages
             reward += 500.0
@@ -111,7 +118,7 @@ struct RewardCalculator {
             reward += Double(currentScore) * 100.0
         }
 
-        // 5. DEATH PENALTY (scales with progress but always less than cumulative rewards)
+        // 6. DEATH PENALTY (scales with progress but always less than cumulative rewards)
         // Death penalty increases with each stage, but completing stages is still net positive
         if playerDied {
             let stageRewards: [Double] = [1, 2, 4, 8, 16, 32, 64, 100]

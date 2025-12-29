@@ -167,4 +167,47 @@ struct Pathfinding {
         }
         return occupied
     }
+
+    /// Calculate shortest path distance from a position to a target using BFS
+    /// Returns nil if no path exists
+    static func findDistance(
+        from start: (row: Int, col: Int),
+        to target: (row: Int, col: Int),
+        grid: Grid
+    ) -> Int? {
+        if start.0 == target.0 && start.1 == target.1 {
+            return 0
+        }
+
+        var queue: [(pos: (Int, Int), distance: Int)] = [(start, 0)]
+        var visited = Set<String>()
+        visited.insert("\(start.0),\(start.1)")
+
+        while !queue.isEmpty {
+            let (currentPos, distance) = queue.removeFirst()
+
+            for direction in Direction.allCases {
+                let offset = direction.offset
+                let newRow = currentPos.0 + offset.row
+                let newCol = currentPos.1 + offset.col
+
+                guard grid.isValidPosition(row: newRow, col: newCol) else { continue }
+
+                let posKey = "\(newRow),\(newCol)"
+                guard !visited.contains(posKey) else { continue }
+
+                if newRow == target.0 && newCol == target.1 {
+                    return distance + 1
+                }
+
+                let cell = grid.cells[newRow][newCol]
+                if cell.hasBlock { continue }
+
+                visited.insert(posKey)
+                queue.append(((newRow, newCol), distance + 1))
+            }
+        }
+
+        return nil
+    }
 }
