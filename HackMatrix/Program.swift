@@ -17,6 +17,7 @@ enum ProgramType: String, CaseIterable {
     /// Actions 0-4 are reserved for directions and siphon
     var actionIndex: Int {
         switch self {
+            // 23 possible programs
         case .push: return 5
         case .pull: return 6
         case .crash: return 7

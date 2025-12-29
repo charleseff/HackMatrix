@@ -14,6 +14,7 @@ from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from gymnasium.wrappers import TimeLimit
 
 from hackmatrix import HackEnv
 
@@ -36,7 +37,8 @@ def train(
         resume_path: str = None,
         debug: bool = False,
         info: bool = False,
-        num_envs: int = 1
+        num_envs: int = 1,
+        max_episode_steps: int = 1000
 ):
     """
     Train a MaskablePPO agent with action masking.
@@ -51,6 +53,7 @@ def train(
         debug: Enable verbose debug logging
         info: Enable info-level logging (less verbose)
         num_envs: Number of parallel environments (1=single, 4-8=parallel)
+        max_episode_steps: Maximum steps per episode before truncation (default: 1000)
     """
     # MARK: Setup Directories
     os.makedirs(log_dir, exist_ok=True)
@@ -87,7 +90,8 @@ def train(
     def make_env():
         """Create and wrap the environment."""
         env = HackEnv(debug=debug, info=info)
-        env = ActionMasker(env, mask_fn)  # ActionMasker needs access to HackEnv
+        env = ActionMasker(env, mask_fn)  # ActionMasker needs direct access to HackEnv
+        env = TimeLimit(env, max_episode_steps=max_episode_steps)  # Truncate long episodes
         env = Monitor(env)  # Monitor goes on the outside to track episode statistics
         return env
 
@@ -234,6 +238,8 @@ if __name__ == "__main__":
                         help="Enable info-level logging (important events only)")
     parser.add_argument("--num-envs", type=int, default=1,
                         help="Number of parallel environments (1=single, 4-8=parallel, default: 1)")
+    parser.add_argument("--max-episode-steps", type=int, default=1000,
+                        help="Maximum steps per episode before truncation (default: 1000)")
 
     args = parser.parse_args()
 
@@ -246,5 +252,6 @@ if __name__ == "__main__":
         resume_path=args.resume,
         debug=args.debug,
         info=args.info,
-        num_envs=args.num_envs
+        num_envs=args.num_envs,
+        max_episode_steps=args.max_episode_steps
     )
