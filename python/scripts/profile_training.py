@@ -7,6 +7,8 @@ Measures environment step time vs NN training time.
 import time
 import numpy as np
 from hackmatrix import HackEnv
+from hackmatrix.training_config import FAST_MODEL_CONFIG
+from hackmatrix.training_utils import make_env
 
 def profile_environment(num_steps=1000):
     """Profile environment performance."""
@@ -65,16 +67,7 @@ def profile_training_loop(num_steps=10000):
     print("="*70)
 
     from sb3_contrib import MaskablePPO
-    from sb3_contrib.common.wrappers import ActionMasker
     from stable_baselines3.common.vec_env import DummyVecEnv
-
-    def mask_fn(env):
-        return env._get_action_mask()
-
-    def make_env():
-        env = HackEnv()
-        env = ActionMasker(env, mask_fn)
-        return env
 
     env = DummyVecEnv([make_env])
 
@@ -83,8 +76,7 @@ def profile_training_loop(num_steps=10000):
         "MultiInputPolicy",
         env,
         verbose=0,
-        n_steps=2048,
-        batch_size=64,
+        **FAST_MODEL_CONFIG  # Use shared fast config for profiling
     )
 
     print(f"Training for {num_steps} steps...\n")

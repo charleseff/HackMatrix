@@ -11,10 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 from hackmatrix import HackEnv
-
-
-def mask_fn(env):
-    return env._get_action_mask()
+from hackmatrix.training_utils import mask_fn
 
 
 def get_action_names():

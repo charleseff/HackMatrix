@@ -23,13 +23,8 @@ from wandb.integration.sb3 import WandbCallback
 
 from hackmatrix import HackEnv
 from hackmatrix.training_db import TrainingDB
-
-
-# MARK: Helper Functions
-
-def mask_fn(env: HackEnv) -> np.ndarray:
-    """Return action mask for current state."""
-    return env._get_action_mask()
+from hackmatrix.training_config import MODEL_CONFIG
+from hackmatrix.training_utils import make_env
 
 
 # MARK: Custom Callbacks
@@ -166,25 +161,6 @@ def train(
         run_model_dir = os.path.join(model_dir, run_name)
         os.makedirs(run_model_dir, exist_ok=True)
 
-    # MARK: Model Hyperparameters (defined once, used everywhere)
-    model_config = {
-        "learning_rate": 3e-4,
-        "n_steps": 4096,  # Increased from 2048 for better value estimates
-        "batch_size": 64,
-        "n_epochs": 20,  # Increased from 10 to train value function more
-        "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "clip_range": 0.2,
-        "ent_coef": 0.3,
-        "vf_coef": 1.0,  # Increased from 0.5 to prioritize value function learning
-        "policy_kwargs": {
-            "net_arch": {
-                "pi": [256, 256, 128],  # Policy: 3 layers (more capacity for complex decisions)
-                "vf": [256, 256, 128],  # Value: 3 layers (better state evaluation)
-            }
-        }
-    }
-
     # MARK: Initialize W&B
     # Derive run_id from run_name so it's consistent across resumes
     run_id = hashlib.md5(run_name.encode()).hexdigest()[:8]
@@ -200,7 +176,7 @@ def train(
             save_code=True,  # Save code snapshot
             config={
                 # Model hyperparameters
-                **model_config,
+                **MODEL_CONFIG,
 
                 # Reward structure
                 "reward_stage_multipliers": [1, 2, 4, 8, 16, 32, 64, 100],
@@ -236,25 +212,18 @@ def train(
 
     # MARK: Create Environments
 
-    def make_env():
-        """Create and wrap the environment."""
-        env = HackEnv(debug=debug, info=info)
-        env = ActionMasker(env, mask_fn)  # ActionMasker needs direct access to HackEnv
-        env = TimeLimit(env, max_episode_steps=max_episode_steps)  # Truncate long episodes
-        env = Monitor(env)  # Monitor goes on the outside to track episode statistics
-        return env
-
     print("Creating environment...")
     if num_envs > 1:
         # Use SubprocVecEnv for parallel environments (faster on multi-core CPUs)
-        env = SubprocVecEnv([make_env for _ in range(num_envs)])
+        env = SubprocVecEnv([lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)
+                             for _ in range(num_envs)])
     else:
         # Use DummyVecEnv for single environment (easier debugging)
-        env = DummyVecEnv([make_env])
+        env = DummyVecEnv([lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)])
 
     print("Creating eval environment...")
     # Always use single environment for evaluation (deterministic)
-    eval_env = DummyVecEnv([make_env])
+    eval_env = DummyVecEnv([lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)])
 
     # MARK: Initialize Model
 
@@ -276,7 +245,7 @@ def train(
             env,
             verbose=1,
             tensorboard_log=run_log_dir,
-            **model_config  # Use shared config defined above
+            **MODEL_CONFIG  # Use shared config from training_config
         )
 
     # MARK: Setup Callbacks

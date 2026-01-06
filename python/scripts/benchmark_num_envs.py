@@ -15,17 +15,8 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 # Add parent to path for hackmatrix import
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hackmatrix import HackEnv
-
-
-def mask_fn(env: HackEnv) -> np.ndarray:
-    return env._get_action_mask()
-
-
-def make_env():
-    env = HackEnv(debug=False, info=False)
-    env = ActionMasker(env, mask_fn)
-    env = Monitor(env)
-    return env
+from hackmatrix.training_config import FAST_MODEL_CONFIG
+from hackmatrix.training_utils import make_env
 
 
 def benchmark_num_envs(num_envs: int, timesteps: int = 10_000) -> float:
@@ -48,14 +39,7 @@ def benchmark_num_envs(num_envs: int, timesteps: int = 10_000) -> float:
         "MultiInputPolicy",
         env,
         verbose=0,  # Quiet mode
-        learning_rate=3e-4,
-        n_steps=2048,
-        batch_size=64,
-        n_epochs=10,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.3,
+        **FAST_MODEL_CONFIG  # Use shared fast config for benchmarking
     )
 
     # Warmup - let environments initialize
