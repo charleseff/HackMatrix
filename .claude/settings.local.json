@@ -25,7 +25,15 @@
       "Bash(python scripts/benchmark_num_envs.py:*)",
       "Bash(for i in 1 2 3 4 5)",
       "Bash(do ps -o pid,rss -p 16864)",
-      "Bash(ps:*)"
+      "Bash(ps:*)",
+      "Bash(pip install:*)",
+      "Bash(timeout 90 python:*)",
+      "Bash(sqlite3:*)",
+      "Bash(cat:*)",
+      "Skill(plan-code-changes)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nWIP: Add action history tracking for anomaly detection\n\n- Add actionHistory array to GameState for debugging\n- Track each successful action in tryExecuteAction\\(\\)\n\nPart of anomaly detection feature to debug suspicious game states\n\\(e.g., siphonsUsed > siphonsCollected, high programUses\\)\n\nSee plan: ~/.claude/plans/plan-anomaly-detection-logging.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(/Users/charles/dev/868-hack-2/DerivedData/HackMatrix/Build/Products/Debug/HackMatrix.app/Contents/MacOS/HackMatrix:*)",
+      "WebSearch"
     ]
   }
 }

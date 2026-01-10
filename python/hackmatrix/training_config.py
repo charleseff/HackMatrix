@@ -16,7 +16,8 @@ MODEL_CONFIG = {
             "pi": [256, 256, 128],  # Policy network: 3 layers
             "vf": [256, 256, 128],  # Value network: 3 layers
         }
-    }
+    },
+    # "device": "mps"
 }
 
 # For profiling/benchmarking where speed matters more than final performance

@@ -8,6 +8,13 @@
     "**/DerivedData": true,
     "**/.build": true
   },
+  // Python settings
+  "python.defaultInterpreterPath": "${workspaceFolder}/python/venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/python"
+  ],
+  "python.envFile": "${workspaceFolder}/python/.env",
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#65c89b",
     "activityBar.background": "#65c89b",

@@ -422,15 +422,15 @@ class GameState {
         }
     }
 
-    func spawnRandomTransmissions(count: Int, isFromScheduledTask: Bool = false) {
+    func spawnRandomTransmissions(count: Int, isFromScheduledTask: Bool = false, spawnedFromSiphon: Bool = false) {
         for _ in 0..<count {
             // First try to find a cell out of player's line of fire
             if let pos = findEmptyCellOutOfLineOfFire() {
-                let transmission = Transmission(row: pos.0, col: pos.1, isFromScheduledTask: isFromScheduledTask)
+                let transmission = Transmission(row: pos.0, col: pos.1, isFromScheduledTask: isFromScheduledTask, spawnedFromSiphon: spawnedFromSiphon)
                 transmissions.append(transmission)
             } else if let pos = findEmptyCell() {
                 // Fallback: spawn in any empty cell (even in line of fire)
-                let transmission = Transmission(row: pos.0, col: pos.1, isFromScheduledTask: isFromScheduledTask)
+                let transmission = Transmission(row: pos.0, col: pos.1, isFromScheduledTask: isFromScheduledTask, spawnedFromSiphon: spawnedFromSiphon)
                 transmissions.append(transmission)
             }
         }
@@ -545,7 +545,7 @@ class GameState {
     func finalizeAnimatedEnemyTurn() {
         // Spawn any pending transmissions from siphoning
         if pendingSiphonTransmissions > 0 {
-            spawnRandomTransmissions(count: pendingSiphonTransmissions)
+            spawnRandomTransmissions(count: pendingSiphonTransmissions, spawnedFromSiphon: true)
             pendingSiphonTransmissions = 0
         }
 
@@ -606,11 +606,181 @@ class GameState {
         return positions
     }
 
-    func performSiphon() -> (success: Bool, blocksSiphoned: Int, programsAcquired: Int, creditsGained: Int, energyGained: Int) {
+    /// Calculate total resource value that would be obtained by siphoning from given position
+    /// - Returns: (credits, energy, dataBlockValues, programs) tuple
+    func calculateSiphonYieldAt(row: Int, col: Int) -> (credits: Int, energy: Int, dataBlockValues: [Int], programs: Set<ProgramType>) {
+        // OPTIMIZATION: Can't siphon if standing on a block (invalid position)
+        if case .block = grid.cells[row][col].content {
+            return (0, 0, [], [])
+        }
+
+        let siphonCells = grid.getSiphonCells(centerRow: row, centerCol: col)
+
+        var totalCredits = 0
+        var totalEnergy = 0
+        var dataBlockValues: [Int] = []  // Track specific point values
+        var programs: Set<ProgramType> = []
+
+        for cell in siphonCells {
+            // Skip already-siphoned cells
+            guard !cell.isSiphoned else { continue }
+
+            // Count blocks with specific values
+            if case .block(let blockType) = cell.content {
+                switch blockType {
+                case .data(let points, _):
+                    dataBlockValues.append(points)  // Track specific point value
+                case .program(let program, _):
+                    // Only count if we don't already own this program
+                    if !ownedPrograms.contains(program.type) {
+                        programs.insert(program.type)
+                    }
+                case .question(let isData, let points, let program, _):
+                    // Unknown value - treat as incomparable
+                    if isData, let pts = points {
+                        dataBlockValues.append(pts)
+                    } else if let prog = program {
+                        if !ownedPrograms.contains(prog.type) {
+                            programs.insert(prog.type)
+                        }
+                    }
+                }
+            } else {
+                // No block - count resources
+                if case .credits(let amount) = cell.resources {
+                    totalCredits += amount
+                } else if case .energy(let amount) = cell.resources {
+                    totalEnergy += amount
+                }
+            }
+        }
+
+        // Sort for consistent comparison
+        dataBlockValues.sort()
+
+        return (totalCredits, totalEnergy, dataBlockValues, programs)
+    }
+
+    /// Check if there exists a strictly better siphon position than current position
+    /// A position is strictly better if it has >= credits, >= energy, and EXACT same blocks
+    /// - Returns: (exists, missedCredits, missedEnergy) tuple
+    func checkForBetterSiphonPosition() -> (exists: Bool, missedCredits: Int, missedEnergy: Int) {
+        let currentYield = calculateSiphonYieldAt(row: player.row, col: player.col)
+
+        // OPTIMIZATION: Determine which positions to check
+        var positionsToCheck: [(Int, Int)] = []
+
+        if !currentYield.dataBlockValues.isEmpty || !currentYield.programs.isEmpty {
+            // Current yield has blocks - only check positions that would siphon SAME blocks
+            let currentSiphonCells = grid.getSiphonCells(centerRow: player.row, centerCol: player.col)
+            var blockPositions: [(Int, Int)] = []
+
+            for cell in currentSiphonCells {
+                if case .block = cell.content, !cell.isSiphoned {
+                    blockPositions.append((cell.row, cell.col))
+                }
+            }
+
+            if !blockPositions.isEmpty {
+                // Find positions that could siphon ALL these blocks
+                // Use arrays instead of sets to avoid tuple hashability issues
+                var candidateLists: [[(Int, Int)]] = []
+
+                for (blockRow, blockCol) in blockPositions {
+                    var candidates: [(Int, Int)] = []
+
+                    // Positions that could have this block in their siphon pattern (cross pattern)
+                    let possibleCenters = [
+                        (blockRow - 1, blockCol),  // Block is below center
+                        (blockRow + 1, blockCol),  // Block is above center
+                        (blockRow, blockCol - 1),  // Block is to right of center
+                        (blockRow, blockCol + 1),  // Block is to left of center
+                        (blockRow, blockCol)       // Block is at center
+                    ]
+
+                    for (centerRow, centerCol) in possibleCenters {
+                        if centerRow >= 0 && centerRow < 6 && centerCol >= 0 && centerCol < 6 {
+                            if case .block = grid.cells[centerRow][centerCol].content {
+                                // Can't stand on block
+                            } else {
+                                candidates.append((centerRow, centerCol))
+                            }
+                        }
+                    }
+
+                    candidateLists.append(candidates)
+                }
+
+                // Intersection: positions that can siphon ALL the blocks
+                if !candidateLists.isEmpty {
+                    var intersection = candidateLists[0]
+                    for candidateList in candidateLists.dropFirst() {
+                        // Manual intersection for tuples
+                        intersection = intersection.filter { pos in
+                            candidateList.contains(where: { $0.0 == pos.0 && $0.1 == pos.1 })
+                        }
+                    }
+
+                    positionsToCheck = intersection
+                }
+            }
+        } else {
+            // No blocks in current yield - check all valid positions
+            for row in 0..<6 {
+                for col in 0..<6 {
+                    if case .block = grid.cells[row][col].content {
+                        // Can't siphon from block position
+                    } else {
+                        positionsToCheck.append((row, col))
+                    }
+                }
+            }
+        }
+
+        var bestCredits = currentYield.credits
+        var bestEnergy = currentYield.energy
+        var foundBetter = false
+
+        // Check each candidate position for strict dominance
+        for (row, col) in positionsToCheck {
+            let yield = calculateSiphonYieldAt(row: row, col: col)
+
+            // Check for strict dominance:
+            // 1. EXACT same data block values (sorted arrays)
+            // 2. EXACT same program set
+            // 3. >= credits AND >= energy
+            // 4. At least one resource is strictly greater
+            if yield.dataBlockValues == currentYield.dataBlockValues &&  // Exact same data blocks
+               yield.programs == currentYield.programs {                  // Exact same programs
+
+                let betterCredits = yield.credits >= currentYield.credits
+                let betterEnergy = yield.energy >= currentYield.energy
+                let strictlyBetter = (yield.credits > currentYield.credits) ||
+                                   (yield.energy > currentYield.energy)
+
+                if betterCredits && betterEnergy && strictlyBetter {
+                    foundBetter = true
+                    bestCredits = max(bestCredits, yield.credits)
+                    bestEnergy = max(bestEnergy, yield.energy)
+                }
+            }
+        }
+
+        let missedCredits = bestCredits - currentYield.credits
+        let missedEnergy = bestEnergy - currentYield.energy
+
+        return (foundBetter, missedCredits, missedEnergy)
+    }
+
+    func performSiphon() -> (success: Bool, blocksSiphoned: Int, programsAcquired: Int, creditsGained: Int, energyGained: Int, wasOptimal: Bool, missedCredits: Int, missedEnergy: Int) {
         // Check if player has data siphons
         guard player.dataSiphons > 0 else {
-            return (false, 0, 0, 0, 0)
+            return (false, 0, 0, 0, 0, true, 0, 0)
         }
+
+        // Check if there was a strictly better position (before siphoning)
+        let (betterExists, missedCredits, missedEnergy) = checkForBetterSiphonPosition()
+        let wasOptimal = !betterExists
 
         // Get cells in siphon range (current cell + cardinal directions)
         let siphonCells = grid.getSiphonCells(centerRow: player.row, centerCol: player.col)
@@ -698,7 +868,7 @@ class GameState {
         nextScheduledTaskTurn += 5
 
         // Don't advance turn here - let caller handle animated turn flow
-        return (true, blocksSiphoned, programsAcquired, creditsGained, energyGained)
+        return (true, blocksSiphoned, programsAcquired, creditsGained, energyGained, wasOptimal, missedCredits, missedEnergy)
     }
 
     // MARK: - Program Execution
@@ -892,6 +1062,8 @@ class GameState {
         let fromCol = player.col
         let oldScore = player.score
         let oldHP = player.health.rawValue
+        let oldCredits = player.credits
+        let oldEnergy = player.energy
 
         // Calculate distance to exit before action (for reward shaping)
         let oldDistanceToExit = Pathfinding.findDistance(
@@ -913,6 +1085,14 @@ class GameState {
         var creditsGained = 0
         var energyGained = 0
         var dataSiphonCollected = false
+
+        // Track for new reward components
+        var siphonWasUsed = false
+        var siphonWasOptimal = true
+        var siphonMissedCredits = 0
+        var siphonMissedEnergy = 0
+        var resetWasWasteful = false
+        var diedToSiphonEnemy = false
 
         // 1. Handle player action
         switch action {
@@ -936,8 +1116,18 @@ class GameState {
             programsAcquired = siphonResult.programsAcquired
             creditsGained = siphonResult.creditsGained
             energyGained = siphonResult.energyGained
+            // Store siphon quality metrics
+            siphonWasUsed = true
+            siphonWasOptimal = siphonResult.wasOptimal
+            siphonMissedCredits = siphonResult.missedCredits
+            siphonMissedEnergy = siphonResult.missedEnergy
 
         case .program(let programType):
+            // Check for RESET waste BEFORE executing
+            if programType == .reset && oldHP == 2 {
+                resetWasWasteful = true
+            }
+
             let execResult = executeProgram(programType)
             success = execResult.success
             affectedPositions = execResult.affectedPositions
@@ -972,6 +1162,18 @@ class GameState {
         var enemySteps: [EnemyStepResult] = []
         if shouldRunEnemyTurn {
             enemySteps = runEnemyTurn()
+
+            // Check if player died to a siphon-spawned enemy
+            let playerDied = player.health == .dead
+            if playerDied {
+                // Check if any adjacent enemy is siphon-spawned (they attacked this turn)
+                for enemy in enemies {
+                    if isAdjacentToPlayer(enemy) && enemy.spawnedFromSiphon {
+                        diedToSiphonEnemy = true
+                        break
+                    }
+                }
+            }
         }
 
         // 4. Calculate reward and return everything
@@ -1000,6 +1202,11 @@ class GameState {
             currentScore: player.score,
             currentStage: currentStage,
             oldHP: oldHP,
+            currentHP: player.health.rawValue,
+            oldCredits: oldCredits,
+            currentCredits: player.credits,
+            oldEnergy: oldEnergy,
+            currentEnergy: player.energy,
             playerDied: playerDied,
             gameWon: gameWon,
             stageAdvanced: stageAdvanced,
@@ -1009,7 +1216,13 @@ class GameState {
             energyGained: energyGained,
             totalKills: totalKills,
             dataSiphonCollected: dataSiphonCollected,
-            distanceToExitDelta: distanceToExitDelta
+            distanceToExitDelta: distanceToExitDelta,
+            siphonWasUsed: siphonWasUsed,
+            siphonWasOptimal: siphonWasOptimal,
+            siphonMissedCredits: siphonMissedCredits,
+            siphonMissedEnergy: siphonMissedEnergy,
+            resetWasWasteful: resetWasWasteful,
+            diedToSiphonEnemy: diedToSiphonEnemy
         )
 
         return ActionResult(
@@ -1050,7 +1263,7 @@ class GameState {
 
         // Finalize turn
         if pendingSiphonTransmissions > 0 {
-            spawnRandomTransmissions(count: pendingSiphonTransmissions)
+            spawnRandomTransmissions(count: pendingSiphonTransmissions, spawnedFromSiphon: true)
             pendingSiphonTransmissions = 0
         }
         for enemy in enemies {

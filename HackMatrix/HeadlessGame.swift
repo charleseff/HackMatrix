@@ -57,7 +57,14 @@ class HeadlessGame {
             "dataSiphon": result.rewardBreakdown.dataSiphonCollected,
             "distance": result.rewardBreakdown.distanceShaping,
             "victory": result.rewardBreakdown.victory,
-            "death": result.rewardBreakdown.deathPenalty
+            "death": result.rewardBreakdown.deathPenalty,
+            "resourceGain": result.rewardBreakdown.resourceGain,
+            "resourceHolding": result.rewardBreakdown.resourceHolding,
+            "damagePenalty": result.rewardBreakdown.damagePenalty,
+            "hpRecovery": result.rewardBreakdown.hpRecovery,
+            "siphonQuality": result.rewardBreakdown.siphonQuality,
+            "programWaste": result.rewardBreakdown.programWaste,
+            "siphonDeathPenalty": result.rewardBreakdown.siphonDeathPenalty
         ]
 
         let observation = ObservationBuilder.build(from: gameState)
