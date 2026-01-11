@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
 
 enum StartingBonus: CaseIterable {
     case credits10
@@ -9,7 +11,11 @@ enum StartingBonus: CaseIterable {
 
 enum Constants {
     static let gridSize = 6
+    #if canImport(CoreGraphics)
     static let cellSize: CGFloat = 80.0
+    #else
+    static let cellSize: Double = 80.0
+    #endif
     static let totalStages = 8
 
     // Starting enemies per stage (as transmissions)

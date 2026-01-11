@@ -1,3 +1,4 @@
+#if canImport(SpriteKit)
 import SpriteKit
 
 class MenuScene: SKScene {
@@ -144,3 +145,4 @@ class MenuScene: SKScene {
         view?.presentScene(gameScene, transition: transition)
     }
 }
+#endif

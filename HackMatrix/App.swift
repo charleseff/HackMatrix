@@ -1,9 +1,9 @@
+#if canImport(SwiftUI)
 import SwiftUI
 import SpriteKit
 
-@main
-struct HackApp: App {
-    init() {
+public struct HackApp: App {
+    public init() {
         fputs("==> HackApp.init() called\n", stderr)
         fflush(stderr)
 
@@ -35,7 +35,7 @@ struct HackApp: App {
         }
     }
 
-    var body: some Scene {
+    public var body: some Scene {
         WindowGroup {
             ContentView()
         }
@@ -58,3 +58,4 @@ struct ContentView: View {
             .background(Color.black)
     }
 }
+#endif

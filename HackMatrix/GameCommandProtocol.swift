@@ -37,21 +37,29 @@ class StdinCommandReader {
 
         outputFile = FileHandle(fileDescriptor: originalStdout, closeOnDealloc: true)
 
-        // autoreleasepool is CRITICAL here to prevent memory leak
+        // autoreleasepool is CRITICAL on macOS to prevent memory leak
         // Foundation's JSON/String operations create Objective-C bridged objects
         // that must be released each iteration to prevent accumulation
         while let line = readLine() {
+            #if canImport(ObjectiveC)
             autoreleasepool {
-                guard let data = line.data(using: .utf8),
-                      let command = try? JSONDecoder().decode(Command.self, from: data) else {
-                    sendError("Invalid command")
-                    return
-                }
-                handleCommand(command)
+                processLine(line)
             }
+            #else
+            processLine(line)
+            #endif
         }
 
         close(originalStdout)
+    }
+
+    private func processLine(_ line: String) {
+        guard let data = line.data(using: .utf8),
+              let command = try? JSONDecoder().decode(Command.self, from: data) else {
+            sendError("Invalid command")
+            return
+        }
+        handleCommand(command)
     }
 
     private func handleCommand(_ command: Command) {

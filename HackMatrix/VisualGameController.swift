@@ -1,3 +1,4 @@
+#if canImport(SpriteKit)
 import Foundation
 
 // Handles stdin/stdout protocol for visual CLI mode
@@ -97,3 +98,4 @@ class VisualGameController: GameCommandExecutor {
         }
     }
 }
+#endif

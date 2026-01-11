@@ -1844,7 +1844,7 @@ class GameState {
             },
             showActivated: showActivated,
             scheduledTasksDisabled: scheduledTasksDisabled,
-            atkPlusUsedThisStage: atkPlusUsedThisStage,
+            atkPlusUsedThisStage: atkPlusUsedThisStage
         )
         gameHistory.append(snapshot)
     }

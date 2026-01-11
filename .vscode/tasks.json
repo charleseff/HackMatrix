@@ -4,38 +4,21 @@
     {
       "label": "Build HackMatrix",
       "type": "shell",
-      "command": "xcodebuild",
-      "args": [
-        // "-project", "${workspaceFolder}/HackMatrix.xcodeproj",
-        "-scheme", "HackMatrix",
-        "-configuration", "Debug",
-        "clean", "build"
-      ],
+      "command": "swift",
+      "args": ["build"],
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": ["$gcc"]
+      "problemMatcher": ["$swiftc"]
     },
     {
       "label": "Run GUI",
       "type": "shell",
-      "command": "open",
-      "args": ["${workspaceFolder}/DerivedData/HackMatrix/Build/Products/Debug/HackMatrix.app"],
+      "command": "${workspaceFolder}/.build/debug/HackMatrix",
+      "args": [],
       "dependsOn": "Build HackMatrix",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "never"
-      }
+      "problemMatcher": []
     }
-    /* {
-      "type": "swift",
-      "label": "Swift Build All - Release",
-      "detail": "swift build --build-tests",
-      "args": ["build", "--build-tests", "-c", "release"],
-      "env": {},
-      "cwd": "${workspaceFolder}",
-      "group": "build"
-    } */
   ]
 }

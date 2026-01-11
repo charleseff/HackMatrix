@@ -1,3 +1,4 @@
+#if canImport(SpriteKit)
 import SpriteKit
 import SwiftUI
 
@@ -945,3 +946,4 @@ override func mouseDown(with event: NSEvent) {
         addChild(restartLabel)
     }
 }
+#endif

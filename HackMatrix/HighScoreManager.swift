@@ -1,3 +1,4 @@
+#if canImport(SpriteKit)
 import Foundation
 
 struct HighScoreEntry: Codable {
@@ -56,3 +57,4 @@ class HighScoreManager {
         userDefaults.removeObject(forKey: highScoresKey)
     }
 }
+#endif

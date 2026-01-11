@@ -1,3 +1,4 @@
+#if canImport(SpriteKit)
 import Foundation
 
 // Simple test to measure headless game performance
@@ -52,3 +53,4 @@ class HeadlessTest {
         print("This performance should be sufficient for initial training experiments.")
     }
 }
+#endif

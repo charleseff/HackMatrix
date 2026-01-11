@@ -1,3 +1,4 @@
+#if canImport(SpriteKit)
 import Foundation
 
 /// Lightweight test runner for game logic tests
@@ -166,3 +167,4 @@ class GameLogicTests {
         assertEqual(state.nextScheduledTaskTurn, 31, "Next turn should be turnCount + interval")
     }
 }
+#endif
