@@ -75,13 +75,25 @@ class VisualGameController: GameCommandExecutor {
 
     // Called by GameScene when animation completes
     func onAnimationComplete(actionResult: GameState.ActionResult) {
-        guard let scene = gameScene, let callback = animationCompleteForStdin else { return }
-
-        animationCompleteForStdin = nil
+        guard let scene = gameScene else { return }
 
         let obs = ObservationBuilder.build(from: scene.gameState)
-        // TODO: Add GameState.isGameOver() method instead of inline check
         let done = scene.gameState.player.health == .dead || scene.gameState.currentStage > Constants.totalStages
-        callback(obs, actionResult.rewardBreakdown.total, done, [:])
+        let reward = actionResult.rewardBreakdown.total
+        let info = HeadlessGame.buildInfoDict(from: actionResult)
+
+        if let callback = animationCompleteForStdin {
+            // Stdin command - invoke callback
+            animationCompleteForStdin = nil
+            callback(obs, reward, done, info)
+        } else {
+            // Manual play via GUI - emit to stdout for monitoring
+            commandReader.sendResponse([
+                "observation": commandReader.encodeObservation(obs),
+                "reward": reward,
+                "done": done,
+                "info": info
+            ])
+        }
     }
 }

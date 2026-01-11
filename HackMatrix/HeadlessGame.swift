@@ -14,42 +14,20 @@ class HeadlessGame {
         return ObservationBuilder.build(from: gameState)
     }
 
-    // Execute action and advance game state (including enemy turn)
-    // Returns: (observation, reward, isDone, info)
-    func step(actionIndex: Int) -> (GameObservation, Double, Bool, [String: Any]) {
-        guard let action = GameAction.fromIndex(actionIndex) else {
-            fatalError("Invalid action index: \(actionIndex)")
-        }
-
-        var isDone = false
+    /// Build info dict from ActionResult - used by both HeadlessGame and VisualGameController
+    static func buildInfoDict(from result: GameState.ActionResult) -> [String: Any] {
         var info: [String: Any] = [:]
 
-        // Process action (handles player action + enemy turn)
-        let result: GameState.ActionResult = gameState.tryExecuteAction(action)
-
         if !result.success {
-            // Invalid action - terminate episode to prevent infinite loops
             info["invalid_action"] = true
-            isDone = true
-            infoLog("HeadlessGame", "❌ Invalid action \(action) attempted - terminating episode")
         }
-
         if result.stageAdvanced {
-            isDone = result.gameWon
-            if isDone {
-                infoLog(
-                    "Completed the game! With points: \(gameState.player.score)")
-            }
-
             info["stage_complete"] = true
         }
-
         if result.playerDied {
-            isDone = true
             info["death"] = true
         }
 
-        // Add reward breakdown to info dict for Python-side tracking
         info["reward_breakdown"] = [
             "stage": result.rewardBreakdown.stageCompletion,
             "score": result.rewardBreakdown.scoreGain,
@@ -67,17 +45,45 @@ class HeadlessGame {
             "siphonDeathPenalty": result.rewardBreakdown.siphonDeathPenalty
         ]
 
+        return info
+    }
+
+    // Execute action and advance game state (including enemy turn)
+    // Returns: (observation, reward, isDone, info)
+    func step(actionIndex: Int) -> (GameObservation, Double, Bool, [String: Any]) {
+        guard let action = GameAction.fromIndex(actionIndex) else {
+            fatalError("Invalid action index: \(actionIndex)")
+        }
+
+        // Process action (handles player action + enemy turn)
+        let result: GameState.ActionResult = gameState.tryExecuteAction(action)
+
+        // Build info dict using shared helper
+        let info = HeadlessGame.buildInfoDict(from: result)
+
+        // Determine if episode is done
+        var isDone = false
+        if !result.success {
+            isDone = true
+            infoLog("HeadlessGame", "❌ Invalid action \(action) attempted - terminating episode")
+        }
+        if result.stageAdvanced {
+            isDone = result.gameWon
+            if isDone {
+                infoLog("Completed the game! With points: \(gameState.player.score)")
+            }
+        }
+        if result.playerDied {
+            isDone = true
+        }
+
         let observation = ObservationBuilder.build(from: gameState)
         let reward = result.rewardBreakdown.total
 
         if result.stageAdvanced {
-            debugLog(
-                "Advanced to stage \(observation.stage)"
-            )
+            debugLog("Advanced to stage \(observation.stage)")
         } else {
-            debugLog(
-                "Step \(String(describing: action)) -> reward: \(String(format: "%.3f", reward)), done: \(isDone), stage: \(observation.stage), credits: \(gameState.player.credits), energy: \(gameState.player.energy)"
-            )
+            debugLog("Step \(String(describing: action)) -> reward: \(String(format: "%.3f", reward)), done: \(isDone), stage: \(observation.stage), credits: \(gameState.player.credits), energy: \(gameState.player.energy)")
         }
 
         return (observation, reward, isDone, info)

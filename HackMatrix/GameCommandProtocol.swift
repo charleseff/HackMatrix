@@ -99,7 +99,7 @@ class StdinCommandReader {
 
     // MARK: Observation Encoding
 
-    private func encodeObservation(_ obs: GameObservation) -> [String: Any] {
+    func encodeObservation(_ obs: GameObservation) -> [String: Any] {
         var result: [String: Any] = [
             "playerRow": obs.playerRow,
             "playerCol": obs.playerCol,
@@ -173,7 +173,7 @@ class StdinCommandReader {
 
     // MARK: JSON Response Handling
 
-    private func sendResponse(_ data: [String: Any]) {
+    func sendResponse(_ data: [String: Any]) {
         guard let output = outputFile else { return }
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: data)

@@ -1,138 +1,185 @@
 #!/usr/bin/env python3
 """
-Manual play script for WOR-27: Verify rewards and observations.
+Monitor manual gameplay and display observation space in real-time.
 
-Launches the game in visual CLI mode where you can:
-1. See the GUI and play the game
-2. Input actions via terminal
-3. View rewards and observations after each action
+Launches the game with --visual-cli and monitors observations as you play.
+No commands needed - just play with keyboard/mouse in the GUI!
 
-Use this to verify rewards are sensible and observations match game state.
+This validates that observation encoding/decoding works correctly across
+all game scenarios by showing the EXACT data fed to the ML model.
 """
 
-from hackmatrix import HackEnv
+import subprocess
+import json
 import sys
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from hackmatrix.observation_utils import parse_observation, print_observation_detailed
 
 
-def print_action_menu():
-    """Print available actions."""
-    print("\n" + "="*70)
-    print("ACTIONS:")
-    print("  W/A/S/D or 0-3: Move (W=Up, S=Down, A=Left, D=Right)")
-    print("  4: Siphon")
-    print("  5-27: Programs (check owned programs in output)")
-    print()
-    print("COMMANDS:")
-    print("  v: Show valid actions")
-    print("  q: Quit")
-    print("="*70)
+def monitor_gameplay(app_path: str, debug_scenario: bool = False):
+    """Launch game and monitor observations from manual play."""
 
+    print("="*80)
+    print("MANUAL PLAY MONITOR - Observation & Action Space Validator")
+    print("="*80)
+    print("\nLaunching game in visual-cli mode...")
+    print("🎮 Play with keyboard/mouse in the GUI window")
+    print("📊 Observations will appear here in real-time\n")
 
-def print_valid_actions(valid_actions):
-    """Print valid actions in a readable format."""
-    action_names = {
-        0: "Up(W)", 1: "Down(S)", 2: "Left(A)", 3: "Right(D)", 4: "Siphon"
-    }
-    # Add program names for 5-27
-    for i in range(5, 28):
-        action_names[i] = f"Prog{i}"
+    if debug_scenario:
+        print("🔬 Debug scenario enabled - predictable starting state\n")
 
-    valid_names = [action_names.get(a, f"Action{a}") for a in valid_actions]
-    print(f"\nValid actions: {', '.join(valid_names)}")
-    print(f"Indices: {valid_actions}")
+    print("="*80)
 
+    # Build command
+    cmd = [app_path, "--visual-cli"]
+    if debug_scenario:
+        cmd.append("--debug-scenario")
 
-def main():
-    """Run manual play session."""
-    print("=" * 70)
-    print("WOR-27: Manual Verification - Visual CLI Mode")
-    print("=" * 70)
-    print("\nLaunching game in visual mode...")
-    print("You'll see:")
-    print("  1. GUI window (for visual feedback)")
-    print("  2. Terminal output (showing rewards & observations)")
-    print()
+    # Launch Swift process
+    process = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1
+    )
 
-    # Create environment in visual mode
-    env = HackEnv(visual=True, info=True)
+    step = 0
+    pending_observation = None  # Store observation until we get valid actions
 
-    # Reset environment
-    obs, info = env.reset()
-    print("\n✓ Game started!")
-    print_action_menu()
+    try:
+        # Send initial reset command to start the game
+        print("Sending reset command to start game...\n")
+        reset_cmd = json.dumps({"action": "reset"}) + "\n"
+        process.stdin.write(reset_cmd)
+        process.stdin.flush()
 
-    step_count = 0
-
-    while True:
-        # Get valid actions and display them
-        valid_actions = env.get_valid_actions()
-        print_valid_actions(valid_actions)
-
-        # Get user input
-        try:
-            user_input = input("\nEnter action: ").strip().lower()
-
-            if user_input == 'q':
-                print("Quitting...")
-                break
-
-            if user_input == 'v':
-                print_valid_actions(valid_actions)
+        # Read stdout line by line (same as gym_env._send_command)
+        for line in process.stdout:
+            line = line.strip()
+            if not line:
                 continue
 
-            if user_input == '':
+            # Debug: show raw line (can be disabled later)
+            print(f"[DEBUG] Received line: {line[:100]}", file=sys.stderr)
+
+            # Skip non-JSON lines (debug messages, go to stderr output)
+            if not line.startswith('{'):
+                # Print Swift debug output
+                if line:
+                    print(f"[Swift] {line}", file=sys.stderr)
                 continue
 
-            # Parse action - support WASD shortcuts
-            wasd_map = {'w': 0, 's': 1, 'a': 2, 'd': 3}
-            if user_input in wasd_map:
-                action = wasd_map[user_input]
-            else:
-                # Try to parse as number
-                try:
-                    action = int(user_input)
-                except ValueError:
-                    print(f"Invalid input: '{user_input}'. Use W/A/S/D, numbers 0-30, 'v', or 'q'.")
-                    continue
+            try:
+                data = json.loads(line)
 
-            # Validate action
-            if action not in valid_actions:
-                print(f"❌ Action {action} is NOT valid!")
-                print(f"   Valid actions: {valid_actions}")
-                continue
+                # Debug: show what type of message we received
+                msg_type = "unknown"
+                if "observation" in data:
+                    msg_type = "observation"
+                elif "validActions" in data:
+                    msg_type = "validActions"
+                elif "error" in data:
+                    msg_type = "error"
+                print(f"[DEBUG] Message type: {msg_type}", file=sys.stderr)
 
-            # Take action (visual CLI debug output will print automatically)
-            obs, reward, terminated, truncated, info = env.step(action)
-            step_count += 1
+                # Handle different response types
+                if "observation" in data:
+                    # Store observation, request valid actions (same flow as training)
+                    step += 1
+                    pending_observation = (data, step)
+                    request_valid_actions(process)
 
-            # Check if game ended
-            if terminated or truncated:
-                print("\n" + "="*70)
-                print("GAME ENDED")
-                print(f"Total steps: {step_count}")
-                print("="*70)
+                elif "validActions" in data:
+                    # Now we have valid actions, print the pending observation
+                    valid_actions = data["validActions"]
+                    print(f"[DEBUG] Got {len(valid_actions)} valid actions", file=sys.stderr)
 
-                choice = input("\nPlay again? (y/n): ").strip().lower()
-                if choice == 'y':
-                    obs, info = env.reset()
-                    step_count = 0
-                    print("\n✓ Game reset!")
-                    print_action_menu()
-                else:
-                    break
+                    if pending_observation:
+                        obs_data, obs_step = pending_observation
+                        print_observation(obs_data, obs_step, valid_actions)
+                        pending_observation = None
 
-        except KeyboardInterrupt:
-            print("\n\nInterrupted by user. Quitting...")
-            break
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            import traceback
-            traceback.print_exc()
-            break
+                elif "error" in data:
+                    print(f"\n❌ Error: {data['error']}")
 
-    env.close()
-    print("\n✓ Session ended.")
+            except json.JSONDecodeError as e:
+                print(f"[Parse Error] {e}: {line[:100]}", file=sys.stderr)
+            except Exception as e:
+                print(f"[ERROR] {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+
+    except KeyboardInterrupt:
+        print("\n\n👋 Monitor stopped by user")
+    finally:
+        process.terminate()
+        process.wait()
+
+
+def request_valid_actions(process):
+    """Send getValidActions command to Swift."""
+    command = json.dumps({"action": "getValidActions"}) + "\n"
+    try:
+        process.stdin.write(command)
+        process.stdin.flush()
+    except BrokenPipeError:
+        pass  # Process terminated
+
+
+def print_observation(data: dict, step: int, valid_actions: list = None):
+    """Pretty-print observation data using robust observation_utils."""
+
+    try:
+        obs_raw = data.get("observation", {})
+        reward = data.get("reward", 0)
+        done = data.get("done", False)
+        info = data.get("info", {})
+
+        # Parse observation using the EXACT same logic as gym_env
+        observation = parse_observation(obs_raw)
+
+        # Use detailed printer from observation_utils
+        print_observation_detailed(
+            observation=observation,
+            step=step,
+            reward=reward,
+            done=done,
+            info=info,
+            valid_actions=valid_actions
+        )
+        sys.stdout.flush()
+
+    except Exception as e:
+        print(f"[ERROR in print_observation] {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Monitor manual gameplay and validate observation/action space"
+    )
+    parser.add_argument(
+        "--debug-scenario",
+        action="store_true",
+        help="Use debug scenario starting state"
+    )
+    args = parser.parse_args()
+
+    # Path to Swift binary
+    binary_path = "../DerivedData/HackMatrix/Build/Products/Debug/HackMatrix.app/Contents/MacOS/HackMatrix"
+
+    if not Path(binary_path).exists():
+        print(f"❌ Binary not found: {binary_path}")
+        print("\nBuild first:")
+        print("  xcodebuild -scheme HackMatrix -configuration Debug")
+        sys.exit(1)
+
+    monitor_gameplay(binary_path, debug_scenario=args.debug_scenario)

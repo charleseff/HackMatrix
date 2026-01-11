@@ -520,7 +520,8 @@ class GameState {
 
         if turnCount >= nextScheduledTaskTurn {
             spawnRandomTransmissions(count: 1, isFromScheduledTask: true)
-            nextScheduledTaskTurn = turnCount + max(1, scheduledTaskInterval)
+            // no fewer than 4 turns between spawns
+            nextScheduledTaskTurn = turnCount + max(4, scheduledTaskInterval)
         }
     }
 
