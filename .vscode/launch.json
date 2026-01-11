@@ -1,47 +1,32 @@
 {
   "version": "0.2.0",
   "configurations": [
-
-    {
-      "name": "Debug Headless CLI",
-      "type": "lldb",
-      "request": "launch",
-      "program": "${workspaceFolder}/DerivedData/HackMatrix/Build/Products/Debug/HackMatrix.app/Contents/MacOS/HackMatrix",
-      "args": [
-        "--headless-cli"
-      ],
-      "cwd": "${workspaceFolder}",
-      "preLaunchTask": "Build HackMatrix"
-    },
     {
       "name": "Debug HackMatrix",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/DerivedData/HackMatrix/Build/Products/Debug/HackMatrix.app/Contents/MacOS/HackMatrix",
+      "program": "${workspaceFolder}/.build/debug/HackMatrix",
       "args": [],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "Build HackMatrix"
     },
     {
-      "name": "debug scenario",
+      "name": "Debug Headless CLI",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/DerivedData/HackMatrix/Build/Products/Debug/HackMatrix.app/Contents/MacOS/HackMatrix",
-      "args": [
-        "--debug-scenario"
-      ],
+      "program": "${workspaceFolder}/.build/debug/HackMatrix",
+      "args": ["--headless-cli"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "Build HackMatrix"
     },
     {
-      "type": "swift",
+      "name": "Debug Scenario",
+      "type": "lldb",
       "request": "launch",
-      "args": [],
-      "cwd": "${workspaceFolder:868-hack-2}",
-      "name": "Release HackMatrix",
-      "target": "HackMatrix",
-      "configuration": "release",
-      "preLaunchTask": "swift: Build Release HackMatrix"
+      "program": "${workspaceFolder}/.build/debug/HackMatrix",
+      "args": ["--debug-scenario"],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Build HackMatrix"
     }
   ]
 }
