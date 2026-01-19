@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     aggregate \
     dnsutils \
     jq \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies (cached layer)
