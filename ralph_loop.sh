@@ -83,17 +83,21 @@ while true; do
     # Run Ralph iteration with selected prompt
     # -p: Headless mode (non-interactive, reads from stdin)
     # --dangerously-skip-permissions: Auto-approve all tool calls (YOLO mode)
-    # --output-format=text: Human-readable output
-    # --model opus: Primary agent uses Opus for complex reasoning (task selection, prioritization)
-    #               Can use 'sonnet' in build mode for speed if plan is clear and tasks well-defined
+    # --output-format=stream-json: Real-time streaming output
+    # --model opus: Primary agent uses Opus for complex reasoning
     # --verbose: Detailed execution logging
-    # stdbuf -oL: Line-buffered output so we can see progress in real-time
-    # Use envsubst to substitute COMPLETION_PROMISE variable into prompt
-    envsubst < "$PROMPT_FILE" | stdbuf -oL claude -p \
+    #
+    # Pipeline: envsubst substitutes COMPLETION_PROMISE in prompt
+    #           claude outputs stream-json
+    #           tee saves raw JSON to log file (for completion detection)
+    #           json2text.sh filters to readable text (for terminal display)
+    envsubst < "$PROMPT_FILE" | claude -p \
         --dangerously-skip-permissions \
-        --output-format=text \
+        --output-format=stream-json \
         --model opus \
-        --verbose 2>&1 | tee "$OUTPUT_FILE"
+        --verbose 2>&1 | tee "$OUTPUT_FILE" | ./json2text.sh
+
+
 
     # Check for completion promise in output
     if grep -q "$COMPLETION_PROMISE" "$OUTPUT_FILE"; then
