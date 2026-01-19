@@ -186,11 +186,11 @@ Swift responds with JSON on stdout:
 
 ### Observation Space
 
-**Player state** (9 values): `[row, col, hp, credits, energy, stage, turn, dataSiphons, baseAttack]`
+**Player state** (10 values): `[row, col, hp, credits, energy, stage, dataSiphons, baseAttack, showActivated, scheduledTasksDisabled]`
 
-**Grid** (6×6×20): Each cell has 20 features encoding enemies, blocks, transmissions, resources, special cells.
+**Programs** (23 values): Binary int32 vector indicating owned programs.
 
-**Flags**: `[showActivated]` - whether the "show" program has been used.
+**Grid** (6x6x40): Each cell has 40 features encoding enemies, blocks, transmissions, resources, special cells.
 
 ### Running Tests
 

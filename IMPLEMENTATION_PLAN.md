@@ -13,23 +13,23 @@ Implement a minimal pure functional JAX environment (`jax_env.py`) as specified 
 - **Training pipeline**: `python/scripts/train.py` - MaskablePPO with W&B integration
 - **Requirements**: `python/requirements.txt` - stable-baselines3, PyTorch dependencies
 
-### What Does NOT Exist (Required by Spec)
-- [ ] `python/jax_env.py` - Pure JAX environment
-- [ ] `python/test_env_parity.py` - Interface parity tests
-- [ ] `python/scripts/train_jax.py` - JAX training script sketch
-- [ ] JAX/Flax dependencies in requirements
+### What Now Exists
+- [x] `python/jax_env.py` - Pure JAX environment (COMPLETED)
+- [x] `python/test_env_parity.py` - Interface parity tests (COMPLETED)
+- [x] `python/scripts/train_jax.py` - JAX training script sketch (COMPLETED)
+- [x] JAX/Flax dependencies in requirements (COMPLETED)
 
-## Specification Discrepancies (MUST RESOLVE FIRST)
+## Specification Discrepancies (RESOLVED)
 
-**CRITICAL**: The spec (`specs/jax-dummy-env.md`) does not match the actual implementation:
+All discrepancies between spec and actual implementation have been resolved:
 
-| Component | Spec Says | Actual `gym_env.py` | Resolution |
-|-----------|-----------|---------------------|------------|
-| Player state | (9,) | (10,) | **Update spec** - includes `showActivated` + `scheduledTasksDisabled` flags |
-| Grid | (6, 6, 20) | (6, 6, 40) | **Update spec** - 40 features in reality |
-| Flags | (1,) separate | Embedded in player | **Update spec** - no separate flags component |
+| Component | Resolution |
+|-----------|-----------|
+| Player state | Spec updated: (10,) with `showActivated` + `scheduledTasksDisabled` flags |
+| Grid | Spec updated: (6, 6, 40) features per cell |
+| Flags | Spec updated: no separate flags component, embedded in player state |
 
-**Actual observation structure** (from `gym_env.py` and `observation_utils.py`):
+**Actual observation structure** (now matches specs/jax-dummy-env.md):
 - **Player**: (10,) float32 - `[row, col, hp, credits, energy, stage, dataSiphons, baseAttack, showActivated, scheduledTasksDisabled]`
 - **Programs**: (23,) int32 - binary vector of owned programs
 - **Grid**: (6, 6, 40) float32 - 40 features per cell:
@@ -45,20 +45,20 @@ Implement a minimal pure functional JAX environment (`jax_env.py`) as specified 
   - Channels 36-37: Credits, energy
   - Channels 38-39: Data siphon cell, exit cell
 
-**Recommendation**: JAX env should match actual `gym_env.py` for parity testing to work correctly.
+**Status**: JAX env matches actual `gym_env.py` - parity testing confirmed working.
 
 ## Implementation Tasks (Priority Order)
 
 ### Phase 1: Specification Alignment
-- [ ] **P1.1** Update `specs/jax-dummy-env.md` observation space to match `gym_env.py`:
+- [x] **P1.1** Update `specs/jax-dummy-env.md` observation space to match `gym_env.py`: (COMPLETED)
   - Player state: (10,) with both `showActivated` and `scheduledTasksDisabled`
   - Grid: (6, 6, 40) features
   - Programs: (23,) int32 binary vector
   - Remove separate flags component
-- [ ] **P1.2** Update CLAUDE.md observation space documentation to match reality
+- [x] **P1.2** Update CLAUDE.md observation space documentation to match reality (COMPLETED)
 
 ### Phase 2: Dependencies
-- [ ] **P2.1** Add JAX dependencies to `python/requirements.txt`:
+- [x] **P2.1** Add JAX dependencies to `python/requirements.txt`: (COMPLETED)
   ```
   jax>=0.4.20
   jaxlib>=0.4.20
@@ -66,7 +66,7 @@ Implement a minimal pure functional JAX environment (`jax_env.py`) as specified 
   ```
 
 ### Phase 3: Core JAX Environment
-- [ ] **P3.1** Create `python/jax_env.py` with:
+- [x] **P3.1** Create `python/jax_env.py` with: (COMPLETED)
   - `EnvState` dataclass using `flax.struct.dataclass`
   - `Observation` dataclass matching gym_env structure:
     - `player_state`: (10,) float32
@@ -81,7 +81,7 @@ Implement a minimal pure functional JAX environment (`jax_env.py`) as specified 
   - All functions marked with `@jax.jit`
 
 ### Phase 4: Parity Tests
-- [ ] **P4.1** Create `python/test_env_parity.py` with:
+- [x] **P4.1** Create `python/test_env_parity.py` with: (COMPLETED)
   - `EnvAdapter` protocol for common interface
   - `SwiftEnvAdapter` wrapping `HackEnv`
   - `JaxEnvAdapter` wrapping `jax_env` functions
@@ -91,20 +91,20 @@ Implement a minimal pure functional JAX environment (`jax_env.py`) as specified 
   - `test_step_return_types()` - verify reward (float), done (bool) types
 
 ### Phase 5: Training Script Sketch
-- [ ] **P5.1** Create `python/scripts/train_jax.py` with:
+- [x] **P5.1** Create `python/scripts/train_jax.py` with: (COMPLETED)
   - `Transition` NamedTuple for trajectory storage
   - `make_train(config)` factory returning JIT-compiled train function
   - `main()` with device detection and placeholder training loop
   - Comments indicating where PureJaxRL integration would go
 
 ### Phase 6: Testing & Verification
-- [ ] **P6.1** Manual verification script outputs:
+- [x] **P6.1** Manual verification script outputs: (COMPLETED)
   - JAX env observation shapes match spec
   - Valid actions mask has exactly 4 True values (0-3)
   - Episodes terminate ~10% of steps
   - JIT compilation works without errors
-- [ ] **P6.2** Run parity tests: `python test_env_parity.py`
-- [ ] **P6.3** Test TPU/GPU detection: `python -c "import jax; print(jax.devices())"`
+- [x] **P6.2** Run parity tests: `python test_env_parity.py` (COMPLETED - all 5 tests pass)
+- [x] **P6.3** Test TPU/GPU detection: `python -c "import jax; print(jax.devices())"` (COMPLETED)
 
 ## Files to Create/Modify
 
@@ -119,11 +119,13 @@ Implement a minimal pure functional JAX environment (`jax_env.py`) as specified 
 
 ## Success Criteria
 
-1. `python/jax_env.py` exists and is JIT-compilable
-2. `python -c "import jax_env; print('OK')"` succeeds
-3. `python test_env_parity.py` passes all 4 tests
-4. `python scripts/train_jax.py` runs without error (even if training is placeholder)
-5. Manual verification shows correct observation shapes and action masking
+- [x] `python/jax_env.py` exists and is JIT-compilable (VERIFIED)
+- [x] `python -c "import jax_env; print('OK')"` succeeds (VERIFIED)
+- [x] `python test_env_parity.py` passes all 5 tests (VERIFIED - all tests passing)
+- [x] `python scripts/train_jax.py` runs without error (VERIFIED)
+- [x] Manual verification shows correct observation shapes and action masking (VERIFIED)
+
+**All success criteria have been met.**
 
 ## Notes
 

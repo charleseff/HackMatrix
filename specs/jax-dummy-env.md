@@ -48,9 +48,9 @@ Must match Swift environment exactly for model portability and parity testing.
 
 | Component | Shape | Description |
 |-----------|-------|-------------|
-| Player state | (9,) | `[row, col, hp, credits, energy, stage, turn, dataSiphons, baseAttack]` |
-| Grid | (6, 6, 20) | 20 features per cell encoding enemies, blocks, transmissions, etc. |
-| Flags | (1,) | `[showActivated]` |
+| Player state | (10,) | `[row, col, hp, credits, energy, stage, dataSiphons, baseAttack, showActivated, scheduledTasksDisabled]` |
+| Programs | (23,) | Binary int32 vector of owned programs |
+| Grid | (6, 6, 40) | 40 features per cell encoding enemies, blocks, transmissions, etc. |
 
 ### Action Space
 
@@ -81,9 +81,9 @@ class EnvState:
 @struct.dataclass
 class Observation:
     """Observation returned to agent."""
-    player_state: jax.Array  # (9,)
-    grid: jax.Array          # (6, 6, 20)
-    flags: jax.Array         # (1,)
+    player_state: jax.Array  # (10,)
+    programs: jax.Array      # (23,) int32
+    grid: jax.Array          # (6, 6, 40)
 ```
 
 ### Functional Interface
@@ -149,9 +149,9 @@ class EnvState:
 @struct.dataclass
 class Observation:
     """Observation returned to agent."""
-    player_state: jax.Array  # (9,)
-    grid: jax.Array          # (6, 6, 20)
-    flags: jax.Array         # (1,)
+    player_state: jax.Array  # (10,)
+    programs: jax.Array      # (23,) int32
+    grid: jax.Array          # (6, 6, 40)
 
 
 # ---------------------------------------------------------------------------
@@ -160,8 +160,9 @@ class Observation:
 
 NUM_ACTIONS = 28
 GRID_SIZE = 6
-GRID_FEATURES = 20
-PLAYER_STATE_SIZE = 9
+GRID_FEATURES = 40  # Changed from 20
+PLAYER_STATE_SIZE = 10  # Changed from 9
+NUM_PROGRAMS = 23  # Added
 
 
 # ---------------------------------------------------------------------------
@@ -232,8 +233,8 @@ def _zero_observation() -> Observation:
     """Create zeroed observation."""
     return Observation(
         player_state=jnp.zeros(PLAYER_STATE_SIZE, dtype=jnp.float32),
+        programs=jnp.zeros(NUM_PROGRAMS, dtype=jnp.int32),
         grid=jnp.zeros((GRID_SIZE, GRID_SIZE, GRID_FEATURES), dtype=jnp.float32),
-        flags=jnp.zeros(1, dtype=jnp.float32),
     )
 
 
@@ -345,8 +346,8 @@ class JaxEnvAdapter:
     def _obs_to_dict(self, obs) -> dict:
         return {
             "player_state": np.asarray(obs.player_state),
+            "programs": np.asarray(obs.programs),
             "grid": np.asarray(obs.grid),
-            "flags": np.asarray(obs.flags),
         }
 
     def _mask_to_list(self, mask) -> list[int]:
@@ -365,11 +366,11 @@ def test_observation_shapes():
     swift_obs, _ = swift.reset()
     jax_obs, _ = jax_adapter.reset()
 
-    for key in ["player_state", "grid", "flags"]:
+    for key in ["player_state", "programs", "grid"]:
         assert swift_obs[key].shape == jax_obs[key].shape, \
             f"Shape mismatch for {key}: {swift_obs[key].shape} vs {jax_obs[key].shape}"
 
-    print("✓ Observation shapes match")
+    print("Observation shapes match")
 
 
 def test_observation_dtypes():
@@ -380,11 +381,11 @@ def test_observation_dtypes():
     swift_obs, _ = swift.reset()
     jax_obs, _ = jax_adapter.reset()
 
-    for key in ["player_state", "grid", "flags"]:
+    for key in ["player_state", "programs", "grid"]:
         assert swift_obs[key].dtype == jax_obs[key].dtype, \
             f"Dtype mismatch for {key}: {swift_obs[key].dtype} vs {jax_obs[key].dtype}"
 
-    print("✓ Observation dtypes match")
+    print("Observation dtypes match")
 
 
 def test_valid_actions_format():
@@ -402,7 +403,7 @@ def test_valid_actions_format():
     assert all(0 <= a < 28 for a in swift_valid), "Swift actions should be in range 0-27"
     assert all(0 <= a < 28 for a in jax_valid), "JAX actions should be in range 0-27"
 
-    print("✓ Valid actions format matches")
+    print("Valid actions format matches")
 
 
 def test_step_return_types():
@@ -426,7 +427,7 @@ def test_step_return_types():
     assert isinstance(swift_done, bool), f"Swift done should be bool, got {type(swift_done)}"
     assert isinstance(jax_done, bool), f"JAX done should be bool, got {type(jax_done)}"
 
-    print("✓ Step return types match")
+    print("Step return types match")
 
 
 if __name__ == "__main__":
@@ -563,8 +564,8 @@ key = jax.random.PRNGKey(42)
 state, obs = jax_env.reset(key)
 print('Observation shapes:')
 print(f'  player_state: {obs.player_state.shape}')
+print(f'  programs: {obs.programs.shape}')
 print(f'  grid: {obs.grid.shape}')
-print(f'  flags: {obs.flags.shape}')
 
 key, subkey = jax.random.split(key)
 state, obs, reward, done = jax_env.step(state, 0, subkey)
@@ -583,7 +584,7 @@ python -c "import jax; print('Devices:', jax.devices())"
 
 ### Expected Output
 
-- Observation shapes: `player_state: (9,)`, `grid: (6, 6, 20)`, `flags: (1,)`
+- Observation shapes: `player_state: (10,)`, `programs: (23,)`, `grid: (6, 6, 40)`
 - Valid actions: 4 valid (indices 0-3)
 - Episodes terminate ~10% of steps
 - Parity tests pass

@@ -12,5 +12,10 @@ tensorboard>=2.14.0
 matplotlib>=3.7.0
 wandb>=0.15.0
 
+# JAX for TPU/GPU accelerated training
+jax>=0.4.20
+jaxlib>=0.4.20
+flax>=0.8.0
+
 # Development tools
 ruff>=0.1.0
