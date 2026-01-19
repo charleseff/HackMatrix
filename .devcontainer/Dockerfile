@@ -29,12 +29,8 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
-# Set up persistent zsh history
-RUN mkdir /commandhistory \
-    && touch /commandhistory/.zsh_history \
-    && chown -R $USERNAME /commandhistory \
-    && SNIPPET="export HISTFILE=/commandhistory/.zsh_history" \
-    && echo "$SNIPPET" >> "/home/$USERNAME/.zshrc"
+# Create directory for persistent zsh history (mounted as volume in devcontainer.json)
+RUN mkdir -p /commandhistory && chown -R $USERNAME /commandhistory
 
 # Set up firewall script with passwordless sudo
 COPY .devcontainer/init-firewall.sh /usr/local/bin/

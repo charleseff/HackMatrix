@@ -33,6 +33,7 @@
 		}
 	},
 	"remoteEnv": {
-		"HACKMATRIX_BINARY": "${containerWorkspaceFolder}/.build/release/HackMatrix"
+		"HACKMATRIX_BINARY": "${containerWorkspaceFolder}/.build/release/HackMatrix",
+		"HISTFILE": "/commandhistory/.zsh_history"
 	}
 }
