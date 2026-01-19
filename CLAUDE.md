@@ -18,6 +18,16 @@
 
 Python auto-selects the right binary based on mode.
 
+**Validation commands:**
+- Tests: `swift test`
+- Build (headless): `swift build`
+- Build (GUI): `xcodebuild -scheme HackMatrix -configuration Debug build`
+
+**Notes:**
+- SPM excludes `App.swift` and GUI code via conditional compilation
+- Game logic is shared between SPM and Xcode builds
+- Source code in `HackMatrix/` and `Sources/`, tests in `Tests/HackMatrixTests/`
+
 ### Dev Container (Linux Training)
 
 Use VS Code Dev Containers for a full Linux dev environment with Swift, Python, and Claude Code.
