@@ -8,10 +8,7 @@ Tests for edge cases including:
 These tests verify that the Swift environment correctly handles game-ending conditions.
 """
 
-try:
-    import pytest
-except ImportError:
-    from . import pytest_compat as pytest
+import pytest
 import numpy as np
 
 from .env_interface import (

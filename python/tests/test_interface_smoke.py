@@ -12,10 +12,7 @@ Why these tests:
 """
 
 import numpy as np
-try:
-    import pytest
-except ImportError:
-    from . import pytest_compat as pytest
+import pytest
 
 from .env_interface import (
     Observation,

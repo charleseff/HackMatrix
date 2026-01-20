@@ -9,10 +9,7 @@ Tests for stage transitions including:
 These tests verify that the Swift environment correctly handles stage transitions.
 """
 
-try:
-    import pytest
-except ImportError:
-    from . import pytest_compat as pytest
+import pytest
 import numpy as np
 
 from .env_interface import (

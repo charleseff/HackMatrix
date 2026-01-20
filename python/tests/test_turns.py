@@ -11,10 +11,7 @@ Tests for turn mechanics including:
 These tests verify that the Swift environment correctly implements turn mechanics.
 """
 
-try:
-    import pytest
-except ImportError:
-    from . import pytest_compat as pytest
+import pytest
 import numpy as np
 
 from .env_interface import (
