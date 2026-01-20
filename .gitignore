@@ -1,6 +1,8 @@
 .idea
 .env
 .mcp.json
+.claude/settings.local.json
+.vscode/settings.json
 
 # Xcode build artifacts
 DerivedData/
