@@ -1,135 +1,233 @@
-# JAX Dummy Environment Implementation Plan
+# Environment Parity Test Suite Implementation Plan
 
-## Project Goal
-
-Implement a minimal pure functional JAX environment (`jax_env.py`) as specified in `specs/jax-dummy-env.md` to enable TPU-accelerated training with PureJaxRL.
+Based on analysis of `specs/env-parity-tests.md` and codebase exploration.
 
 ## Current State Assessment
 
 ### What Exists
-- **Swift game**: Full game logic in Swift (`HackMatrix/*.swift`)
-- **Python Gymnasium wrapper**: `python/hackmatrix/gym_env.py` - production-ready
-- **Observation utilities**: `python/hackmatrix/observation_utils.py` - comprehensive parsing/display
-- **Training pipeline**: `python/scripts/train.py` - MaskablePPO with W&B integration
-- **Requirements**: `python/requirements.txt` - stable-baselines3, PyTorch dependencies
 
-### What Now Exists
-- [x] `python/jax_env.py` - Pure JAX environment (COMPLETED)
-- [x] `python/test_env_parity.py` - Interface parity tests (COMPLETED)
-- [x] `python/scripts/train_jax.py` - JAX training script sketch (COMPLETED)
-- [x] JAX/Flax dependencies in requirements (COMPLETED)
+| Component | Status | Location |
+|-----------|--------|----------|
+| Swift JSON protocol | Partial | `HackMatrix/GameCommandProtocol.swift` |
+| `reset`, `step`, `getValidActions` commands | Complete | GameCommandProtocol.swift |
+| `HackEnv` Gymnasium wrapper | Complete | `python/hackmatrix/gym_env.py` |
+| JAX dummy environment | Complete | `python/hackmatrix/jax_env.py` |
+| Basic parity tests (shapes/dtypes) | Complete | `python/scripts/test_env_parity.py` |
+| Debug scenario mode | Complete | `--debug-scenario` flag in HackEnv |
 
-## Specification Discrepancies (RESOLVED)
+### What's Missing
 
-All discrepancies between spec and actual implementation have been resolved:
+| Component | Priority | Notes |
+|-----------|----------|-------|
+| `set_state` JSON command | **P0** | Core blocker - needed for deterministic test scenarios |
+| pytest test infrastructure | **P0** | No `tests/` directory, no `conftest.py` |
+| `EnvInterface` Protocol | **P1** | Spec defines protocol, not yet implemented |
+| `SwiftEnvWrapper` class | **P1** | Exists as adapter, needs `set_state` |
+| `JaxEnvWrapper` skeleton | **P1** | Exists as adapter, needs `set_state` stub |
+| Comprehensive test cases | **P2** | Movement, siphon, programs, enemies, turns, stages |
+| Action mask verification tests | **P2** | Per spec requirements |
 
-| Component | Resolution |
-|-----------|-----------|
-| Player state | Spec updated: (10,) with `showActivated` + `scheduledTasksDisabled` flags |
-| Grid | Spec updated: (6, 6, 40) features per cell |
-| Flags | Spec updated: no separate flags component, embedded in player state |
+## Spec Discrepancies
 
-**Actual observation structure** (now matches specs/jax-dummy-env.md):
-- **Player**: (10,) float32 - `[row, col, hp, credits, energy, stage, dataSiphons, baseAttack, showActivated, scheduledTasksDisabled]`
-- **Programs**: (23,) int32 - binary vector of owned programs
-- **Grid**: (6, 6, 40) float32 - 40 features per cell:
-  - Channels 0-3: Enemy type one-hot (virus, daemon, glitch, cryptog)
-  - Channel 4: Enemy HP
-  - Channel 5: Enemy stunned
-  - Channels 6-8: Block type one-hot (data, program, question)
-  - Channel 9: Block points
-  - Channel 10: Block siphoned
-  - Channels 11-33: Program type one-hot (23 programs)
-  - Channel 34: Transmission spawn count
-  - Channel 35: Transmission turns
-  - Channels 36-37: Credits, energy
-  - Channels 38-39: Data siphon cell, exit cell
+1. **Interface location**: Spec specifies `python/tests/env_interface.py`, but current adapters are in `python/scripts/test_env_parity.py`
+2. **Wrapper naming**: Spec uses `SwiftEnvWrapper`/`JaxEnvWrapper`, current code uses `SwiftEnvAdapter`/`JaxEnvAdapter`
+3. **`set_state` missing**: Critical feature not yet in Swift JSON protocol
 
-**Status**: JAX env matches actual `gym_env.py` - parity testing confirmed working.
+## Implementation Tasks
 
-## Implementation Tasks (Priority Order)
+### Phase 1: Interface & Infrastructure
 
-### Phase 1: Specification Alignment
-- [x] **P1.1** Update `specs/jax-dummy-env.md` observation space to match `gym_env.py`: (COMPLETED)
-  - Player state: (10,) with both `showActivated` and `scheduledTasksDisabled`
-  - Grid: (6, 6, 40) features
-  - Programs: (23,) int32 binary vector
-  - Remove separate flags component
-- [x] **P1.2** Update CLAUDE.md observation space documentation to match reality (COMPLETED)
+- [ ] **1.1** Create `python/tests/` directory structure
+- [ ] **1.2** Create `python/tests/conftest.py` with pytest fixtures
+- [ ] **1.3** Create `python/tests/env_interface.py` with `EnvInterface` Protocol and dataclasses:
+  - `Observation` dataclass
+  - `GameState` dataclass for `set_state`
+  - `PlayerState`, `Enemy`, `Transmission`, `Block`, `Resource` dataclasses
+- [ ] **1.4** Add `set_state` command to Swift JSON protocol (`GameCommandProtocol.swift`)
+- [ ] **1.5** Implement `setState()` in `HeadlessGame.swift` to set arbitrary game state
+- [ ] **1.6** Create `python/tests/swift_env_wrapper.py` implementing `EnvInterface`
+- [ ] **1.7** Create `python/tests/jax_env_wrapper.py` skeleton implementing `EnvInterface`
+- [ ] **1.8** Create `python/tests/test_interface_smoke.py` - basic interface compliance tests
 
-### Phase 2: Dependencies
-- [x] **P2.1** Add JAX dependencies to `python/requirements.txt`: (COMPLETED)
-  ```
-  jax>=0.4.20
-  jaxlib>=0.4.20
-  flax>=0.8.0
-  ```
+### Phase 2: Comprehensive Test Cases
 
-### Phase 3: Core JAX Environment
-- [x] **P3.1** Create `python/jax_env.py` with: (COMPLETED)
-  - `EnvState` dataclass using `flax.struct.dataclass`
-  - `Observation` dataclass matching gym_env structure:
-    - `player_state`: (10,) float32
-    - `programs`: (23,) int32
-    - `grid`: (6, 6, 40) float32
-  - Constants: `NUM_ACTIONS=28`, `GRID_SIZE=6`, `GRID_FEATURES=40`, `PLAYER_STATE_SIZE=10`, `NUM_PROGRAMS=23`
-  - `reset(key)` function returning zeroed observation
-  - `step(state, action, key)` function with 10% termination probability
-  - `get_valid_actions(state)` returning mask for actions 0-3 only
-  - `_zero_observation()` helper
-  - Vectorized versions: `batched_reset`, `batched_step`, `batched_get_valid_actions`
-  - All functions marked with `@jax.jit`
+#### Movement Tests (`test_movement.py`)
+- [ ] **2.1** Move to empty cell (all 4 directions)
+- [ ] **2.2** Move blocked by wall/grid edge
+- [ ] **2.3** Move blocked by block
+- [ ] **2.4** Move onto cell with credits
+- [ ] **2.5** Move onto cell with energy
+- [ ] **2.6** Move onto cell with both resources
+- [ ] **2.7** Move into enemy (attack, kill)
+- [ ] **2.8** Move into enemy (attack, survives)
+- [ ] **2.9** Move into transmission
 
-### Phase 4: Parity Tests
-- [x] **P4.1** Create `python/test_env_parity.py` with: (COMPLETED)
-  - `EnvAdapter` protocol for common interface
-  - `SwiftEnvAdapter` wrapping `HackEnv`
-  - `JaxEnvAdapter` wrapping `jax_env` functions
-  - `test_observation_shapes()` - verify shapes match
-  - `test_observation_dtypes()` - verify dtypes match
-  - `test_valid_actions_format()` - verify list of ints format
-  - `test_step_return_types()` - verify reward (float), done (bool) types
+#### Siphon Tests (`test_siphon.py`)
+- [ ] **2.10** Siphon adjacent block (cross pattern)
+- [ ] **2.11** Siphon with no adjacent block (invalid)
+- [ ] **2.12** Siphon already-siphoned block
+- [ ] **2.13** Siphon spawns transmissions based on spawn count
+- [ ] **2.14** Siphon reveals resources
+- [ ] **2.15** Siphon different block types (data, program, question)
 
-### Phase 5: Training Script Sketch
-- [x] **P5.1** Create `python/scripts/train_jax.py` with: (COMPLETED)
-  - `Transition` NamedTuple for trajectory storage
-  - `make_train(config)` factory returning JIT-compiled train function
-  - `main()` with device detection and placeholder training loop
-  - Comments indicating where PureJaxRL integration would go
+#### Program Tests (`test_programs.py`)
+Each of the 23 programs needs at least one test:
 
-### Phase 6: Testing & Verification
-- [x] **P6.1** Manual verification script outputs: (COMPLETED)
-  - JAX env observation shapes match spec
-  - Valid actions mask has exactly 4 True values (0-3)
-  - Episodes terminate ~10% of steps
-  - JIT compilation works without errors
-- [x] **P6.2** Run parity tests: `python test_env_parity.py` (COMPLETED - all 5 tests pass)
-- [x] **P6.3** Test TPU/GPU detection: `python -c "import jax; print(jax.devices())"` (COMPLETED)
+- [ ] **2.16** `push` (index 5): Push enemies away
+- [ ] **2.17** `pull` (index 6): Pull enemies toward
+- [ ] **2.18** `crash` (index 7): Clear 8 surrounding cells
+- [ ] **2.19** `warp` (index 8): Warp to random enemy/transmission
+- [ ] **2.20** `poly` (index 9): Randomize enemy types
+- [ ] **2.21** `wait` (index 10): Skip turn, ends turn
+- [ ] **2.22** `debug` (index 11): Damage enemies on blocks
+- [ ] **2.23** `row` (index 12): Attack all in row
+- [ ] **2.24** `col` (index 13): Attack all in column
+- [ ] **2.25** `undo` (index 14): Restore previous state
+- [ ] **2.26** `step` (index 15): Enemies don't move next turn
+- [ ] **2.27** `siph+` (index 16): Gain data siphon
+- [ ] **2.28** `exch` (index 17): Convert 4 credits to 4 energy
+- [ ] **2.29** `show` (index 18): Reveal cryptogs/transmissions
+- [ ] **2.30** `reset` (index 19): Restore to 3 HP
+- [ ] **2.31** `calm` (index 20): Disable scheduled spawns
+- [ ] **2.32** `d_bom` (index 21): Destroy nearest daemon
+- [ ] **2.33** `delay` (index 22): Extend transmissions +3 turns
+- [ ] **2.34** `anti-v` (index 23): Damage all viruses
+- [ ] **2.35** `score` (index 24): Gain points = stages left
+- [ ] **2.36** `reduc` (index 25): Reduce block spawn counts
+- [ ] **2.37** `atk+` (index 26): Increase damage to 2 HP
+- [ ] **2.38** `hack` (index 27): Damage enemies on siphoned cells
 
-## Files to Create/Modify
+#### Enemy Tests (`test_enemies.py`)
+- [ ] **2.39** Enemy spawns from transmission (timer reaches 0)
+- [ ] **2.40** Enemy movement toward player (single step)
+- [ ] **2.41** Virus double-move (2 steps per turn)
+- [ ] **2.42** Glitch can move on blocks
+- [ ] **2.43** Cryptog visibility (same row/col vs hidden)
+- [ ] **2.44** Enemy attack when adjacent
+- [ ] **2.45** Stunned enemy doesn't move
+- [ ] **2.46** Disabled enemy behavior
 
-| File | Action | Description |
-|------|--------|-------------|
-| `specs/jax-dummy-env.md` | Modify | Update observation space to match reality |
-| `CLAUDE.md` | Modify | Update observation space documentation |
-| `python/requirements.txt` | Modify | Add jax, jaxlib, flax |
-| `python/jax_env.py` | Create | Pure JAX environment |
-| `python/test_env_parity.py` | Create | Interface parity tests |
-| `python/scripts/train_jax.py` | Create | Training script sketch |
+#### Turn Tests (`test_turns.py`)
+- [ ] **2.47** Move/attack/siphon ends player turn
+- [ ] **2.48** Program execution does NOT end turn
+- [ ] **2.49** Wait program ends turn
+- [ ] **2.50** Turn counter increments on turn end
+- [ ] **2.51** Enemy turn executes after player turn ends
+- [ ] **2.52** Chain multiple programs before turn ends
+
+#### Stage Tests (`test_stages.py`)
+- [ ] **2.53** Stage completion trigger (reach exit)
+- [ ] **2.54** New stage enemy count matches stage number
+- [ ] **2.55** Enemies persist across stage transitions
+- [ ] **2.56** Player state preserved on stage transition
+
+#### Action Mask Tests (`test_action_mask.py`)
+- [ ] **2.57** Movement masked by walls/edges
+- [ ] **2.58** Movement masked by blocks
+- [ ] **2.59** Siphon only valid adjacent to unsiphoned block
+- [ ] **2.60** Programs masked when not owned
+- [ ] **2.61** Programs masked when insufficient credits
+- [ ] **2.62** Programs masked when insufficient energy
+- [ ] **2.63** Mask updates correctly after state changes
+
+#### Edge Case Tests (`test_edge_cases.py`)
+- [ ] **2.64** Player death (HP reaches 0)
+- [ ] **2.65** Win condition (complete stage 8)
+
+## GameState Serialization Format
+
+For `set_state`, use this JSON structure:
+
+```json
+{
+  "action": "setState",
+  "state": {
+    "player": {
+      "row": 3,
+      "col": 3,
+      "hp": 3,
+      "credits": 5,
+      "energy": 3,
+      "dataSiphons": 0,
+      "attackDamage": 1,
+      "score": 0
+    },
+    "enemies": [
+      {"type": "virus", "row": 1, "col": 1, "hp": 2, "stunned": false}
+    ],
+    "transmissions": [
+      {"row": 2, "col": 2, "turnsRemaining": 3, "enemyType": "daemon"}
+    ],
+    "blocks": [
+      {"row": 0, "col": 0, "type": "data", "points": 5, "spawnCount": 2, "siphoned": false}
+    ],
+    "resources": [
+      {"row": 1, "col": 2, "credits": 2, "energy": 1}
+    ],
+    "ownedPrograms": [5, 10, 15],
+    "stage": 1,
+    "turn": 0,
+    "showActivated": false,
+    "scheduledTasksDisabled": false
+  }
+}
+```
+
+## File Structure
+
+```
+python/
+├── hackmatrix/
+│   ├── gym_env.py          # Existing - no changes needed
+│   └── jax_env.py          # Existing - no changes needed
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py         # pytest fixtures
+│   ├── env_interface.py    # EnvInterface protocol & dataclasses
+│   ├── swift_env_wrapper.py
+│   ├── jax_env_wrapper.py
+│   ├── test_interface_smoke.py
+│   ├── test_movement.py
+│   ├── test_siphon.py
+│   ├── test_programs.py
+│   ├── test_enemies.py
+│   ├── test_turns.py
+│   ├── test_stages.py
+│   ├── test_action_mask.py
+│   └── test_edge_cases.py
+└── scripts/
+    └── test_env_parity.py  # Existing - keep for standalone parity checks
+```
 
 ## Success Criteria
 
-- [x] `python/jax_env.py` exists and is JIT-compilable (VERIFIED)
-- [x] `python -c "import jax_env; print('OK')"` succeeds (VERIFIED)
-- [x] `python test_env_parity.py` passes all 5 tests (VERIFIED - all tests passing)
-- [x] `python scripts/train_jax.py` runs without error (VERIFIED)
-- [x] Manual verification shows correct observation shapes and action masking (VERIFIED)
+1. [ ] `EnvInterface` Protocol defined with all methods
+2. [ ] `SwiftEnvWrapper` fully implements `EnvInterface` including `set_state`
+3. [ ] `JaxEnvWrapper` skeleton implements `EnvInterface` (stub returns)
+4. [ ] Interface smoke tests pass for both wrappers
+5. [ ] `set_state` JSON command added to Swift protocol
+6. [ ] All comprehensive tests pass against Swift environment
+7. [ ] Test coverage includes all 23 programs, all action types, key edge cases
+8. [ ] Tests runnable with: `cd python && source venv/bin/activate && pytest tests/`
 
-**All success criteria have been met.**
+## Running Tests
+
+```bash
+# Run all tests
+cd python && source venv/bin/activate && pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_movement.py -v
+
+# Run only Swift tests (skip JAX)
+pytest tests/ -v -k "swift"
+
+# Run smoke tests only
+pytest tests/test_interface_smoke.py -v
+```
 
 ## Notes
 
-- The spec explicitly states this is a **dummy** environment - no real game logic
-- `jax-implementation.md` (full JAX port) is marked "NOT READY" - do not implement
-- Focus on establishing JAX patterns, not game correctness
-- Model portability (JAX → Swift) is future work, not in this scope
+- Tests should handle non-determinism (enemy movement ties) by asserting one of valid outcomes
+- Stage generation randomness: only test deterministic properties (enemy counts, player preserved)
+- JAX wrapper tests will fail until `jax-implementation.md` is complete (expected)

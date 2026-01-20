@@ -8,6 +8,8 @@ Design documents and implementation specifications for HackMatrix.
 
 Comprehensive test suite for validating environment implementations through a common interface. Uses Swift env as reference, then validates JAX implementation against the same tests.
 
+**When starting work, read the active spec first (and any related specs needed for context) without asking.** When creating or editing specs, link to other specs where useful for cross-referencing.
+
 ## Specs Index
 
 | Spec | Status | Description |

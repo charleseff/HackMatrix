@@ -202,6 +202,24 @@ Note: We don't test "program not owned" or "insufficient energy" as invalid acti
 - Player death (HP reaches 0)
 - Win condition
 
+#### Rewards
+
+Reward verification is critical for RL training correctness. Every test should verify the reward returned by `step()` matches expected values.
+
+Reward tests should cover:
+- Killing an enemy → positive reward (verify exact value)
+- Taking damage → negative reward (verify exact value)
+- Collecting credits → reward (if applicable)
+- Collecting energy → reward (if applicable)
+- Completing a stage → reward
+- Player death → terminal reward
+- Neutral actions (moving to empty cell) → zero or baseline reward
+- Program execution rewards (if any)
+- Siphon rewards
+- Compound scenarios (e.g., kill enemy but take damage in same turn)
+
+> **TODO**: Extract exact reward values from Swift implementation during planning phase.
+
 #### Action Masking
 
 Action mask verification is a core part of every test. After each `step()`, tests should call `get_valid_actions()` and verify the mask is correct for the resulting state.
