@@ -4,16 +4,16 @@ Design documents and implementation specifications for HackMatrix.
 
 ## Current Focus
 
-**Active spec:** [jax-dummy-env.md](./jax-dummy-env.md)
+**Active spec:** [jax-implementation.md](./jax-implementation.md)
 
-Implement the minimal JAX dummy environment first. This establishes JAX patterns and enables parity testing before the full port.
+Full JAX port of the game logic. The dummy environment is complete and provides the foundation for parity testing.
 
 ## Specs Index
 
 | Spec | Status | Description |
 |------|--------|-------------|
-| [jax-dummy-env.md](./jax-dummy-env.md) | **Active** | Minimal JAX dummy environment for plug-and-play testing with Swift env |
-| [jax-implementation.md](./jax-implementation.md) | Deferred | Full JAX port of game logic (depends on dummy env) |
+| [jax-dummy-env.md](./jax-dummy-env.md) | **Complete** | Minimal JAX dummy environment for plug-and-play testing with Swift env |
+| [jax-implementation.md](./jax-implementation.md) | **Active** | Full JAX port of game logic (depends on dummy env) |
 
 ## Usage
 
