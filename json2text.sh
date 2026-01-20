@@ -41,6 +41,14 @@ while IFS= read -r line; do
                 echo "  ✓ Agent completed: $agent_result"
             fi
             ;;
+        agent)
+            # Subagent activity (if streamed)
+            agent_type=$(echo "$line" | jq -r '.agent_type // empty' 2>/dev/null)
+            agent_msg=$(echo "$line" | jq -r '.message // empty' 2>/dev/null)
+            if [ -n "$agent_type" ]; then
+                echo "    [$agent_type] $agent_msg"
+            fi
+            ;;
         result)
             # Final result
             result=$(echo "$line" | jq -r '.result // empty' 2>/dev/null)
