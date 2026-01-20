@@ -155,9 +155,11 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 
 ### Phase 2: Comprehensive Test Cases
 
-#### Movement Tests (`test_movement.py`)
+**Status**: In progress - core tests implemented, all passing
 
-- [ ] **2.1** Move to empty cell (all 4 directions)
+#### Movement Tests (`test_movement.py`) - IMPLEMENTED
+
+- [x] **2.1** Move to empty cell (all 4 directions)
 
 **Test: `test_move_up_to_empty_cell`**
 - **Preconditions**:
@@ -184,7 +186,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Expected Valid Actions**: [0, 1, 2, 3] (all directions valid from center)
 - **Variants**: `test_move_down_to_empty_cell`, `test_move_left_to_empty_cell`, `test_move_right_to_empty_cell` with corresponding direction changes
 
-- [ ] **2.2** Move blocked by grid edge
+- [x] **2.2** Move blocked by grid edge
 
 **Test: `test_move_blocked_by_top_edge`**
 - **Preconditions**:
@@ -204,7 +206,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - `test_move_blocked_by_left_edge` (col=0, action=2)
   - `test_move_blocked_by_right_edge` (col=5, action=3)
 
-- [ ] **2.3** Move blocked by block
+- [x] **2.3** Move blocked by block
 
 **Test: `test_move_blocked_by_block`**
 - **Preconditions**:
@@ -222,7 +224,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Pre-step Valid Actions**: Should NOT include 0
 
 
-- [ ] **2.4** Move onto cell with data siphon
+- [x] **2.4** Move onto cell with data siphon
 
 **Test: `test_move_collects_data_siphon`**
 - **Preconditions**:
@@ -244,7 +246,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Expected Reward**: 1.0 (data siphon collected reward)
 - **Note**: This is the ONLY resource type collected by walking - credits/energy require siphoning
 
-- [ ] **2.5** Line-of-sight attack on distant enemy
+- [x] **2.5** Line-of-sight attack on distant enemy
 
 **Test: `test_line_of_sight_attack_distant_enemy`**
 - **Preconditions**:
@@ -265,7 +267,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Expected Reward**: 0.3 (kill reward)
 - **Key**: Directional action toward enemy in line-of-sight triggers ATTACK, not movement
 
-- [ ] **2.6** Line-of-sight attack on enemy on block
+- [x] **2.6** Line-of-sight attack on enemy on block
 
 **Test: `test_line_of_sight_attack_enemy_on_block`**
 - **Preconditions**:
@@ -288,7 +290,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Expected Reward**: 0.3 (kill reward)
 - **Key**: Player can attack enemies on blocks via line-of-sight (even though movement is blocked by the block)
 
-- [ ] **2.7** Move into adjacent enemy (attack and kill)
+- [x] **2.7** Move into adjacent enemy (attack and kill)
 
 **Test: `test_attack_kills_enemy`**
 - **Preconditions**:
@@ -308,7 +310,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - `turn`: 0 → 1
 - **Expected Reward**: 0.3 (kill reward)
 
-- [ ] **2.8** Move into adjacent enemy (attack, enemy survives)
+- [x] **2.8** Move into adjacent enemy (attack, enemy survives)
 
 **Test: `test_attack_damages_enemy`**
 - **Preconditions**:
@@ -329,7 +331,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - `turn`: 0 → 1
 - **Expected Reward**: 0.0 (no kill, no score)
 
-- [ ] **2.9** Move into transmission
+- [x] **2.9** Move into transmission
 
 **Test: `test_attack_destroys_transmission`**
 - **Preconditions**:
@@ -349,9 +351,9 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - `turn`: 0 → 1
 - **Expected Reward**: 0.0 (transmissions don't give kill reward)
 
-#### Siphon Tests (`test_siphon.py`)
+#### Siphon Tests (`test_siphon.py`) - IMPLEMENTED
 
-- [ ] **2.10** Siphon adjacent block (cross pattern)
+- [x] **2.10** Siphon adjacent block (cross pattern)
 
 **Test: `test_siphon_data_block`**
 - **Preconditions**:
@@ -374,7 +376,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Expected Reward**: 10 × 0.5 = 5.0 (score gain)
 - **INVARIANT CHECK**: `block.points == block.spawnCount` (data block invariant)
 
-- [ ] **2.11** Siphon always valid with data siphons
+- [x] **2.11** Siphon always valid with data siphons
 
 **Test: `test_siphon_always_valid_with_siphons`**
 - **Preconditions**:
@@ -390,7 +392,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Pre-step Valid Actions**: SHOULD include 4 (siphon is valid when player has siphons)
 - **Note**: Siphon validity only depends on having data siphons, not on block adjacency
 
-- [ ] **2.12** Siphon invalid without data siphons
+- [x] **2.12** Siphon invalid without data siphons
 
 **Test: `test_siphon_invalid_without_siphons`**
 - **Preconditions**:
@@ -406,7 +408,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Pre-step Valid Actions**: Should NOT include 4 (no siphons available)
 - **Note**: Even with adjacent block, siphon requires data siphons
 
-- [ ] **2.13** Siphon spawns transmissions
+- [x] **2.13** Siphon spawns transmissions
 
 **Test: `test_siphon_spawns_transmissions`**
 - **Preconditions**:
@@ -425,7 +427,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - 3 new transmissions appear in observation
   - Transmissions spawned at valid empty cells
 
-- [ ] **2.14** Siphon does NOT reveal resources under block
+- [x] **2.14** Siphon does NOT reveal resources under block
 
 **Test: `test_siphon_does_not_reveal_resources`**
 - **Preconditions**:
@@ -445,7 +447,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - Resources at (4,3) still NOT visible/collectible (block still exists, just siphoned)
 - **Key**: Siphoning marks block as siphoned but does NOT destroy it or reveal resources
 
-- [ ] **2.15** Siphon program block
+- [x] **2.15** Siphon program block
 
 **Test: `test_siphon_program_block`**
 - **Preconditions**:
@@ -463,7 +465,9 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - `owned_programs`: [] → [5] (push program acquired)
   - `programs[0]`: 0 → 1 (push at index 0 in programs array)
 
-#### Program Tests (`test_programs.py`)
+#### Program Tests (`test_programs.py`) - PARTIALLY IMPLEMENTED
+
+**Status**: Core tests implemented (PUSH, PULL, POLY, WAIT, SIPH+, RESET, program chaining)
 
 **IMPORTANT**: All program tests must verify:
 1. Correct resource deduction (credits/energy per Program.swift costs)
@@ -471,7 +475,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 3. Primary effect
 4. Secondary effects (stuns, block destruction, etc.)
 
-- [ ] **2.16** PUSH (index 5)
+- [x] **2.16** PUSH (index 5)
 
 **Test: `test_push_enemies_away`**
 - **Preconditions**:
@@ -493,7 +497,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Post-step Valid Actions**: Should still include movement options (turn not ended)
 - **Applicability**: Requires enemies to exist
 
-- [ ] **2.17** PULL (index 6)
+- [x] **2.17** PULL (index 6)
 
 **Test: `test_pull_enemies_toward`**
 - **Preconditions**:
@@ -572,7 +576,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - Warp teleports TO the enemy position and KILLS it (not adjacent to enemy)
 - **Test strategy**: With multiple enemies, verify player ends up at one of the enemy positions and that enemy is dead
 
-- [ ] **2.20** POLY (index 9)
+- [x] **2.20** POLY (index 9)
 
 **Test: `test_poly_randomizes_enemy_types`**
 - **Preconditions**:
@@ -617,7 +621,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Code Reference**: `GameState.swift:1473-1498` - damage preservation logic
 - **VERIFIED**: Fix in commit ac8d827 - POLY now preserves damage across type transformation
 
-- [ ] **2.21** WAIT (index 10)
+- [x] **2.21** WAIT (index 10)
 
 **Test: `test_wait_ends_turn`**
 - **Preconditions**:
@@ -772,7 +776,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - After move: Enemy position unchanged (5,3) - didn't move due to STEP
 - **Applicability**: Always applicable
 
-- [ ] **2.27** SIPH+ (index 16)
+- [x] **2.27** SIPH+ (index 16)
 
 **Test: `test_siph_plus_gains_data_siphon`**
 - **Preconditions**:
@@ -836,7 +840,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Applicability**: Requires `showActivated` to be false
 - SHOW additionally makes transmissions show the incoming enemy type
 
-- [ ] **2.30** RESET (index 19)
+- [x] **2.30** RESET (index 19)
 
 **Test: `test_reset_restores_hp`**
 - **Preconditions**:
