@@ -71,7 +71,7 @@ class TestSiphonDataBlock:
     """Test 2.10: Siphon adjacent data block."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_data_block(self, swift_env):
+    def test_siphon_data_block(self, env):
         """Siphoning adjacent data block should award score and consume siphon."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0,
@@ -80,11 +80,11 @@ class TestSiphonDataBlock:
             enemies=[],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         siphons_before = get_player_siphons(obs_before)
         assert siphons_before == 1, f"Should start with 1 siphon, got {siphons_before}"
 
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         # Siphon should be consumed
         siphons_after = get_player_siphons(result.observation)
@@ -105,7 +105,7 @@ class TestSiphonValidWithSiphons:
     """Test 2.11: Siphon is valid when player has data siphons."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_always_valid_with_siphons(self, swift_env):
+    def test_siphon_always_valid_with_siphons(self, env):
         """Siphon should be valid when player has siphons, even without adjacent blocks."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
@@ -113,9 +113,9 @@ class TestSiphonValidWithSiphons:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid_actions = swift_env.get_valid_actions()
+        valid_actions = env.get_valid_actions()
         assert ACTION_SIPHON in valid_actions, \
             f"Siphon should be valid when player has siphons, got {valid_actions}"
 
@@ -126,7 +126,7 @@ class TestSiphonInvalidWithoutSiphons:
     """Test 2.12: Siphon is invalid without data siphons."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_invalid_without_siphons(self, swift_env):
+    def test_siphon_invalid_without_siphons(self, env):
         """Siphon should be invalid when player has no siphons."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=0),
@@ -134,9 +134,9 @@ class TestSiphonInvalidWithoutSiphons:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid_actions = swift_env.get_valid_actions()
+        valid_actions = env.get_valid_actions()
         assert ACTION_SIPHON not in valid_actions, \
             f"Siphon should be invalid without siphons, got {valid_actions}"
 
@@ -147,7 +147,7 @@ class TestSiphonSpawnsTransmissions:
     """Test 2.13: Siphoning block spawns transmissions."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_spawns_transmissions(self, swift_env):
+    def test_siphon_spawns_transmissions(self, env):
         """Siphoning a block should spawn transmissions equal to spawnCount."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
@@ -156,11 +156,11 @@ class TestSiphonSpawnsTransmissions:
             enemies=[],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         trans_before = count_transmissions(obs_before)
         assert trans_before == 0, f"Should start with 0 transmissions, got {trans_before}"
 
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         trans_after = count_transmissions(result.observation)
         # Note: transmissions are spawned, should be >= spawnCount
@@ -174,7 +174,7 @@ class TestSiphonDoesNotRevealResources:
     """Test 2.14: Siphoning doesn't destroy block or reveal resources."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_does_not_reveal_resources(self, swift_env):
+    def test_siphon_does_not_reveal_resources(self, env):
         """Siphoning marks block as siphoned but doesn't destroy it."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
@@ -183,9 +183,9 @@ class TestSiphonDoesNotRevealResources:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         # Block should still exist (just marked as siphoned)
         block = get_block_at(result.observation, 4, 3)
@@ -202,7 +202,7 @@ class TestSiphonProgramBlock:
     """Test 2.15: Siphoning program block acquires the program."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_program_block(self, swift_env):
+    def test_siphon_program_block(self, env):
         """Siphoning a program block should add program to inventory."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
@@ -212,11 +212,11 @@ class TestSiphonProgramBlock:
             enemies=[],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         programs_before = get_owned_programs(obs_before)
         assert 5 not in programs_before, f"Should not own PUSH before, got {programs_before}"
 
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         programs_after = get_owned_programs(result.observation)
         assert 5 in programs_after, f"Should own PUSH after siphoning, got {programs_after}"

@@ -105,7 +105,7 @@ class TestPushProgram:
     """Test 2.16: PUSH program pushes enemies away."""
 
     @pytest.mark.requires_set_state
-    def test_push_enemies_away(self, swift_env):
+    def test_push_enemies_away(self, env):
         """PUSH should move enemies away from player and cost energy."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=2, dataSiphons=0),
@@ -113,11 +113,11 @@ class TestPushProgram:
             owned_programs=[PROGRAM_PUSH],
             stage=1
         )
-        obs = swift_env.set_state(state)
+        obs = env.set_state(state)
         energy_before = get_player_energy(obs)
         assert energy_before == 2, f"Should have 2 energy, got {energy_before}"
 
-        result = swift_env.step(PROGRAM_PUSH)
+        result = env.step(PROGRAM_PUSH)
 
         # Energy should be consumed (PUSH costs 0C, 2E)
         energy_after = get_player_energy(result.observation)
@@ -129,7 +129,7 @@ class TestPushProgram:
         assert enemies[0]["row"] == 5, f"Enemy should be at row 5, got {enemies[0]['row']}"
 
     @pytest.mark.requires_set_state
-    def test_push_requires_enemies(self, swift_env):
+    def test_push_requires_enemies(self, env):
         """PUSH should be invalid without enemies."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=10),
@@ -137,9 +137,9 @@ class TestPushProgram:
             owned_programs=[PROGRAM_PUSH],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_PUSH not in valid, f"PUSH should be invalid without enemies, got {valid}"
 
 
@@ -149,7 +149,7 @@ class TestPullProgram:
     """Test 2.17: PULL program pulls enemies toward player."""
 
     @pytest.mark.requires_set_state
-    def test_pull_enemies_toward(self, swift_env):
+    def test_pull_enemies_toward(self, env):
         """PULL should move enemies toward player."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=2),
@@ -157,9 +157,9 @@ class TestPullProgram:
             owned_programs=[PROGRAM_PULL],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_PULL)
+        result = env.step(PROGRAM_PULL)
 
         # Enemy should be pulled closer
         enemies = find_enemies(result.observation)
@@ -173,7 +173,7 @@ class TestPolyProgram:
     """Test 2.20: POLY program transforms enemies."""
 
     @pytest.mark.requires_set_state
-    def test_poly_randomizes_enemy_types(self, swift_env):
+    def test_poly_randomizes_enemy_types(self, env):
         """POLY should change enemy type.
 
         Note: Enemy is placed in same row as player so it remains visible
@@ -187,9 +187,9 @@ class TestPolyProgram:
             owned_programs=[PROGRAM_POLY],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_POLY)
+        result = env.step(PROGRAM_POLY)
 
         # Enemy type should change (guaranteed different from virus)
         # Enemy stays visible because it's in same row as player
@@ -204,7 +204,7 @@ class TestWaitProgram:
     """Test 2.21: WAIT program ends turn."""
 
     @pytest.mark.requires_set_state
-    def test_wait_ends_turn(self, swift_env):
+    def test_wait_ends_turn(self, env):
         """WAIT should end turn and cause enemy movement."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=1),
@@ -212,9 +212,9 @@ class TestWaitProgram:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Daemon should move closer (1 cell per turn)
         enemies = find_enemies(result.observation)
@@ -229,7 +229,7 @@ class TestSiphPlusProgram:
     """Test 2.27: SIPH+ program grants a data siphon."""
 
     @pytest.mark.requires_set_state
-    def test_siph_plus_gains_data_siphon(self, swift_env):
+    def test_siph_plus_gains_data_siphon(self, env):
         """SIPH+ should give player a data siphon."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=5, energy=0, dataSiphons=0),
@@ -237,11 +237,11 @@ class TestSiphPlusProgram:
             enemies=[],
             stage=1
         )
-        obs = swift_env.set_state(state)
+        obs = env.set_state(state)
         siphons_before = get_player_siphons(obs)
         assert siphons_before == 0, f"Should start with 0 siphons, got {siphons_before}"
 
-        result = swift_env.step(PROGRAM_SIPH_PLUS)
+        result = env.step(PROGRAM_SIPH_PLUS)
 
         siphons_after = get_player_siphons(result.observation)
         assert siphons_after == 1, f"Should have 1 siphon after SIPH+, got {siphons_after}"
@@ -257,7 +257,7 @@ class TestResetProgram:
     """Test 2.30: RESET program restores HP."""
 
     @pytest.mark.requires_set_state
-    def test_reset_restores_hp(self, swift_env):
+    def test_reset_restores_hp(self, env):
         """RESET should restore player HP to max."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=1, credits=0, energy=4),
@@ -265,17 +265,17 @@ class TestResetProgram:
             enemies=[],
             stage=1
         )
-        obs = swift_env.set_state(state)
+        obs = env.set_state(state)
         hp_before = get_player_hp(obs)
         assert hp_before == 1, f"Should start with 1 HP, got {hp_before}"
 
-        result = swift_env.step(PROGRAM_RESET)
+        result = env.step(PROGRAM_RESET)
 
         hp_after = get_player_hp(result.observation)
         assert hp_after == 3, f"HP should be 3 after RESET, got {hp_after}"
 
     @pytest.mark.requires_set_state
-    def test_reset_requires_low_hp(self, swift_env):
+    def test_reset_requires_low_hp(self, env):
         """RESET should be invalid at full HP."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=10),  # Full HP
@@ -283,9 +283,9 @@ class TestResetProgram:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_RESET not in valid, f"RESET should be invalid at full HP, got {valid}"
 
 
@@ -295,7 +295,7 @@ class TestProgramChaining:
     """Test that programs don't end turn (except WAIT)."""
 
     @pytest.mark.requires_set_state
-    def test_program_does_not_end_turn(self, swift_env):
+    def test_program_does_not_end_turn(self, env):
         """Programs (except WAIT) should not end the turn."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=5, energy=0, dataSiphons=0),
@@ -303,9 +303,9 @@ class TestProgramChaining:
             enemies=[Enemy(type="daemon", row=5, col=3, hp=3, stunned=False)],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_SIPH_PLUS)
+        result = env.step(PROGRAM_SIPH_PLUS)
 
         # Enemy should NOT have moved (turn didn't end)
         enemies = find_enemies(result.observation)
@@ -313,7 +313,7 @@ class TestProgramChaining:
         assert enemies[0]["row"] == 5, f"Enemy should still be at row 5, got {enemies[0]['row']}"
 
         # Movement should still be valid (turn not ended)
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert ACTION_MOVE_UP in valid, f"Movement should be valid after program, got {valid}"
 
 
@@ -323,7 +323,7 @@ class TestCrashProgram:
     """Test 2.18: CRASH clears surrounding cells."""
 
     @pytest.mark.requires_set_state
-    def test_crash_kills_surrounding_enemies(self, swift_env):
+    def test_crash_kills_surrounding_enemies(self, env):
         """CRASH should kill enemies in 8 surrounding cells."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=2),
@@ -334,9 +334,9 @@ class TestCrashProgram:
             owned_programs=[PROGRAM_CRASH],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_CRASH)
+        result = env.step(PROGRAM_CRASH)
 
         # Both enemies should be killed
         enemies = find_enemies(result.observation)
@@ -349,7 +349,7 @@ class TestCrashProgram:
         assert energy == 0, f"Energy should be 0, got {energy}"
 
     @pytest.mark.requires_set_state
-    def test_crash_requires_targets(self, swift_env):
+    def test_crash_requires_targets(self, env):
         """CRASH should be invalid without targets in surrounding cells."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -358,9 +358,9 @@ class TestCrashProgram:
             owned_programs=[PROGRAM_CRASH],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_CRASH not in valid, f"CRASH requires targets, got {valid}"
 
 
@@ -370,7 +370,7 @@ class TestWarpProgram:
     """Test 2.19: WARP teleports to and kills enemy."""
 
     @pytest.mark.requires_set_state
-    def test_warp_kills_enemy(self, swift_env):
+    def test_warp_kills_enemy(self, env):
         """WARP should teleport to an enemy and kill it."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, credits=2, energy=2),
@@ -378,9 +378,9 @@ class TestWarpProgram:
             owned_programs=[PROGRAM_WARP],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WARP)
+        result = env.step(PROGRAM_WARP)
 
         # Player should have moved
         row = int(round(result.observation.player[0] * 5))
@@ -393,7 +393,7 @@ class TestWarpProgram:
         assert len(enemies) == 0, f"Enemy should be killed by warp, found {len(enemies)}"
 
     @pytest.mark.requires_set_state
-    def test_warp_requires_targets(self, swift_env):
+    def test_warp_requires_targets(self, env):
         """WARP requires enemies or transmissions."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -402,9 +402,9 @@ class TestWarpProgram:
             owned_programs=[PROGRAM_WARP],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_WARP not in valid, f"WARP requires targets, got {valid}"
 
 
@@ -414,7 +414,7 @@ class TestDebugProgram:
     """Test 2.22: DEBUG damages enemies on blocks."""
 
     @pytest.mark.requires_set_state
-    def test_debug_damages_enemies_on_blocks(self, swift_env):
+    def test_debug_damages_enemies_on_blocks(self, env):
         """DEBUG should damage and stun enemies standing on blocks."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=0),
@@ -428,9 +428,9 @@ class TestDebugProgram:
             owned_programs=[PROGRAM_DEBUG],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_DEBUG)
+        result = env.step(PROGRAM_DEBUG)
 
         # Enemy on block should be damaged
         enemy_on_block = get_enemy_at(result.observation, 4, 4)
@@ -444,7 +444,7 @@ class TestDebugProgram:
         assert enemy_off_block["hp"] == 2, f"Enemy not on block should be unhurt, hp={enemy_off_block['hp']}"
 
     @pytest.mark.requires_set_state
-    def test_debug_requires_enemies_on_blocks(self, swift_env):
+    def test_debug_requires_enemies_on_blocks(self, env):
         """DEBUG requires enemies on blocks."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10),
@@ -453,9 +453,9 @@ class TestDebugProgram:
             owned_programs=[PROGRAM_DEBUG],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_DEBUG not in valid, f"DEBUG requires enemies on blocks, got {valid}"
 
 
@@ -465,7 +465,7 @@ class TestRowProgram:
     """Test 2.23: ROW attacks all enemies in player's row."""
 
     @pytest.mark.requires_set_state
-    def test_row_attacks_enemies_in_row(self, swift_env):
+    def test_row_attacks_enemies_in_row(self, env):
         """ROW should damage all enemies in player's row."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=1),
@@ -477,9 +477,9 @@ class TestRowProgram:
             owned_programs=[PROGRAM_ROW],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_ROW)
+        result = env.step(PROGRAM_ROW)
 
         # Enemy at (3,0) should be killed
         enemy_at_3_0 = get_enemy_at(result.observation, 3, 0)
@@ -496,7 +496,7 @@ class TestRowProgram:
         assert enemy_at_4_3["hp"] == 2, f"Enemy not in row should have full hp={enemy_at_4_3['hp']}"
 
     @pytest.mark.requires_set_state
-    def test_row_requires_enemies_in_row(self, swift_env):
+    def test_row_requires_enemies_in_row(self, env):
         """ROW requires enemies in player's row."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -504,9 +504,9 @@ class TestRowProgram:
             owned_programs=[PROGRAM_ROW],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_ROW not in valid, f"ROW requires enemies in row, got {valid}"
 
 
@@ -516,7 +516,7 @@ class TestColProgram:
     """Test 2.24: COL attacks all enemies in player's column."""
 
     @pytest.mark.requires_set_state
-    def test_col_attacks_enemies_in_column(self, swift_env):
+    def test_col_attacks_enemies_in_column(self, env):
         """COL should damage all enemies in player's column."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=1),
@@ -528,9 +528,9 @@ class TestColProgram:
             owned_programs=[PROGRAM_COL],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_COL)
+        result = env.step(PROGRAM_COL)
 
         # Enemy at (0,3) should be killed
         enemy_at_0_3 = get_enemy_at(result.observation, 0, 3)
@@ -547,7 +547,7 @@ class TestColProgram:
         assert enemy_at_3_4["hp"] == 2, f"Enemy not in col should have full hp={enemy_at_3_4['hp']}"
 
     @pytest.mark.requires_set_state
-    def test_col_requires_enemies_in_column(self, swift_env):
+    def test_col_requires_enemies_in_column(self, env):
         """COL requires enemies in player's column."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -555,9 +555,9 @@ class TestColProgram:
             owned_programs=[PROGRAM_COL],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_COL not in valid, f"COL requires enemies in column, got {valid}"
 
 
@@ -567,18 +567,18 @@ class TestExchProgram:
     """Test 2.28: EXCH converts credits to energy."""
 
     @pytest.mark.requires_set_state
-    def test_exch_converts_credits_to_energy(self, swift_env):
+    def test_exch_converts_credits_to_energy(self, env):
         """EXCH should convert credits to energy."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=8, energy=0),
             owned_programs=[PROGRAM_EXCH],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         credits_before = get_player_credits(obs_before)
         assert credits_before == 8, f"Should start with 8 credits, got {credits_before}"
 
-        result = swift_env.step(PROGRAM_EXCH)
+        result = env.step(PROGRAM_EXCH)
 
         # Credits: 8 - 4 (cost) = 4, then converted: 4 - 4 = 0 and +4 energy
         # OR: Credits: 8 - 4 (cost) = 4, and 4 credits become 4 energy
@@ -590,16 +590,16 @@ class TestExchProgram:
         assert energy_after == 4, f"Energy should be 4 after EXCH, got {energy_after}"
 
     @pytest.mark.requires_set_state
-    def test_exch_requires_credits(self, swift_env):
+    def test_exch_requires_credits(self, env):
         """EXCH requires at least 4 credits (for cost)."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=0),  # Only 3 credits
             owned_programs=[PROGRAM_EXCH],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_EXCH not in valid, f"EXCH requires 4+ credits, got {valid}"
 
 
@@ -609,7 +609,7 @@ class TestShowProgram:
     """Test 2.29: SHOW reveals cryptogs and transmission types."""
 
     @pytest.mark.requires_set_state
-    def test_show_reveals_cryptog(self, swift_env):
+    def test_show_reveals_cryptog(self, env):
         """SHOW should make cryptogs visible."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=2, energy=0),
@@ -620,18 +620,18 @@ class TestShowProgram:
         )
 
         # Before SHOW, cryptog at (5,5) should be hidden
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         enemies_before = find_enemies(obs_before)
         assert len(enemies_before) == 0, f"Cryptog should be hidden before SHOW, found {len(enemies_before)}"
 
-        result = swift_env.step(PROGRAM_SHOW)
+        result = env.step(PROGRAM_SHOW)
 
         # After SHOW, cryptog should be visible
         enemies_after = find_enemies(result.observation)
         assert len(enemies_after) == 1, f"Cryptog should be visible after SHOW, found {len(enemies_after)}"
 
     @pytest.mark.requires_set_state
-    def test_show_requires_not_activated(self, swift_env):
+    def test_show_requires_not_activated(self, env):
         """SHOW requires showActivated to be false."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10),
@@ -639,9 +639,9 @@ class TestShowProgram:
             owned_programs=[PROGRAM_SHOW],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_SHOW not in valid, f"SHOW requires showActivated=false, got {valid}"
 
 
@@ -651,7 +651,7 @@ class TestCalmProgram:
     """Test 2.31: CALM disables scheduled spawns."""
 
     @pytest.mark.requires_set_state
-    def test_calm_disables_spawns(self, swift_env):
+    def test_calm_disables_spawns(self, env):
         """CALM should disable scheduled task spawns."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=2, energy=4),
@@ -659,9 +659,9 @@ class TestCalmProgram:
             owned_programs=[PROGRAM_CALM],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_CALM)
+        result = env.step(PROGRAM_CALM)
 
         # Resources consumed
         credits = get_player_credits(result.observation)
@@ -673,7 +673,7 @@ class TestCalmProgram:
         # but we can verify the program executed by checking resources consumed
 
     @pytest.mark.requires_set_state
-    def test_calm_requires_not_disabled(self, swift_env):
+    def test_calm_requires_not_disabled(self, env):
         """CALM requires scheduledTasksDisabled to be false."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -681,9 +681,9 @@ class TestCalmProgram:
             owned_programs=[PROGRAM_CALM],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_CALM not in valid, f"CALM requires scheduledTasksDisabled=false, got {valid}"
 
 
@@ -693,7 +693,7 @@ class TestDBomProgram:
     """Test 2.32: D_BOM destroys nearest daemon."""
 
     @pytest.mark.requires_set_state
-    def test_d_bom_destroys_daemon(self, swift_env):
+    def test_d_bom_destroys_daemon(self, env):
         """D_BOM should destroy the nearest daemon."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=0),
@@ -704,9 +704,9 @@ class TestDBomProgram:
             owned_programs=[PROGRAM_D_BOM],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_D_BOM)
+        result = env.step(PROGRAM_D_BOM)
 
         # Daemon should be destroyed
         enemy_at_5_5 = get_enemy_at(result.observation, 5, 5)
@@ -719,7 +719,7 @@ class TestDBomProgram:
             assert enemy_at_4_4["hp"] <= 1, f"Virus should take splash damage, hp={enemy_at_4_4['hp']}"
 
     @pytest.mark.requires_set_state
-    def test_d_bom_requires_daemon(self, swift_env):
+    def test_d_bom_requires_daemon(self, env):
         """D_BOM requires a daemon to exist."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10),
@@ -727,9 +727,9 @@ class TestDBomProgram:
             owned_programs=[PROGRAM_D_BOM],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_D_BOM not in valid, f"D_BOM requires daemon, got {valid}"
 
 
@@ -739,7 +739,7 @@ class TestDelayProgram:
     """Test 2.33: DELAY extends transmission timers."""
 
     @pytest.mark.requires_set_state
-    def test_delay_extends_transmissions(self, swift_env):
+    def test_delay_extends_transmissions(self, env):
         """DELAY should add turns to transmission countdowns."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=1, energy=2),
@@ -749,9 +749,9 @@ class TestDelayProgram:
             owned_programs=[PROGRAM_DELAY],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_DELAY)
+        result = env.step(PROGRAM_DELAY)
 
         # Transmission countdown should increase by 3
         # Check transmission at (5,5)
@@ -760,7 +760,7 @@ class TestDelayProgram:
         assert trans_countdown > 0.3, f"Transmission countdown should increase, got {trans_countdown}"
 
     @pytest.mark.requires_set_state
-    def test_delay_requires_transmissions(self, swift_env):
+    def test_delay_requires_transmissions(self, env):
         """DELAY requires transmissions to exist."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -768,9 +768,9 @@ class TestDelayProgram:
             owned_programs=[PROGRAM_DELAY],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_DELAY not in valid, f"DELAY requires transmissions, got {valid}"
 
 
@@ -780,7 +780,7 @@ class TestAntiVProgram:
     """Test 2.34: ANTI-V damages all viruses."""
 
     @pytest.mark.requires_set_state
-    def test_antiv_damages_viruses(self, swift_env):
+    def test_antiv_damages_viruses(self, env):
         """ANTI-V should damage all viruses."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=0),
@@ -792,9 +792,9 @@ class TestAntiVProgram:
             owned_programs=[PROGRAM_ANTI_V],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_ANTI_V)
+        result = env.step(PROGRAM_ANTI_V)
 
         # 1-HP virus should be killed
         enemy_at_4_3 = get_enemy_at(result.observation, 4, 3)
@@ -811,7 +811,7 @@ class TestAntiVProgram:
         assert enemy_at_0_0["hp"] == 3, f"Daemon should have full hp={enemy_at_0_0['hp']}"
 
     @pytest.mark.requires_set_state
-    def test_antiv_requires_virus(self, swift_env):
+    def test_antiv_requires_virus(self, env):
         """ANTI-V requires a virus to exist."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10),
@@ -819,9 +819,9 @@ class TestAntiVProgram:
             owned_programs=[PROGRAM_ANTI_V],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_ANTI_V not in valid, f"ANTI-V requires virus, got {valid}"
 
 
@@ -831,16 +831,16 @@ class TestScoreProgram:
     """Test 2.35: SCORE gains points equal to stages left."""
 
     @pytest.mark.requires_set_state
-    def test_score_gains_points(self, swift_env):
+    def test_score_gains_points(self, env):
         """SCORE should give points equal to 8 - current stage."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=5, score=0),
             stage=2,  # 8 - 2 = 6 points
             owned_programs=[PROGRAM_SCORE],
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_SCORE)
+        result = env.step(PROGRAM_SCORE)
 
         # Energy should be consumed
         energy = get_player_energy(result.observation)
@@ -850,16 +850,16 @@ class TestScoreProgram:
         assert result.reward > 0, f"Should get positive reward from score gain, got {result.reward}"
 
     @pytest.mark.requires_set_state
-    def test_score_requires_not_last_stage(self, swift_env):
+    def test_score_requires_not_last_stage(self, env):
         """SCORE requires not being on last stage."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=10),
             stage=8,  # Last stage
             owned_programs=[PROGRAM_SCORE],
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_SCORE not in valid, f"SCORE requires stage < 8, got {valid}"
 
 
@@ -869,7 +869,7 @@ class TestReducProgram:
     """Test 2.36: REDUC reduces block spawn counts."""
 
     @pytest.mark.requires_set_state
-    def test_reduc_reduces_spawn_counts(self, swift_env):
+    def test_reduc_reduces_spawn_counts(self, env):
         """REDUC should reduce spawn counts of unsiphoned blocks."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=2, energy=1),
@@ -880,9 +880,9 @@ class TestReducProgram:
             owned_programs=[PROGRAM_REDUC],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_REDUC)
+        result = env.step(PROGRAM_REDUC)
 
         # Resources consumed
         credits = get_player_credits(result.observation)
@@ -894,7 +894,7 @@ class TestReducProgram:
         # but we can verify resources were consumed
 
     @pytest.mark.requires_set_state
-    def test_reduc_requires_unsiphoned_blocks(self, swift_env):
+    def test_reduc_requires_unsiphoned_blocks(self, env):
         """REDUC requires unsiphoned blocks with spawnCount > 0."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -904,9 +904,9 @@ class TestReducProgram:
             owned_programs=[PROGRAM_REDUC],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_REDUC not in valid, f"REDUC requires blocks with spawnCount>0, got {valid}"
 
 
@@ -916,16 +916,16 @@ class TestAtkPlusProgram:
     """Test 2.37: ATK+ increases attack damage."""
 
     @pytest.mark.requires_set_state
-    def test_atkplus_increases_damage(self, swift_env):
+    def test_atkplus_increases_damage(self, env):
         """ATK+ should increase player's attack damage to 2."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=4, energy=4, attackDamage=1),
             owned_programs=[PROGRAM_ATK_PLUS],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_ATK_PLUS)
+        result = env.step(PROGRAM_ATK_PLUS)
 
         # Resources consumed
         credits = get_player_credits(result.observation)
@@ -938,16 +938,16 @@ class TestAtkPlusProgram:
         assert attack_damage == 2, f"Attack damage should be 2, got {attack_damage}"
 
     @pytest.mark.requires_set_state
-    def test_atkplus_requires_low_damage(self, swift_env):
+    def test_atkplus_requires_low_damage(self, env):
         """ATK+ requires attackDamage < 2."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10, attackDamage=2),
             owned_programs=[PROGRAM_ATK_PLUS],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_ATK_PLUS not in valid, f"ATK+ requires damage < 2, got {valid}"
 
 
@@ -957,7 +957,7 @@ class TestHackProgram:
     """Test 2.38: HACK damages enemies on siphoned cells."""
 
     @pytest.mark.requires_set_state
-    def test_hack_damages_enemies_on_siphoned_blocks(self, swift_env):
+    def test_hack_damages_enemies_on_siphoned_blocks(self, env):
         """HACK should damage enemies standing on siphoned blocks."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=2, energy=2),
@@ -972,9 +972,9 @@ class TestHackProgram:
             owned_programs=[PROGRAM_HACK],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_HACK)
+        result = env.step(PROGRAM_HACK)
 
         # Enemy on siphoned block should be killed
         enemy_at_4_3 = get_enemy_at(result.observation, 4, 3)
@@ -986,7 +986,7 @@ class TestHackProgram:
         assert enemy_at_5_5["hp"] == 2, f"Enemy not on siphoned block should be unhurt, hp={enemy_at_5_5['hp']}"
 
     @pytest.mark.requires_set_state
-    def test_hack_requires_siphoned_blocks(self, swift_env):
+    def test_hack_requires_siphoned_blocks(self, env):
         """HACK requires siphoned blocks to exist."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
@@ -994,9 +994,9 @@ class TestHackProgram:
             owned_programs=[PROGRAM_HACK],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_HACK not in valid, f"HACK requires siphoned blocks, got {valid}"
 
 
@@ -1010,7 +1010,7 @@ class TestUndoProgram:
     """
 
     @pytest.mark.requires_set_state
-    def test_undo_masked_with_empty_history(self, swift_env):
+    def test_undo_masked_with_empty_history(self, env):
         """UNDO should be masked when there's no history to undo."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=0),
@@ -1019,9 +1019,9 @@ class TestUndoProgram:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_UNDO not in valid, f"UNDO requires history, should be masked initially"
 
 
@@ -1031,7 +1031,7 @@ class TestStepProgram:
     """Test 2.26: STEP prevents enemy movement for one turn."""
 
     @pytest.mark.requires_set_state
-    def test_step_prevents_enemy_movement(self, swift_env):
+    def test_step_prevents_enemy_movement(self, env):
         """After using STEP, enemies should not move on the next turn end."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, energy=3),
@@ -1039,10 +1039,10 @@ class TestStepProgram:
             owned_programs=[PROGRAM_STEP],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Use STEP
-        result1 = swift_env.step(PROGRAM_STEP)
+        result1 = env.step(PROGRAM_STEP)
 
         # Enemy should still be at (4,0) - STEP doesn't end turn
         enemies1 = find_enemies(result1.observation)
@@ -1050,7 +1050,7 @@ class TestStepProgram:
         assert enemies1[0]["row"] == 4, f"Enemy should stay at row 4 after STEP, got {enemies1[0]['row']}"
 
         # Now move (ends turn) - enemy should NOT move due to STEP effect
-        result2 = swift_env.step(ACTION_MOVE_UP)
+        result2 = env.step(ACTION_MOVE_UP)
 
         enemies2 = find_enemies(result2.observation)
         assert len(enemies2) == 1, f"Should have 1 enemy, got {len(enemies2)}"
@@ -1059,7 +1059,7 @@ class TestStepProgram:
             f"Enemy should not move due to STEP effect, got row {enemies2[0]['row']}"
 
     @pytest.mark.requires_set_state
-    def test_step_always_applicable(self, swift_env):
+    def test_step_always_applicable(self, env):
         """STEP should always be applicable (if owned and have energy)."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=3),
@@ -1068,13 +1068,13 @@ class TestStepProgram:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_STEP in valid, f"STEP should be valid with energy, got {valid}"
 
     @pytest.mark.requires_set_state
-    def test_step_requires_energy(self, swift_env):
+    def test_step_requires_energy(self, env):
         """STEP costs 3 energy."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=2),  # Only 2 energy
@@ -1083,7 +1083,7 @@ class TestStepProgram:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert PROGRAM_STEP not in valid, f"STEP requires 3 energy, should be masked with 2"

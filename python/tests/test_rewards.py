@@ -60,7 +60,7 @@ class TestStageCompletionRewards:
     """Test 2.66: Stage completion rewards are exponential."""
 
     @pytest.mark.requires_set_state
-    def test_stage_1_completion_reward(self, swift_env):
+    def test_stage_1_completion_reward(self, env):
         """Stage 1 completion should give base reward (multiplier 1)."""
         state = GameState(
             player=PlayerState(row=5, col=4, hp=3),
@@ -68,15 +68,15 @@ class TestStageCompletionRewards:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         # Stage 1 reward multiplier is 1.0
         assert result.reward > 0, f"Stage completion should give positive reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
-    def test_later_stages_give_more_reward(self, swift_env):
+    def test_later_stages_give_more_reward(self, env):
         """Later stages should give exponentially more reward."""
         rewards = []
 
@@ -87,8 +87,8 @@ class TestStageCompletionRewards:
                 blocks=[],
                 stage=stage
             )
-            swift_env.set_state(state)
-            result = swift_env.step(ACTION_MOVE_RIGHT)
+            env.set_state(state)
+            result = env.step(ACTION_MOVE_RIGHT)
             rewards.append(result.reward)
 
         # Each stage should give more than the previous
@@ -105,7 +105,7 @@ class TestScoreGainReward:
     """Test 2.67: Score gain gives 0.5x reward per point."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_score_reward(self, swift_env):
+    def test_siphon_score_reward(self, env):
         """Siphoning a data block should give score-based reward."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1, score=0),
@@ -113,9 +113,9 @@ class TestScoreGainReward:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         # Score gain: 10 points * 0.5 = 5.0 (base component)
         # May also include distance shaping and other components
@@ -129,7 +129,7 @@ class TestKillReward:
     """Test 2.68: Killing enemies gives 0.3x reward per kill."""
 
     @pytest.mark.requires_set_state
-    def test_kill_single_enemy_reward(self, swift_env):
+    def test_kill_single_enemy_reward(self, env):
         """Killing one enemy should give kill reward."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
@@ -137,16 +137,16 @@ class TestKillReward:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Kill reward: 0.3 per enemy
         assert result.reward >= 0.2, \
             f"Kill should give positive reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
-    def test_kill_multiple_enemies_reward(self, swift_env):
+    def test_kill_multiple_enemies_reward(self, env):
         """Killing multiple enemies should give more reward."""
         # Single kill
         state1 = GameState(
@@ -155,8 +155,8 @@ class TestKillReward:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state1)
-        result1 = swift_env.step(ACTION_MOVE_UP)
+        env.set_state(state1)
+        result1 = env.step(ACTION_MOVE_UP)
 
         # Compare with attack on single enemy - can't easily set up multi-kill
         # Just verify single kill gives expected reward
@@ -169,7 +169,7 @@ class TestDataSiphonCollectionReward:
     """Test 2.69: Collecting data siphons gives 1.0 reward."""
 
     @pytest.mark.requires_set_state
-    def test_walk_onto_data_siphon_reward(self, swift_env):
+    def test_walk_onto_data_siphon_reward(self, env):
         """Walking onto a cell with data siphon should give reward."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=0),
@@ -178,16 +178,16 @@ class TestDataSiphonCollectionReward:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Data siphon collection: 1.0 flat reward
         assert result.reward >= 0.9, \
             f"Data siphon collection should give ~1.0 reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
-    def test_siph_plus_gives_reward(self, swift_env):
+    def test_siph_plus_gives_reward(self, env):
         """Using SIPH+ program should give data siphon.
 
         Note: SIPH+ costs 5 credits (resource loss penalty: -5 * 0.05 = -0.25)
@@ -201,9 +201,9 @@ class TestDataSiphonCollectionReward:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_SIPH_PLUS)
+        result = env.step(PROGRAM_SIPH_PLUS)
 
         # Should get data siphon
         siphons_after = get_player_siphons(result.observation)
@@ -219,7 +219,7 @@ class TestDistanceShaping:
     """Test 2.70: Moving closer to exit gives small positive reward."""
 
     @pytest.mark.requires_set_state
-    def test_move_closer_to_exit_positive_reward(self, swift_env):
+    def test_move_closer_to_exit_positive_reward(self, env):
         """Moving toward exit should give positive distance reward."""
         # Player at (0,0), exit at (5,5) - move up to get closer
         state = GameState(
@@ -228,9 +228,9 @@ class TestDistanceShaping:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Distance shaping: 0.05 per cell closer
         # Moving up brings us closer to (5,5)
@@ -244,7 +244,7 @@ class TestVictoryBonus:
     """Test 2.71: Winning the game gives 500 + score * 100."""
 
     @pytest.mark.requires_set_state
-    def test_victory_bonus_calculated(self, swift_env):
+    def test_victory_bonus_calculated(self, env):
         """Victory should give large bonus based on score."""
         state = GameState(
             player=PlayerState(row=5, col=4, hp=3, score=10),
@@ -252,9 +252,9 @@ class TestVictoryBonus:
             blocks=[],
             stage=8  # Final stage
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         # Victory bonus: 500 + 10 * 100 = 1500
         # Plus stage completion reward
@@ -268,7 +268,7 @@ class TestDeathPenalty:
     """Test 2.72: Dying gives negative reward based on progress."""
 
     @pytest.mark.requires_set_state
-    def test_death_gives_negative_reward(self, swift_env):
+    def test_death_gives_negative_reward(self, env):
         """Dying should give negative reward."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=1, energy=1),
@@ -276,9 +276,9 @@ class TestDeathPenalty:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Death penalty: -0.5 * cumulative stage rewards
         assert result.done, "Player should die"
@@ -291,7 +291,7 @@ class TestResourceGainReward:
     """Test 2.73: Gaining resources gives 0.05x reward per unit."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_resource_block_reward(self, swift_env):
+    def test_siphon_resource_block_reward(self, env):
         """Siphoning a block that gives resources should include resource reward."""
         # Note: Resources are given by blocks when siphoned
         # The block itself has points, and may have underlying resources
@@ -302,9 +302,9 @@ class TestResourceGainReward:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         # Siphon gives score (points) and potentially resources
         # Main reward is from score: 5 * 0.5 = 2.5
@@ -317,7 +317,7 @@ class TestDamagePenalty:
     """Test 2.75: Taking damage gives -1.0 per HP lost."""
 
     @pytest.mark.requires_set_state
-    def test_damage_gives_negative_reward(self, swift_env):
+    def test_damage_gives_negative_reward(self, env):
         """Taking damage should reduce reward."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=1),
@@ -325,9 +325,9 @@ class TestDamagePenalty:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         hp_after = get_player_hp(result.observation)
         assert hp_after == 2, "Player should have taken 1 damage"
@@ -343,7 +343,7 @@ class TestHPRecoveryReward:
     """Test 2.76: Recovering HP gives 1.0 per HP gained."""
 
     @pytest.mark.requires_set_state
-    def test_reset_hp_recovery_reward(self, swift_env):
+    def test_reset_hp_recovery_reward(self, env):
         """Using RESET to heal should give positive reward."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=1, energy=4),  # Low HP
@@ -352,9 +352,9 @@ class TestHPRecoveryReward:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_RESET)
+        result = env.step(PROGRAM_RESET)
 
         hp_after = get_player_hp(result.observation)
         assert hp_after == 3, "RESET should restore HP to 3"
@@ -370,7 +370,7 @@ class TestProgramWastePenalty:
     """Test 2.77: Using RESET at 2 HP gives waste penalty."""
 
     @pytest.mark.requires_set_state
-    def test_reset_at_2hp_gives_waste_penalty(self, swift_env):
+    def test_reset_at_2hp_gives_waste_penalty(self, env):
         """Using RESET at 2 HP should give reduced reward due to waste."""
         # At 1 HP (efficient use)
         state1 = GameState(
@@ -380,8 +380,8 @@ class TestProgramWastePenalty:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state1)
-        result1 = swift_env.step(PROGRAM_RESET)
+        env.set_state(state1)
+        result1 = env.step(PROGRAM_RESET)
         reward_at_1hp = result1.reward
 
         # At 2 HP (wasteful use)
@@ -392,8 +392,8 @@ class TestProgramWastePenalty:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state2)
-        result2 = swift_env.step(PROGRAM_RESET)
+        env.set_state(state2)
+        result2 = env.step(PROGRAM_RESET)
         reward_at_2hp = result2.reward
 
         # RESET at 2 HP should have lower reward due to:
@@ -409,7 +409,7 @@ class TestSiphonCausedDeathPenalty:
     """Test 2.78: Dying to siphon-spawned enemies gives extra penalty."""
 
     @pytest.mark.requires_set_state
-    def test_death_after_siphon_extra_penalty(self, swift_env):
+    def test_death_after_siphon_extra_penalty(self, env):
         """Death caused by siphon-spawned enemies should have extra penalty.
 
         Note: This is difficult to test directly as it requires tracking
@@ -423,10 +423,10 @@ class TestSiphonCausedDeathPenalty:
             enemies=[],  # Siphon will spawn transmissions that become enemies
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Siphon will spawn transmissions
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         # This test verifies siphon works - actual siphon-death penalty
         # requires enemies to spawn and attack, which takes multiple turns

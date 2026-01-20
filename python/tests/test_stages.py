@@ -99,7 +99,7 @@ class TestStageCompletion:
     """Test 2.53: Stage completes when player reaches exit."""
 
     @pytest.mark.requires_set_state
-    def test_stage_completes_on_exit(self, swift_env):
+    def test_stage_completes_on_exit(self, env):
         """Moving to exit should advance to next stage.
 
         Note: Exit is always at top-right (row=5, col=5).
@@ -111,11 +111,11 @@ class TestStageCompletion:
             blocks=[],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         stage_before = get_player_stage(obs_before)
 
         # Move right to reach exit at (5, 5)
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         stage_after = get_player_stage(result.observation)
         # Stage should advance
@@ -123,7 +123,7 @@ class TestStageCompletion:
             f"Stage should advance from {stage_before} to {stage_before + 1}, got {stage_after}"
 
     @pytest.mark.requires_set_state
-    def test_stage_reward_increases_with_stage(self, swift_env):
+    def test_stage_reward_increases_with_stage(self, env):
         """Stage completion rewards should increase exponentially."""
         # Complete stage 1
         state1 = GameState(
@@ -132,8 +132,8 @@ class TestStageCompletion:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state1)
-        result1 = swift_env.step(ACTION_MOVE_RIGHT)
+        env.set_state(state1)
+        result1 = env.step(ACTION_MOVE_RIGHT)
         reward1 = result1.reward
 
         # Complete stage 3 (should have higher reward)
@@ -143,8 +143,8 @@ class TestStageCompletion:
             blocks=[],
             stage=3
         )
-        swift_env.set_state(state3)
-        result3 = swift_env.step(ACTION_MOVE_RIGHT)
+        env.set_state(state3)
+        result3 = env.step(ACTION_MOVE_RIGHT)
         reward3 = result3.reward
 
         # Stage 3 completion reward should be higher than stage 1
@@ -159,7 +159,7 @@ class TestDataBlockInvariant:
     """Test 2.54: New stages maintain data block invariant (points == spawnCount)."""
 
     @pytest.mark.requires_set_state
-    def test_new_stage_generates_content(self, swift_env):
+    def test_new_stage_generates_content(self, env):
         """New stage should be generated with content.
 
         Note: Stage advancement happens on reaching exit.
@@ -171,11 +171,11 @@ class TestDataBlockInvariant:
             blocks=[],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         stage_before = get_player_stage(obs_before)
 
         # Move to exit
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         # Stage should advance
         stage_after = get_player_stage(result.observation)
@@ -189,7 +189,7 @@ class TestPlayerStatePreserved:
     """Test 2.55: Player state is preserved across stage transitions."""
 
     @pytest.mark.requires_set_state
-    def test_credits_preserved_on_stage_transition(self, swift_env):
+    def test_credits_preserved_on_stage_transition(self, env):
         """Player credits should be preserved when transitioning stages."""
         state = GameState(
             player=PlayerState(row=5, col=4, hp=3, credits=10, energy=5),
@@ -197,16 +197,16 @@ class TestPlayerStatePreserved:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         # Credits should be preserved
         credits_after = get_player_credits(result.observation)
         assert credits_after == 10, f"Credits should be 10, got {credits_after}"
 
     @pytest.mark.requires_set_state
-    def test_energy_preserved_on_stage_transition(self, swift_env):
+    def test_energy_preserved_on_stage_transition(self, env):
         """Player energy should be preserved when transitioning stages."""
         state = GameState(
             player=PlayerState(row=5, col=4, hp=3, credits=5, energy=7),
@@ -214,15 +214,15 @@ class TestPlayerStatePreserved:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         energy_after = get_player_energy(result.observation)
         assert energy_after == 7, f"Energy should be 7, got {energy_after}"
 
     @pytest.mark.requires_set_state
-    def test_hp_restored_on_stage_transition(self, swift_env):
+    def test_hp_restored_on_stage_transition(self, env):
         """Player HP is restored to full when transitioning stages.
 
         Note: The game auto-heals player to 3 HP on stage completion.
@@ -234,16 +234,16 @@ class TestPlayerStatePreserved:
             blocks=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         hp_after = get_player_hp(result.observation)
         # Game restores HP on stage transition
         assert hp_after == 3, f"HP should be restored to 3 on stage transition, got {hp_after}"
 
     @pytest.mark.requires_set_state
-    def test_player_position_on_stage_transition(self, swift_env):
+    def test_player_position_on_stage_transition(self, env):
         """Player position changes on stage transition.
 
         Note: The exact starting position depends on game implementation.
@@ -255,10 +255,10 @@ class TestPlayerStatePreserved:
             blocks=[],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         stage_before = get_player_stage(obs_before)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         stage_after = get_player_stage(result.observation)
         # Verify stage transition occurred

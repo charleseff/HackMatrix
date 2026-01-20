@@ -41,7 +41,7 @@ class TestPlayerDeath:
     """Test 2.64: Game ends when player HP reaches 0."""
 
     @pytest.mark.requires_set_state
-    def test_player_death_from_enemy_attack(self, swift_env):
+    def test_player_death_from_enemy_attack(self, env):
         """Player death should trigger game over (done=True)."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=1, energy=1),  # 1 HP
@@ -49,10 +49,10 @@ class TestPlayerDeath:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Wait to let enemy attack
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Game should be over
         assert result.done, "Game should end when player dies"
@@ -65,7 +65,7 @@ class TestPlayerDeath:
         assert result.reward < 0, f"Death should give negative reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
-    def test_death_from_multiple_attacks(self, swift_env):
+    def test_death_from_multiple_attacks(self, env):
         """Player can die from accumulated damage."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=2, energy=2),  # 2 HP
@@ -76,10 +76,10 @@ class TestPlayerDeath:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Wait - both enemies attack
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # With 2 adjacent enemies, player takes 2 damage and dies
         assert result.done, "Game should end when player takes lethal damage"
@@ -91,7 +91,7 @@ class TestWinCondition:
     """Test 2.65: Game is won when completing stage 8."""
 
     @pytest.mark.requires_set_state
-    def test_win_on_stage_8_completion(self, swift_env):
+    def test_win_on_stage_8_completion(self, env):
         """Completing stage 8 should trigger victory (done=True with positive reward)."""
         state = GameState(
             player=PlayerState(row=5, col=4, hp=3, score=50),  # Adjacent to exit
@@ -99,10 +99,10 @@ class TestWinCondition:
             blocks=[],
             stage=8  # Final stage
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Move to exit
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         # Game should be over (victory)
         assert result.done, "Game should end on stage 8 completion"
@@ -112,7 +112,7 @@ class TestWinCondition:
         assert result.reward > 100, f"Victory should give large positive reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
-    def test_win_marked_by_stage_9(self, swift_env):
+    def test_win_marked_by_stage_9(self, env):
         """Victory is indicated by stage advancing to 9."""
         state = GameState(
             player=PlayerState(row=5, col=4, hp=3),
@@ -120,9 +120,9 @@ class TestWinCondition:
             blocks=[],
             stage=8
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         # Stage should be 9 to indicate victory
         # Note: This depends on implementation - may need adjustment
@@ -137,7 +137,7 @@ class TestDeathDuringAction:
     """Additional edge cases related to death timing."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_caused_death_penalty(self, swift_env):
+    def test_siphon_caused_death_penalty(self, env):
         """Player dying to enemies spawned from siphon should have extra penalty."""
         # Set up state where siphoning will spawn enemies that immediately kill player
         state = GameState(
@@ -147,10 +147,10 @@ class TestDeathDuringAction:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Wait for enemy to attack (simpler than siphon death)
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         if result.done:
             # Death occurred - should have negative reward
@@ -161,7 +161,7 @@ class TestNotDoneWhenAlive:
     """Test that game continues when player is alive."""
 
     @pytest.mark.requires_set_state
-    def test_not_done_after_damage(self, swift_env):
+    def test_not_done_after_damage(self, env):
         """Game should continue if player survives damage."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=1),  # Full HP
@@ -169,9 +169,9 @@ class TestNotDoneWhenAlive:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Player should survive with 2 HP
         hp_after = get_player_hp(result.observation)

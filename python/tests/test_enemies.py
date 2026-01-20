@@ -73,7 +73,7 @@ class TestEnemySpawnsFromTransmission:
     """Test 2.39: Enemies spawn when transmission countdown reaches 0."""
 
     @pytest.mark.requires_set_state
-    def test_enemy_spawns_from_transmission(self, swift_env):
+    def test_enemy_spawns_from_transmission(self, env):
         """When transmission countdown hits 0, enemy should spawn."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, energy=1),
@@ -82,12 +82,12 @@ class TestEnemySpawnsFromTransmission:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         assert count_enemies(obs_before) == 0, "Should start with no enemies"
         assert count_transmissions(obs_before) == 1, "Should have 1 transmission"
 
         # Wait ends turn, enemy turn executes, transmission spawns
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Transmission should be gone, enemy should appear
         enemies_after = find_enemies(result.observation)
@@ -101,7 +101,7 @@ class TestEnemyMovesIntoPlayer:
     """Test 2.40: Enemies move toward the player."""
 
     @pytest.mark.requires_set_state
-    def test_daemon_moves_one_cell(self, swift_env):
+    def test_daemon_moves_one_cell(self, env):
         """Daemon should move 1 cell per turn toward player."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, energy=1),
@@ -109,9 +109,9 @@ class TestEnemyMovesIntoPlayer:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Daemon should move from (3,0) to (2,0)
         enemies = find_enemies(result.observation)
@@ -126,7 +126,7 @@ class TestVirusDoubleMoves:
     """Test 2.41: Viruses move 2 cells per turn."""
 
     @pytest.mark.requires_set_state
-    def test_virus_moves_two_cells(self, swift_env):
+    def test_virus_moves_two_cells(self, env):
         """Virus should move 2 cells per turn."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, energy=1),
@@ -134,9 +134,9 @@ class TestVirusDoubleMoves:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Virus should move from (4,0) to (2,0) - 2 cells
         enemies = find_enemies(result.observation)
@@ -150,7 +150,7 @@ class TestGlitchMovesOnBlocks:
     """Test 2.42: Glitch can move through/onto blocks."""
 
     @pytest.mark.requires_set_state
-    def test_glitch_moves_onto_block(self, swift_env):
+    def test_glitch_moves_onto_block(self, env):
         """Glitch should be able to move onto blocks."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, energy=1),
@@ -159,9 +159,9 @@ class TestGlitchMovesOnBlocks:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Glitch should move onto block at (2,0)
         enemies = find_enemies(result.observation)
@@ -175,7 +175,7 @@ class TestCryptogVisibility:
     """Test 2.43: Cryptog visibility based on row/column alignment."""
 
     @pytest.mark.requires_set_state
-    def test_cryptog_visible_in_same_row(self, swift_env):
+    def test_cryptog_visible_in_same_row(self, env):
         """Cryptog in same row as player should be visible."""
         state = GameState(
             player=PlayerState(row=3, col=0, hp=3),
@@ -183,13 +183,13 @@ class TestCryptogVisibility:
             showActivated=False,
             stage=1
         )
-        obs = swift_env.set_state(state)
+        obs = env.set_state(state)
 
         enemies = find_enemies(obs)
         assert len(enemies) == 1, f"Cryptog in same row should be visible, found {len(enemies)}"
 
     @pytest.mark.requires_set_state
-    def test_cryptog_visible_in_same_column(self, swift_env):
+    def test_cryptog_visible_in_same_column(self, env):
         """Cryptog in same column as player should be visible."""
         state = GameState(
             player=PlayerState(row=0, col=3, hp=3),
@@ -197,13 +197,13 @@ class TestCryptogVisibility:
             showActivated=False,
             stage=1
         )
-        obs = swift_env.set_state(state)
+        obs = env.set_state(state)
 
         enemies = find_enemies(obs)
         assert len(enemies) == 1, f"Cryptog in same column should be visible, found {len(enemies)}"
 
     @pytest.mark.requires_set_state
-    def test_cryptog_hidden_different_row_col(self, swift_env):
+    def test_cryptog_hidden_different_row_col(self, env):
         """Cryptog in different row AND column should be hidden."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3),
@@ -211,7 +211,7 @@ class TestCryptogVisibility:
             showActivated=False,
             stage=1
         )
-        obs = swift_env.set_state(state)
+        obs = env.set_state(state)
 
         enemies = find_enemies(obs)
         assert len(enemies) == 0, f"Cryptog in different row/col should be hidden, found {len(enemies)}"
@@ -223,7 +223,7 @@ class TestEnemyAttacksPlayer:
     """Test 2.44: Enemies attack player when adjacent."""
 
     @pytest.mark.requires_set_state
-    def test_adjacent_enemy_attacks_player(self, swift_env):
+    def test_adjacent_enemy_attacks_player(self, env):
         """Adjacent enemy should attack player, reducing HP."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=1),
@@ -231,9 +231,9 @@ class TestEnemyAttacksPlayer:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         hp_after = get_player_hp(result.observation)
         assert hp_after == 2, f"Player should take 1 damage, HP should be 2, got {hp_after}"
@@ -245,7 +245,7 @@ class TestStunnedEnemyNoMovement:
     """Test 2.45: Stunned enemies don't move or attack."""
 
     @pytest.mark.requires_set_state
-    def test_stunned_enemy_doesnt_move(self, swift_env):
+    def test_stunned_enemy_doesnt_move(self, env):
         """Stunned enemy should not move during enemy turn."""
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, energy=1),
@@ -253,9 +253,9 @@ class TestStunnedEnemyNoMovement:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Stunned enemy should stay at (3,0)
         enemies = find_enemies(result.observation)
@@ -269,7 +269,7 @@ class TestEnemiesMoveAfterTurnEnd:
     """Test 2.46: Non-stunned enemies move after player's turn ends."""
 
     @pytest.mark.requires_set_state
-    def test_enemies_move_after_wait(self, swift_env):
+    def test_enemies_move_after_wait(self, env):
         """Non-stunned enemies should move after player waits.
 
         Note: Use WAIT program instead of movement to avoid line-of-sight
@@ -284,11 +284,11 @@ class TestEnemiesMoveAfterTurnEnd:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         enemies_before = find_enemies(obs_before)
 
         # Wait ends turn
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         enemies_after = find_enemies(result.observation)
 

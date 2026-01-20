@@ -74,16 +74,16 @@ class TestMoveEndsTurn:
     """Test 2.47: Movement ends player turn."""
 
     @pytest.mark.requires_set_state
-    def test_move_ends_turn(self, swift_env):
+    def test_move_ends_turn(self, env):
         """Moving should end turn and trigger enemy movement."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[Enemy(type="daemon", row=5, col=5, hp=3, stunned=False)],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Player should have moved
         row, col = get_player_position(result.observation)
@@ -104,7 +104,7 @@ class TestProgramsDoNotEndTurn:
     """Test 2.48: Programs (except WAIT) don't end turn."""
 
     @pytest.mark.requires_set_state
-    def test_push_does_not_end_turn(self, swift_env):
+    def test_push_does_not_end_turn(self, env):
         """PUSH program should NOT end the turn."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=2),
@@ -112,9 +112,9 @@ class TestProgramsDoNotEndTurn:
             owned_programs=[PROGRAM_PUSH],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_PUSH)
+        result = env.step(PROGRAM_PUSH)
 
         # Enemy should NOT have moved (turn didn't end)
         enemies = find_enemies(result.observation)
@@ -124,7 +124,7 @@ class TestProgramsDoNotEndTurn:
         # If enemy was at row 5, it can't go further (edge), so stays at 5
 
         # The key check: movement should still be valid (turn not ended)
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert ACTION_MOVE_UP in valid, f"Movement should be valid after PUSH, got {valid}"
 
 
@@ -134,7 +134,7 @@ class TestWaitEndsTurn:
     """Test 2.49: WAIT program ends turn."""
 
     @pytest.mark.requires_set_state
-    def test_wait_ends_turn(self, swift_env):
+    def test_wait_ends_turn(self, env):
         """WAIT should end turn and trigger enemy movement."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=1),
@@ -142,9 +142,9 @@ class TestWaitEndsTurn:
             owned_programs=[PROGRAM_WAIT],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(PROGRAM_WAIT)
+        result = env.step(PROGRAM_WAIT)
 
         # Enemy should have moved (daemon at row 5 should be at row 4)
         enemies = find_enemies(result.observation)
@@ -158,7 +158,7 @@ class TestAttackEndsTurn:
     """Test 2.50: Attacking ends player turn."""
 
     @pytest.mark.requires_set_state
-    def test_attack_ends_turn(self, swift_env):
+    def test_attack_ends_turn(self, env):
         """Attacking an enemy should end turn."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
@@ -168,9 +168,9 @@ class TestAttackEndsTurn:
             ],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Should have attacked the virus (not moved)
         row, col = get_player_position(result.observation)
@@ -195,7 +195,7 @@ class TestSiphonEndsTurn:
     """Test 2.51: Siphoning ends player turn."""
 
     @pytest.mark.requires_set_state
-    def test_siphon_ends_turn(self, swift_env):
+    def test_siphon_ends_turn(self, env):
         """Siphoning should end turn and trigger enemy movement."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
@@ -203,9 +203,9 @@ class TestSiphonEndsTurn:
             enemies=[Enemy(type="daemon", row=5, col=5, hp=3, stunned=False)],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_SIPHON)
+        result = env.step(ACTION_SIPHON)
 
         # Daemon should have moved (turn ended)
         enemies = find_enemies(result.observation)
@@ -221,7 +221,7 @@ class TestProgramChaining:
     """Test 2.52: Multiple programs can be used before turn ends."""
 
     @pytest.mark.requires_set_state
-    def test_chain_push_then_pull(self, swift_env):
+    def test_chain_push_then_pull(self, env):
         """Can use multiple programs before ending turn."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=4),  # Enough for PUSH + PULL
@@ -229,35 +229,35 @@ class TestProgramChaining:
             owned_programs=[PROGRAM_PUSH, PROGRAM_PULL],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Use PUSH
-        result1 = swift_env.step(PROGRAM_PUSH)
+        result1 = env.step(PROGRAM_PUSH)
         enemies1 = find_enemies(result1.observation)
         # PUSH moves enemy away - daemon stays at (5,3) since it's at edge
 
         # Movement should still be valid
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert ACTION_MOVE_UP in valid, f"Should be able to move after PUSH, got {valid}"
 
         # Use PULL
-        result2 = swift_env.step(PROGRAM_PULL)
+        result2 = env.step(PROGRAM_PULL)
         enemies2 = find_enemies(result2.observation)
         # PULL moves enemy closer
 
         # Movement should still be valid
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert ACTION_MOVE_UP in valid, f"Should be able to move after PULL, got {valid}"
 
         # Now move to end turn
-        result3 = swift_env.step(ACTION_MOVE_UP)
+        result3 = env.step(ACTION_MOVE_UP)
 
         # Player should have moved
         row, col = get_player_position(result3.observation)
         # Movement ends turn, so enemy also moves
 
     @pytest.mark.requires_set_state
-    def test_chain_siph_plus_then_move(self, swift_env):
+    def test_chain_siph_plus_then_move(self, env):
         """Can use SIPH+ then move (SIPH+ doesn't end turn).
 
         Note: Enemy is placed in different column to avoid triggering
@@ -270,21 +270,21 @@ class TestProgramChaining:
             owned_programs=[PROGRAM_SIPH_PLUS],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Use SIPH+
-        result1 = swift_env.step(PROGRAM_SIPH_PLUS)
+        result1 = env.step(PROGRAM_SIPH_PLUS)
 
         # Enemy should NOT have moved
         enemies = find_enemies(result1.observation)
         assert enemies[0]["row"] == 5, f"Enemy should not move after SIPH+, got row {enemies[0]['row']}"
 
         # Movement should be valid
-        valid = swift_env.get_valid_actions()
+        valid = env.get_valid_actions()
         assert ACTION_MOVE_UP in valid, f"Should be able to move after SIPH+, got {valid}"
 
         # Now move
-        result2 = swift_env.step(ACTION_MOVE_UP)
+        result2 = env.step(ACTION_MOVE_UP)
 
         # Enemy should have moved now (turn ended)
         # Daemon was at (5,4), player now at (4,3), daemon moves diagonally toward player

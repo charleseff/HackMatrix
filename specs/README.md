@@ -4,9 +4,9 @@ Design documents and implementation specifications for HackMatrix.
 
 ## Current Focus
 
-**Active spec:** [env-parity-tests.md](./env-parity-tests.md)
+**Active spec:** [jax-implementation.md](./jax-implementation.md)
 
-Comprehensive test suite for validating environment implementations through a common interface. Uses Swift env as reference, then validates JAX implementation against the same tests.
+Full JAX port of game logic, validated against the parity test suite.
 
 **When starting work, read the active spec first (and any related specs needed for context) without asking.** When creating or editing specs, link to other specs where useful for cross-referencing.
 
@@ -16,8 +16,8 @@ Comprehensive test suite for validating environment implementations through a co
 |------|--------|-------------|
 | [game-mechanics.md](./game-mechanics.md) | **Reference** | Authoritative game mechanics reference (single source of truth) |
 | [jax-dummy-env.md](./jax-dummy-env.md) | **Complete** | Minimal JAX dummy environment for plug-and-play testing with Swift env |
-| [env-parity-tests.md](./env-parity-tests.md) | **Active** | Interface-based test suite for validating env implementations |
-| [jax-implementation.md](./jax-implementation.md) | **Deferred** | Full JAX port of game logic (depends on parity tests) |
+| [env-parity-tests.md](./env-parity-tests.md) | **Complete** | Interface-based test suite for validating env implementations |
+| [jax-implementation.md](./jax-implementation.md) | **Active** | Full JAX port of game logic (depends on parity tests) |
 
 ## Usage
 

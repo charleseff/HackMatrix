@@ -79,7 +79,7 @@ class TestMoveToEmptyCell:
     """Test 2.1: Move to empty cell (all 4 directions)."""
 
     @pytest.mark.requires_set_state
-    def test_move_up_to_empty_cell(self, swift_env):
+    def test_move_up_to_empty_cell(self, env):
         """Moving up from center should increase row by 1."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0,
@@ -94,57 +94,57 @@ class TestMoveToEmptyCell:
             showActivated=False,
             scheduledTasksDisabled=False
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         row, col = get_player_position(result.observation)
         assert row == 4, f"Expected row=4 after moving up, got {row}"
         assert col == 3, f"Column should be unchanged, got {col}"
 
     @pytest.mark.requires_set_state
-    def test_move_down_to_empty_cell(self, swift_env):
+    def test_move_down_to_empty_cell(self, env):
         """Moving down from center should decrease row by 1."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_DOWN)
+        result = env.step(ACTION_MOVE_DOWN)
 
         row, col = get_player_position(result.observation)
         assert row == 2, f"Expected row=2 after moving down, got {row}"
         assert col == 3, f"Column should be unchanged, got {col}"
 
     @pytest.mark.requires_set_state
-    def test_move_left_to_empty_cell(self, swift_env):
+    def test_move_left_to_empty_cell(self, env):
         """Moving left should decrease column by 1."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_LEFT)
+        result = env.step(ACTION_MOVE_LEFT)
 
         row, col = get_player_position(result.observation)
         assert row == 3, f"Row should be unchanged, got {row}"
         assert col == 2, f"Expected col=2 after moving left, got {col}"
 
     @pytest.mark.requires_set_state
-    def test_move_right_to_empty_cell(self, swift_env):
+    def test_move_right_to_empty_cell(self, env):
         """Moving right should increase column by 1."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_RIGHT)
+        result = env.step(ACTION_MOVE_RIGHT)
 
         row, col = get_player_position(result.observation)
         assert row == 3, f"Row should be unchanged, got {row}"
@@ -157,58 +157,58 @@ class TestMoveBlockedByEdge:
     """Test 2.2: Movement blocked by grid edges."""
 
     @pytest.mark.requires_set_state
-    def test_move_blocked_by_top_edge(self, swift_env):
+    def test_move_blocked_by_top_edge(self, env):
         """Moving up from top row should be invalid."""
         state = GameState(
             player=PlayerState(row=5, col=3, hp=3),
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid_actions = swift_env.get_valid_actions()
+        valid_actions = env.get_valid_actions()
         assert ACTION_MOVE_UP not in valid_actions, \
             f"Move up should be blocked at top edge, but found in {valid_actions}"
 
     @pytest.mark.requires_set_state
-    def test_move_blocked_by_bottom_edge(self, swift_env):
+    def test_move_blocked_by_bottom_edge(self, env):
         """Moving down from bottom row should be invalid."""
         state = GameState(
             player=PlayerState(row=0, col=3, hp=3),
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid_actions = swift_env.get_valid_actions()
+        valid_actions = env.get_valid_actions()
         assert ACTION_MOVE_DOWN not in valid_actions, \
             f"Move down should be blocked at bottom edge, but found in {valid_actions}"
 
     @pytest.mark.requires_set_state
-    def test_move_blocked_by_left_edge(self, swift_env):
+    def test_move_blocked_by_left_edge(self, env):
         """Moving left from left edge should be invalid."""
         state = GameState(
             player=PlayerState(row=3, col=0, hp=3),
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid_actions = swift_env.get_valid_actions()
+        valid_actions = env.get_valid_actions()
         assert ACTION_MOVE_LEFT not in valid_actions, \
             f"Move left should be blocked at left edge, but found in {valid_actions}"
 
     @pytest.mark.requires_set_state
-    def test_move_blocked_by_right_edge(self, swift_env):
+    def test_move_blocked_by_right_edge(self, env):
         """Moving right from right edge should be invalid."""
         state = GameState(
             player=PlayerState(row=3, col=5, hp=3),
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid_actions = swift_env.get_valid_actions()
+        valid_actions = env.get_valid_actions()
         assert ACTION_MOVE_RIGHT not in valid_actions, \
             f"Move right should be blocked at right edge, but found in {valid_actions}"
 
@@ -219,7 +219,7 @@ class TestMoveBlockedByBlock:
     """Test 2.3: Movement blocked by blocks."""
 
     @pytest.mark.requires_set_state
-    def test_move_blocked_by_block(self, swift_env):
+    def test_move_blocked_by_block(self, env):
         """Moving toward a block should be invalid."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
@@ -227,9 +227,9 @@ class TestMoveBlockedByBlock:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        valid_actions = swift_env.get_valid_actions()
+        valid_actions = env.get_valid_actions()
         assert ACTION_MOVE_UP not in valid_actions, \
             f"Move up should be blocked by block, but found in {valid_actions}"
 
@@ -240,7 +240,7 @@ class TestMoveCollectsDataSiphon:
     """Test 2.4: Moving onto data siphon cell collects it."""
 
     @pytest.mark.requires_set_state
-    def test_move_collects_data_siphon(self, swift_env):
+    def test_move_collects_data_siphon(self, env):
         """Walking onto a data siphon cell should collect it."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0,
@@ -249,14 +249,14 @@ class TestMoveCollectsDataSiphon:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Check initial siphons
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         siphons_before = int(round(obs_before.player[6] * 10))
         assert siphons_before == 0, f"Should start with 0 siphons, got {siphons_before}"
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         row, col = get_player_position(result.observation)
         assert row == 4, f"Should move to row 4, got {row}"
@@ -274,7 +274,7 @@ class TestLineOfSightAttack:
     """Test 2.5: Line-of-sight attacks on distant enemies."""
 
     @pytest.mark.requires_set_state
-    def test_line_of_sight_attack_distant_enemy(self, swift_env):
+    def test_line_of_sight_attack_distant_enemy(self, env):
         """Moving toward a distant enemy in line of sight should attack, not move."""
         state = GameState(
             player=PlayerState(row=0, col=3, hp=3, credits=0, energy=0,
@@ -282,9 +282,9 @@ class TestLineOfSightAttack:
             enemies=[Enemy(type="virus", row=5, col=3, hp=1, stunned=False)],  # 5 cells away, same column
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Player should NOT move (attack instead)
         row, col = get_player_position(result.observation)
@@ -304,7 +304,7 @@ class TestLineOfSightAttackOnBlock:
     """Test 2.6: Line-of-sight attack on enemy standing on a block."""
 
     @pytest.mark.requires_set_state
-    def test_line_of_sight_attack_enemy_on_block(self, swift_env):
+    def test_line_of_sight_attack_enemy_on_block(self, env):
         """Can attack enemy on block via line-of-sight even though can't walk there."""
         state = GameState(
             player=PlayerState(row=0, col=3, hp=3, attackDamage=1),
@@ -312,9 +312,9 @@ class TestLineOfSightAttackOnBlock:
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Player should NOT move
         row, col = get_player_position(result.observation)
@@ -331,16 +331,16 @@ class TestAttackKillsEnemy:
     """Test 2.7: Moving into adjacent enemy kills it."""
 
     @pytest.mark.requires_set_state
-    def test_attack_kills_enemy(self, swift_env):
+    def test_attack_kills_enemy(self, env):
         """Moving into adjacent 1-HP enemy should kill it without moving."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, attackDamage=1),
             enemies=[Enemy(type="virus", row=4, col=3, hp=1, stunned=False)],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Player should NOT move (attack doesn't move player)
         row, col = get_player_position(result.observation)
@@ -360,16 +360,16 @@ class TestAttackEnemySurvives:
     """Test 2.8: Attacking enemy that survives."""
 
     @pytest.mark.requires_set_state
-    def test_attack_damages_enemy(self, swift_env):
+    def test_attack_damages_enemy(self, env):
         """Attacking 2-HP enemy should damage but not kill it."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, attackDamage=1),
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Player should NOT move
         row, col = get_player_position(result.observation)
@@ -387,7 +387,7 @@ class TestAttackTransmission:
     """Test 2.9: Moving into transmission destroys it."""
 
     @pytest.mark.requires_set_state
-    def test_attack_destroys_transmission(self, swift_env):
+    def test_attack_destroys_transmission(self, env):
         """Moving into transmission should destroy it without moving."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
@@ -395,14 +395,14 @@ class TestAttackTransmission:
             enemies=[],
             stage=1
         )
-        swift_env.set_state(state)
+        env.set_state(state)
 
         # Check transmission exists before
-        obs_before = swift_env.set_state(state)
+        obs_before = env.set_state(state)
         trans_before = obs_before.grid[4, 3, 35]  # Transmission countdown channel
         assert trans_before > 0, "Transmission should exist before attack"
 
-        result = swift_env.step(ACTION_MOVE_UP)
+        result = env.step(ACTION_MOVE_UP)
 
         # Player should NOT move
         row, col = get_player_position(result.observation)
