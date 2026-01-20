@@ -155,7 +155,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 
 ### Phase 2: Comprehensive Test Cases
 
-**Status**: In progress - 77 tests passing (movement, siphon, programs, enemies, turns)
+**Status**: Complete - 125 tests passing (all test categories implemented)
 
 #### Movement Tests (`test_movement.py`) - IMPLEMENTED
 
@@ -731,7 +731,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Applicability**: Requires enemies in player's column
 - COL also STUNS surviving enemies
 
-- [ ] **2.25** UNDO (index 14)
+- [x] **2.25** UNDO (index 14)
 
 **Test: `test_undo_restores_player_and_enemy_positions`**
 - **Preconditions**: (This requires 2 steps)
@@ -759,7 +759,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Applicability**: Requires game history (not empty)
 - UNDO also reverses ENEMY positions (not just player)
 
-- [ ] **2.26** STEP (index 15)
+- [x] **2.26** STEP (index 15)
 
 **Test: `test_step_prevents_enemy_movement`**
 - **Preconditions**:
@@ -1262,9 +1262,9 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Then Action**: 0 (move)
 - **Expected**: turn=1
 
-#### Stage Tests (`test_stages.py`)
+#### Stage Tests (`test_stages.py`) - IMPLEMENTED
 
-- [ ] **2.53** Stage completion trigger
+- [x] **2.53** Stage completion trigger
 
 **Test: `test_stage_completes_on_exit_reached`**
 - **Preconditions**:
@@ -1282,34 +1282,34 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Expected**: `stage`: 1 → 2
 - **Expected Reward**: Stage completion: 1.0
 
-- [ ] **2.54** New stage maintains data block invariant
+- [x] **2.54** New stage maintains data block invariant
 
 **Test: `test_new_stage_data_block_invariant`**
 - **Note**: After stage transition, verify all data blocks have `points == spawnCount`
 - **Assert**: For each data block, `block.points == block.spawnCount`
 
-- [ ] **2.55** Player state preserved on stage transition
+- [x] **2.55** Player state preserved on stage transition
 
 **Test: `test_player_state_preserved_on_stage_transition`**
 - **Preconditions**: Player with credits=5, energy=3, score=10, stage=1
 - **Action**: Move to exit
 - **Expected**: `credits`, `energy`, `score` preserved after stage transition
 
-#### Action Mask Tests (`test_action_mask.py`)
+#### Action Mask Tests (`test_action_mask.py`) - IMPLEMENTED
 
-- [ ] **2.56** Movement masked by walls/edges
+- [x] **2.56** Movement masked by walls/edges
 
 **Test: `test_movement_masked_at_edges`**
 - **Preconditions**: Player at (0,0)
 - **Expected Valid Actions**: NOT include 1 (down - row=0), NOT include 2 (left - col=0)
 
-- [ ] **2.57** Movement masked by blocks
+- [x] **2.57** Movement masked by blocks
 
 **Test: `test_movement_masked_by_block`**
 - **Preconditions**: Player at (3,3), block at (4,3)
 - **Expected Valid Actions**: NOT include 0 (up toward block)
 
-- [ ] **2.58** Siphon valid when player has data siphons
+- [x] **2.58** Siphon valid when player has data siphons
 
 **Test: `test_siphon_valid_with_siphons`**
 - **Preconditions**: Player with dataSiphons=1
@@ -1319,25 +1319,25 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Preconditions**: Player with dataSiphons=0
 - **Expected Valid Actions**: NOT include 4
 
-- [ ] **2.59** Programs masked when not owned
+- [x] **2.59** Programs masked when not owned
 
 **Test: `test_program_masked_when_not_owned`**
 - **Preconditions**: Player with owned_programs=[], credits=10, energy=10
 - **Expected Valid Actions**: NOT include any programs (5-27)
 
-- [ ] **2.60** Programs masked when insufficient credits
+- [x] **2.60** Programs masked when insufficient credits
 
 **Test: `test_program_masked_insufficient_credits`**
 - **Preconditions**: Player with owned_programs=[7], credits=0, energy=10 (crash needs 3C)
 - **Expected Valid Actions**: NOT include 7
 
-- [ ] **2.61** Programs masked when insufficient energy
+- [x] **2.61** Programs masked when insufficient energy
 
 **Test: `test_program_masked_insufficient_energy`**
 - **Preconditions**: Player with owned_programs=[5], credits=10, energy=0 (push needs 2E)
 - **Expected Valid Actions**: NOT include 5
 
-- [ ] **2.62** Programs masked when applicability conditions not met
+- [x] **2.62** Programs masked when applicability conditions not met
 
 **Test: `test_program_masked_no_enemies`**
 - **Preconditions**: Player with owned_programs=[5], energy=10, NO enemies
@@ -1363,7 +1363,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Preconditions**: Player with owned_programs=[14], credits=10, fresh game (no history)
 - **Expected Valid Actions**: NOT include 14 (undo requires history)
 
-- [ ] **2.63** Mask updates correctly after state changes
+- [x] **2.63** Mask updates correctly after state changes
 
 **Test: `test_mask_updates_after_resource_gain`**
 - **Preconditions**: Player with owned_programs=[5], energy=0, resource giving energy at adjacent cell
@@ -1375,9 +1375,9 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 - **Action**: 4 (siphon block that gives energy)
 - **Post-step Valid Actions**: Now include 5 (push, has enough energy)
 
-#### Edge Case Tests (`test_edge_cases.py`)
+#### Edge Case Tests (`test_edge_cases.py`) - IMPLEMENTED
 
-- [ ] **2.64** Player death
+- [x] **2.64** Player death
 
 **Test: `test_player_death`**
 - **Preconditions**:
@@ -1396,7 +1396,7 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - `player.hp`: 0
   - Reward includes death penalty
 
-- [ ] **2.65** Win condition
+- [x] **2.65** Win condition
 
 **Test: `test_win_condition`**
 - **Preconditions**: Player at stage 8, adjacent to exit
@@ -1406,9 +1406,9 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
   - `stage`: 9 (indicates victory)
   - Reward includes victory bonus: 500.0 + score × 100.0
 
-#### Reward Tests (`test_rewards.py`)
+#### Reward Tests (`test_rewards.py`) - IMPLEMENTED
 
-- [ ] **2.66** Stage completion rewards
+- [x] **2.66** Stage completion rewards
 
 **Tests for each stage**:
 | Stage Completed | Reward |
@@ -1422,75 +1422,75 @@ Based on analysis of `specs/env-parity-tests.md`, `everything_wrong_with_impl_pl
 | 7 | 64.0 |
 | 8 | 100.0 |
 
-- [ ] **2.67** Score gain reward
+- [x] **2.67** Score gain reward
 
 **Test: `test_score_gain_reward`**
 - **Preconditions**: score=0, siphon data block worth 10 points
 - **Action**: 4 (siphon)
 - **Expected Reward Component**: 10 × 0.5 = 5.0
 
-- [ ] **2.68** Kill reward
+- [x] **2.68** Kill reward
 
 **Test: `test_kill_reward`**
 - **Preconditions**: 1 HP enemy adjacent
 - **Action**: Attack
 - **Expected Reward Component**: 1 × 0.3 = 0.3
 
-- [ ] **2.69** Data siphon collection reward
+- [x] **2.69** Data siphon collection reward
 
 **Test: `test_data_siphon_collection_reward`**
 - **Preconditions**: Player executes SIPH+ program OR walks onto cell with data siphon
 - **Expected Reward Component**: 1.0
 
-- [ ] **2.70** Distance shaping reward
+- [x] **2.70** Distance shaping reward
 
 **Test: `test_distance_closer_reward`**
 - **Preconditions**: Player moves closer to exit
 - **Expected Reward Component**: delta × 0.05 (positive)
 
-- [ ] **2.71** Victory bonus
+- [x] **2.71** Victory bonus
 
 **Test: `test_victory_bonus`**
 - **Preconditions**: Complete stage 8 with score=100
 - **Expected Reward Component**: 500.0 + 100 × 100.0 = 10500.0
 
-- [ ] **2.72** Death penalty
+- [x] **2.72** Death penalty
 
 **Test: `test_death_penalty`**
 - **Preconditions**: Player dies at stage 3 (stages 1,2 completed)
 - **Expected**: -(1 + 2) × 0.5 = -1.5
 
-- [ ] **2.73** Resource gain reward
+- [x] **2.73** Resource gain reward
 
 **Test: `test_resource_gain_reward`**
 - **Preconditions**: Siphon block that gives 3 credits, 2 energy
 - **Expected**: (3 + 2) × 0.05 = 0.25
 
-- [ ] **2.74** Resource holding bonus on stage complete
+- [x] **2.74** Resource holding bonus on stage complete (tested via stage completion tests)
 
 **Test: `test_resource_holding_bonus_on_stage_complete`**
 - **Preconditions**: Complete stage with 5 credits, 3 energy
 - **Expected**: 5 × 0.01 + 3 × 0.01 = 0.08
 
-- [ ] **2.75** Damage penalty
+- [x] **2.75** Damage penalty
 
 **Test: `test_damage_penalty`**
 - **Preconditions**: Player takes 2 damage
 - **Expected**: 2 × -1.0 = -2.0
 
-- [ ] **2.76** HP recovery reward
+- [x] **2.76** HP recovery reward
 
 **Test: `test_hp_recovery_reward`**
 - **Preconditions**: Player at 1 HP uses RESET
 - **Expected**: 2 × 1.0 = 2.0 (gained 2 HP)
 
-- [ ] **2.77** Program waste penalty
+- [x] **2.77** Program waste penalty
 
 **Test: `test_reset_at_2hp_penalty`**
 - **Preconditions**: Player at 2 HP uses RESET
 - **Expected**: -0.3 (program waste penalty)
 
-- [ ] **2.78** Siphon-caused death penalty
+- [x] **2.78** Siphon-caused death penalty
 
 **Test: `test_siphon_caused_death_penalty`**
 - **Preconditions**: Player dies to enemy that spawned from siphon

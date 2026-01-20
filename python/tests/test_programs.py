@@ -1001,3 +1001,92 @@ class TestHackProgram:
 
         valid = swift_env.get_valid_actions()
         assert PROGRAM_HACK not in valid, f"HACK requires siphoned blocks, got {valid}"
+
+
+# MARK: - Test 2.25: UNDO Program
+
+class TestUndoProgram:
+    """Test 2.25: UNDO reverses the last action.
+
+    Note: UNDO requires game history to exist, which means at least one
+    action has been taken. Testing UNDO requires a multi-step sequence.
+    """
+
+    @pytest.mark.requires_set_state
+    def test_undo_masked_with_empty_history(self, swift_env):
+        """UNDO should be masked when there's no history to undo."""
+        state = GameState(
+            player=PlayerState(row=3, col=3, hp=3, credits=10, energy=0),
+            owned_programs=[PROGRAM_UNDO],
+            enemies=[],
+            blocks=[],
+            stage=1
+        )
+        swift_env.set_state(state)
+
+        valid = swift_env.get_valid_actions()
+        assert PROGRAM_UNDO not in valid, f"UNDO requires history, should be masked initially"
+
+
+# MARK: - Test 2.26: STEP Program
+
+class TestStepProgram:
+    """Test 2.26: STEP prevents enemy movement for one turn."""
+
+    @pytest.mark.requires_set_state
+    def test_step_prevents_enemy_movement(self, swift_env):
+        """After using STEP, enemies should not move on the next turn end."""
+        state = GameState(
+            player=PlayerState(row=0, col=0, hp=3, energy=3),
+            enemies=[Enemy(type="daemon", row=4, col=0, hp=3, stunned=False)],
+            owned_programs=[PROGRAM_STEP],
+            stage=1
+        )
+        swift_env.set_state(state)
+
+        # Use STEP
+        result1 = swift_env.step(PROGRAM_STEP)
+
+        # Enemy should still be at (4,0) - STEP doesn't end turn
+        enemies1 = find_enemies(result1.observation)
+        assert len(enemies1) == 1, f"Should have 1 enemy, got {len(enemies1)}"
+        assert enemies1[0]["row"] == 4, f"Enemy should stay at row 4 after STEP, got {enemies1[0]['row']}"
+
+        # Now move (ends turn) - enemy should NOT move due to STEP effect
+        result2 = swift_env.step(ACTION_MOVE_UP)
+
+        enemies2 = find_enemies(result2.observation)
+        assert len(enemies2) == 1, f"Should have 1 enemy, got {len(enemies2)}"
+        # With STEP active, enemy should not move
+        assert enemies2[0]["row"] == 4, \
+            f"Enemy should not move due to STEP effect, got row {enemies2[0]['row']}"
+
+    @pytest.mark.requires_set_state
+    def test_step_always_applicable(self, swift_env):
+        """STEP should always be applicable (if owned and have energy)."""
+        state = GameState(
+            player=PlayerState(row=3, col=3, hp=3, credits=0, energy=3),
+            owned_programs=[PROGRAM_STEP],
+            enemies=[],  # No enemies
+            blocks=[],
+            stage=1
+        )
+        swift_env.set_state(state)
+
+        valid = swift_env.get_valid_actions()
+        assert PROGRAM_STEP in valid, f"STEP should be valid with energy, got {valid}"
+
+    @pytest.mark.requires_set_state
+    def test_step_requires_energy(self, swift_env):
+        """STEP costs 3 energy."""
+        state = GameState(
+            player=PlayerState(row=3, col=3, hp=3, credits=0, energy=2),  # Only 2 energy
+            owned_programs=[PROGRAM_STEP],
+            enemies=[],
+            blocks=[],
+            stage=1
+        )
+        swift_env.set_state(state)
+
+        valid = swift_env.get_valid_actions()
+        assert PROGRAM_STEP not in valid, f"STEP requires 3 energy, should be masked with 2"

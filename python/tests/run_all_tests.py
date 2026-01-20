@@ -170,6 +170,8 @@ class TestRunner:
                     TestReducProgram,
                     TestAtkPlusProgram,
                     TestHackProgram,
+                    TestUndoProgram,
+                    TestStepProgram,
                     TestProgramChaining,
                 )
                 test_classes = [
@@ -194,6 +196,8 @@ class TestRunner:
                     TestReducProgram,
                     TestAtkPlusProgram,
                     TestHackProgram,
+                    TestUndoProgram,
+                    TestStepProgram,
                     TestProgramChaining,
                 ]
             elif module_name == 'test_enemies':
@@ -233,6 +237,80 @@ class TestRunner:
                     TestAttackEndsTurn,
                     TestSiphonEndsTurn,
                     TestProgramChaining,
+                ]
+            elif module_name == 'test_action_mask':
+                from tests.test_action_mask import (
+                    TestMovementMaskedByEdges,
+                    TestMovementMaskedByBlocks,
+                    TestSiphonValidity,
+                    TestProgramsMaskedWhenNotOwned,
+                    TestProgramsMaskedInsufficientCredits,
+                    TestProgramsMaskedInsufficientEnergy,
+                    TestProgramsMaskedByApplicability,
+                    TestMaskUpdatesAfterChanges,
+                )
+                test_classes = [
+                    TestMovementMaskedByEdges,
+                    TestMovementMaskedByBlocks,
+                    TestSiphonValidity,
+                    TestProgramsMaskedWhenNotOwned,
+                    TestProgramsMaskedInsufficientCredits,
+                    TestProgramsMaskedInsufficientEnergy,
+                    TestProgramsMaskedByApplicability,
+                    TestMaskUpdatesAfterChanges,
+                ]
+            elif module_name == 'test_stages':
+                from tests.test_stages import (
+                    TestStageCompletion,
+                    TestDataBlockInvariant,
+                    TestPlayerStatePreserved,
+                )
+                test_classes = [
+                    TestStageCompletion,
+                    TestDataBlockInvariant,
+                    TestPlayerStatePreserved,
+                ]
+            elif module_name == 'test_edge_cases':
+                from tests.test_edge_cases import (
+                    TestPlayerDeath,
+                    TestWinCondition,
+                    TestDeathDuringAction,
+                    TestNotDoneWhenAlive,
+                )
+                test_classes = [
+                    TestPlayerDeath,
+                    TestWinCondition,
+                    TestDeathDuringAction,
+                    TestNotDoneWhenAlive,
+                ]
+            elif module_name == 'test_rewards':
+                from tests.test_rewards import (
+                    TestStageCompletionRewards,
+                    TestScoreGainReward,
+                    TestKillReward,
+                    TestDataSiphonCollectionReward,
+                    TestDistanceShaping,
+                    TestVictoryBonus,
+                    TestDeathPenalty,
+                    TestResourceGainReward,
+                    TestDamagePenalty,
+                    TestHPRecoveryReward,
+                    TestProgramWastePenalty,
+                    TestSiphonCausedDeathPenalty,
+                )
+                test_classes = [
+                    TestStageCompletionRewards,
+                    TestScoreGainReward,
+                    TestKillReward,
+                    TestDataSiphonCollectionReward,
+                    TestDistanceShaping,
+                    TestVictoryBonus,
+                    TestDeathPenalty,
+                    TestResourceGainReward,
+                    TestDamagePenalty,
+                    TestHPRecoveryReward,
+                    TestProgramWastePenalty,
+                    TestSiphonCausedDeathPenalty,
                 ]
             else:
                 print(f"Unknown module: {module_name}")
@@ -284,7 +362,7 @@ def main():
         runner.run_test_module(module_name)
     else:
         # Run all test modules
-        modules = ['test_movement', 'test_siphon', 'test_programs', 'test_enemies', 'test_turns']
+        modules = ['test_movement', 'test_siphon', 'test_programs', 'test_enemies', 'test_turns', 'test_action_mask', 'test_stages', 'test_edge_cases', 'test_rewards']
         for module in modules:
             runner.run_test_module(module)
 
