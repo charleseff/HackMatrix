@@ -143,6 +143,36 @@ class StepResult:
 
 
 # =============================================================================
+# Internal State (for implementation-level tests)
+# =============================================================================
+
+@dataclass
+class InternalEnemy:
+    """Internal enemy state including hidden fields."""
+    row: int
+    col: int
+    type: str
+    hp: int
+    disabled_turns: int
+    is_stunned: bool
+    spawned_from_siphon: bool
+    is_from_scheduled_task: bool
+
+
+@dataclass
+class InternalState:
+    """Internal state for implementation-level testing.
+
+    Exposes hidden state not visible in observations.
+    """
+    scheduled_task_interval: int
+    next_scheduled_task_turn: int
+    pending_siphon_transmissions: int
+    turn_count: int
+    enemies: list[InternalEnemy]
+
+
+# =============================================================================
 # Environment Interface Protocol
 # =============================================================================
 
@@ -195,6 +225,17 @@ class EnvInterface(Protocol):
 
         Returns:
             Observation of the set state
+        """
+        ...
+
+    def get_internal_state(self) -> InternalState:
+        """Get internal state for implementation-level testing.
+
+        Exposes hidden state not visible in observations.
+        Used for testing internal mechanics like scheduled task timing.
+
+        Returns:
+            InternalState with hidden game state
         """
         ...
 

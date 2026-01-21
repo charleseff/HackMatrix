@@ -14,7 +14,7 @@ Why these tests:
 import numpy as np
 import pytest
 
-from .env_interface import (
+from ..env_interface import (
     Observation,
     StepResult,
     GRID_SIZE,
@@ -195,7 +195,7 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_returns_observation(self, env):
         """set_state() should return an Observation."""
-        from .env_interface import GameState, PlayerState
+        from ..env_interface import GameState, PlayerState
 
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0)
@@ -208,7 +208,7 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_player_position(self, env):
         """set_state() should correctly set player position."""
-        from .env_interface import GameState, PlayerState
+        from ..env_interface import GameState, PlayerState
 
         state = GameState(
             player=PlayerState(row=2, col=4, hp=3)
@@ -225,7 +225,7 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_player_resources(self, env):
         """set_state() should correctly set player resources."""
-        from .env_interface import GameState, PlayerState
+        from ..env_interface import GameState, PlayerState
 
         state = GameState(
             player=PlayerState(row=3, col=3, hp=2, credits=10, energy=5)
@@ -244,7 +244,7 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_with_enemies(self, env):
         """set_state() should correctly set enemies."""
-        from .env_interface import GameState, PlayerState, Enemy
+        from ..env_interface import GameState, PlayerState, Enemy
 
         state = GameState(
             player=PlayerState(row=0, col=0),
@@ -261,7 +261,7 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_with_programs(self, env):
         """set_state() should correctly set owned programs."""
-        from .env_interface import GameState, PlayerState, PROGRAM_PUSH, PROGRAM_WAIT
+        from ..env_interface import GameState, PlayerState, PROGRAM_PUSH, PROGRAM_WAIT
 
         state = GameState(
             player=PlayerState(row=3, col=3),
@@ -276,7 +276,7 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_empty_state(self, env):
         """set_state() should work with minimal state."""
-        from .env_interface import GameState, PlayerState
+        from ..env_interface import GameState, PlayerState
 
         # Minimal state: just player position
         state = GameState(

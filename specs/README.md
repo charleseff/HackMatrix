@@ -19,7 +19,7 @@ Reorganize tests and add scheduled task testing (now unblocked since observation
 | [jax-dummy-env.md](./jax-dummy-env.md) | **Complete** | Minimal JAX dummy environment for plug-and-play testing with Swift env |
 | [env-parity-tests.md](./env-parity-tests.md) | **Complete** | Interface-based test suite for validating env implementations |
 | [observation-and-attack-fixes.md](./observation-and-attack-fixes.md) | **Complete** | Add siphonCenter to obs space, ATK+ usable twice per stage |
-| [test-reorganization.md](./test-reorganization.md) | **Deferred** | Reorganize tests, add scheduled task testing (depends on observation-and-attack-fixes) |
+| [test-reorganization.md](./test-reorganization.md) | **Active** | Reorganize tests, add scheduled task testing (depends on observation-and-attack-fixes) |
 | [ci-setup.md](./ci-setup.md) | **Draft** | GitHub Actions CI for Swift and Python tests |
 | [jax-implementation.md](./jax-implementation.md) | **Deferred** | Full JAX port of game logic (depends on test-reorganization) |
 

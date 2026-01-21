@@ -20,6 +20,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "requires_set_state: mark test as requiring set_state() support"
     )
+    config.addinivalue_line(
+        "markers", "implementation: mark test as implementation-level (not interface parity)"
+    )
 
 
 @pytest.fixture(params=["swift", "jax"])

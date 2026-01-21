@@ -13,7 +13,7 @@ These tests verify that the Swift environment correctly implements program mecha
 import pytest
 import numpy as np
 
-from .env_interface import (
+from ..env_interface import (
     GameState,
     PlayerState,
     Enemy,

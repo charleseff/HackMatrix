@@ -19,6 +19,8 @@ from .env_interface import (
     GameState,
     Observation,
     StepResult,
+    InternalState,
+    InternalEnemy,
     GRID_SIZE,
 )
 
@@ -103,6 +105,17 @@ class JaxEnvWrapper:
         raise NotImplementedError(
             "JAX environment does not yet support set_state(). "
             "Tests requiring set_state() should use the Swift environment only."
+        )
+
+    def get_internal_state(self) -> InternalState:
+        """Get internal state for implementation-level testing.
+
+        STUB: The JAX environment doesn't expose internal state yet.
+        This method raises NotImplementedError.
+        """
+        raise NotImplementedError(
+            "JAX environment does not yet support get_internal_state(). "
+            "Tests requiring get_internal_state() should use the Swift environment only."
         )
 
     # MARK: - Cleanup

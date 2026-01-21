@@ -9,6 +9,31 @@ protocol GameCommandExecutor: AnyObject {
     func executeStep(actionIndex: Int) -> (GameObservation, Double, Bool, [String: Any])
     func executeGetValidActions() -> [Int]
     func executeSetState(stateData: SetStateData) -> GameObservation
+    func executeGetInternalState() -> InternalState
+}
+
+// MARK: - Internal State Structure
+
+/// Internal state for implementation-level testing
+/// Exposes hidden state not visible in observations
+struct InternalState {
+    let scheduledTaskInterval: Int
+    let nextScheduledTaskTurn: Int
+    let pendingSiphonTransmissions: Int
+    let turnCount: Int
+    let enemies: [InternalEnemy]
+}
+
+/// Internal enemy state (includes hidden fields)
+struct InternalEnemy {
+    let row: Int
+    let col: Int
+    let type: String
+    let hp: Int
+    let disabledTurns: Int
+    let isStunned: Bool
+    let spawnedFromSiphon: Bool
+    let isFromScheduledTask: Bool
 }
 
 // MARK: - Command Structure
@@ -175,6 +200,10 @@ class StdinCommandReader {
             let obs = executor.executeSetState(stateData: stateData)
             sendResponse(["observation": encodeObservation(obs)])
 
+        case "getInternalState":
+            let state = executor.executeGetInternalState()
+            sendResponse(encodeInternalState(state))
+
         default:
             sendError("Unknown command: \(command.action)")
         }
@@ -254,6 +283,29 @@ class StdinCommandReader {
         result["cryptogHints"] = obs.cryptogHints.map { ["row": $0.0, "col": $0.1] }
 
         return result
+    }
+
+    // MARK: Internal State Encoding
+
+    func encodeInternalState(_ state: InternalState) -> [String: Any] {
+        return [
+            "scheduledTaskInterval": state.scheduledTaskInterval,
+            "nextScheduledTaskTurn": state.nextScheduledTaskTurn,
+            "pendingSiphonTransmissions": state.pendingSiphonTransmissions,
+            "turnCount": state.turnCount,
+            "enemies": state.enemies.map { enemy in
+                [
+                    "row": enemy.row,
+                    "col": enemy.col,
+                    "type": enemy.type,
+                    "hp": enemy.hp,
+                    "disabledTurns": enemy.disabledTurns,
+                    "isStunned": enemy.isStunned,
+                    "spawnedFromSiphon": enemy.spawnedFromSiphon,
+                    "isFromScheduledTask": enemy.isFromScheduledTask
+                ]
+            }
+        ]
     }
 
     // MARK: JSON Response Handling

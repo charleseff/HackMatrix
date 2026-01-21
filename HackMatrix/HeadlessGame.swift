@@ -297,4 +297,37 @@ class HeadlessGame {
         default: return nil
         }
     }
+
+    // MARK: - Internal State (for implementation testing)
+
+    /// Get internal state for implementation-level testing
+    func getInternalState() -> InternalState {
+        return InternalState(
+            scheduledTaskInterval: gameState.scheduledTaskInterval,
+            nextScheduledTaskTurn: gameState.nextScheduledTaskTurn,
+            pendingSiphonTransmissions: gameState.pendingSiphonTransmissions,
+            turnCount: gameState.turnCount,
+            enemies: gameState.enemies.map { enemy in
+                InternalEnemy(
+                    row: enemy.row,
+                    col: enemy.col,
+                    type: enemyTypeToString(enemy.type),
+                    hp: enemy.hp,
+                    disabledTurns: enemy.disabledTurns,
+                    isStunned: enemy.isStunned,
+                    spawnedFromSiphon: enemy.spawnedFromSiphon,
+                    isFromScheduledTask: enemy.isFromScheduledTask
+                )
+            }
+        )
+    }
+
+    private func enemyTypeToString(_ type: EnemyType) -> String {
+        switch type {
+        case .virus: return "virus"
+        case .daemon: return "daemon"
+        case .glitch: return "glitch"
+        case .cryptog: return "cryptog"
+        }
+    }
 }

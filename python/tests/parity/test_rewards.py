@@ -19,7 +19,7 @@ These tests verify that the Swift environment correctly calculates rewards.
 import pytest
 import numpy as np
 
-from .env_interface import (
+from ..env_interface import (
     GameState,
     PlayerState,
     Enemy,

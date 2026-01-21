@@ -83,4 +83,18 @@ public class HeadlessGameCLI: GameCommandExecutor {
         }
         return game!.setState(stateData: stateData)
     }
+
+    func executeGetInternalState() -> InternalState {
+        guard let game = game else {
+            // Return empty state if game not initialized
+            return InternalState(
+                scheduledTaskInterval: 0,
+                nextScheduledTaskTurn: 0,
+                pendingSiphonTransmissions: 0,
+                turnCount: 0,
+                enemies: []
+            )
+        }
+        return game.getInternalState()
+    }
 }

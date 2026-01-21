@@ -1,5 +1,7 @@
 # Test Reorganization Spec
 
+**Status: Active**
+
 ## Goal
 
 Reorganize and expand the test suite before proceeding with the JAX implementation:

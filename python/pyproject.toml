@@ -1,0 +1,23 @@
+[project]
+name = "hackmatrix"
+version = "0.1.0"
+description = "HackMatrix Python training environment"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"
+markers = [
+    "requires_set_state: mark test as requiring set_state() support",
+    "implementation: mark test as implementation-level (not interface parity)",
+]
+
+# Run usage examples:
+#   pytest                        # all tests
+#   pytest tests/parity/          # parity tests only
+#   pytest tests/implementation/  # implementation tests only
+#   pytest -k swift               # swift env only
+#   pytest -k jax                 # jax env only

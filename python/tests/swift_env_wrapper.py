@@ -22,6 +22,8 @@ from .env_interface import (
     GameState,
     Observation,
     StepResult,
+    InternalState,
+    InternalEnemy,
     game_state_to_json,
 )
 
@@ -238,6 +240,32 @@ class SwiftEnvWrapper:
             "state": state_json
         })
         return self._parse_observation(response["observation"])
+
+    def get_internal_state(self) -> InternalState:
+        """Get internal state for implementation-level testing."""
+        response = self._send_command({"action": "getInternalState"})
+
+        enemies = [
+            InternalEnemy(
+                row=e["row"],
+                col=e["col"],
+                type=e["type"],
+                hp=e["hp"],
+                disabled_turns=e["disabledTurns"],
+                is_stunned=e["isStunned"],
+                spawned_from_siphon=e["spawnedFromSiphon"],
+                is_from_scheduled_task=e["isFromScheduledTask"],
+            )
+            for e in response.get("enemies", [])
+        ]
+
+        return InternalState(
+            scheduled_task_interval=response["scheduledTaskInterval"],
+            next_scheduled_task_turn=response["nextScheduledTaskTurn"],
+            pending_siphon_transmissions=response["pendingSiphonTransmissions"],
+            turn_count=response["turnCount"],
+            enemies=enemies,
+        )
 
     # MARK: - Cleanup
 
