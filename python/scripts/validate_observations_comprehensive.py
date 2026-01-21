@@ -59,8 +59,8 @@ class ComprehensiveValidator:
 
         # Validate grid
         grid = obs['grid']
-        if grid.shape != (6, 6, 40):
-            self.issues.append(f"{context}: Grid should be (6,6,40), got {grid.shape}")
+        if grid.shape != (6, 6, 42):
+            self.issues.append(f"{context}: Grid should be (6,6,42), got {grid.shape}")
             return False
 
         if np.any(grid < 0) or np.any(grid > 1):

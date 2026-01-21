@@ -119,7 +119,7 @@ def test_jax_observation_shapes():
     expected_shapes = {
         "player": (10,),
         "programs": (23,),
-        "grid": (6, 6, 40),
+        "grid": (6, 6, 42),
     }
 
     for key, expected_shape in expected_shapes.items():
@@ -211,8 +211,8 @@ def test_jax_batched_operations():
         batch_size,
         6,
         6,
-        40,
-    ), f"Expected ({batch_size}, 6, 6, 40), got {obs.grid.shape}"
+        42,
+    ), f"Expected ({batch_size}, 6, 6, 42), got {obs.grid.shape}"
 
     # Test batched step
     actions = jax.numpy.zeros(batch_size, dtype=jax.numpy.int32)

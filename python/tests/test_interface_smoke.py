@@ -55,10 +55,10 @@ class TestObservationStructure:
         assert obs.programs.dtype == np.int32, f"Expected int32, got {obs.programs.dtype}"
 
     def test_grid_shape(self, env):
-        """Grid should have shape (6, 6, 40) and dtype float32."""
+        """Grid should have shape (6, 6, 42) and dtype float32."""
         obs = env.reset()
 
-        expected_shape = (GRID_SIZE, GRID_SIZE, 40)
+        expected_shape = (GRID_SIZE, GRID_SIZE, 42)
         assert obs.grid.shape == expected_shape, f"Expected {expected_shape}, got {obs.grid.shape}"
         assert obs.grid.dtype == np.float32, f"Expected float32, got {obs.grid.dtype}"
 
@@ -113,7 +113,7 @@ class TestStepFunction:
 
             assert obs.player.shape == (10,)
             assert obs.programs.shape == (23,)
-            assert obs.grid.shape == (6, 6, 40)
+            assert obs.grid.shape == (6, 6, 42)
 
     def test_step_reward_is_float(self, env):
         """step() reward should be a finite float."""

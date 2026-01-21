@@ -44,4 +44,4 @@ ${COMPLETION_PROMISE}
 
 ## ULTIMATE GOAL:
 
-We want to achieve [[project-specific goal](specs/env-parity-tests.md)]. Consider missing elements and plan accordingly. If an element is missing, search first to confirm it doesn't exist, then if needed author the specification at specs/FILENAME.md. If you create a new element then document the plan to implement it in @IMPLEMENTATION_PLAN.md using a subagent.
+We want to achieve [[project-specific goal](specs/observation-and-attack-fixes.md)]. Consider missing elements and plan accordingly. If an element is missing, search first to confirm it doesn't exist, then if needed author the specification at specs/FILENAME.md. If you create a new element then document the plan to implement it in @IMPLEMENTATION_PLAN.md using a subagent.

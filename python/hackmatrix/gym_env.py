@@ -100,11 +100,11 @@ class HackEnv(gym.Env):
             # Block: one-hot types (3) + points + siphoned = 5
             # Program: one-hot (23) + transmission_spawncount + transmission_turns = 25
             # Resources: credits + energy = 2
-            # Special: is_data_siphon + is_exit = 2
+            # Special: is_data_siphon + is_exit + siphon_center = 3
             "grid": spaces.Box(
                 low=0.0,
                 high=1.0,
-                shape=(6, 6, 40),
+                shape=(6, 6, 42),
                 dtype=np.float32
             )
         })

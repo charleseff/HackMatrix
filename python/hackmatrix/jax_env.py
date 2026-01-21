@@ -32,7 +32,7 @@ class Observation:
 
     player_state: jax.Array  # (10,) float32
     programs: jax.Array  # (23,) int32
-    grid: jax.Array  # (6, 6, 40) float32
+    grid: jax.Array  # (6, 6, 42) float32
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ class Observation:
 
 NUM_ACTIONS = 28
 GRID_SIZE = 6
-GRID_FEATURES = 40
+GRID_FEATURES = 42  # 7 enemy + 5 block + 23 program + 2 transmission + 2 resource + 3 special
 PLAYER_STATE_SIZE = 10
 NUM_PROGRAMS = 23
 

@@ -159,7 +159,13 @@ class HeadlessGame {
         if let enemies = stateData.enemies {
             for enemyData in enemies {
                 guard let enemyType = parseEnemyType(enemyData.type) else { continue }
-                let enemy = Enemy(type: enemyType, row: enemyData.row, col: enemyData.col)
+                let enemy = Enemy(
+                    type: enemyType,
+                    row: enemyData.row,
+                    col: enemyData.col,
+                    isFromScheduledTask: enemyData.isFromScheduledTask ?? false,
+                    spawnedFromSiphon: enemyData.spawnedFromSiphon ?? false
+                )
                 enemy.hp = enemyData.hp
                 if let stunned = enemyData.stunned, stunned {
                     enemy.isStunned = true

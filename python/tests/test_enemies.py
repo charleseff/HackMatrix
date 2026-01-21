@@ -63,8 +63,8 @@ def count_enemies(obs: Observation) -> int:
 
 
 def count_transmissions(obs: Observation) -> int:
-    """Count transmissions in the grid."""
-    return int(np.sum(obs.grid[:, :, 35] > 0))
+    """Count transmissions in the grid (channel 36 = transmission countdown)."""
+    return int(np.sum(obs.grid[:, :, 36] > 0))
 
 
 # MARK: - Test 2.39: Enemy Spawns from Transmission

@@ -53,6 +53,8 @@ struct SetStateEnemy: Codable {
     let col: Int
     let hp: Int
     let stunned: Bool?
+    let spawnedFromSiphon: Bool?
+    let isFromScheduledTask: Bool?
 }
 
 struct SetStateTransmission: Codable {
@@ -206,14 +208,16 @@ class StdinCommandReader {
                     "row": cell.row,
                     "col": cell.col,
                     "isDataSiphon": cell.isDataSiphon,
-                    "isExit": cell.isExit
+                    "isExit": cell.isExit,
+                    "siphonCenter": cell.siphonCenter
                 ]
 
                 if let enemy = cell.enemy {
                     cellDict["enemy"] = [
                         "type": enemy.type,
                         "hp": enemy.hp,
-                        "isStunned": enemy.isStunned
+                        "isStunned": enemy.isStunned,
+                        "spawnedFromSiphon": enemy.spawnedFromSiphon
                     ]
                 }
 

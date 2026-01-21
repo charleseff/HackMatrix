@@ -41,21 +41,21 @@ def get_player_score(obs: Observation) -> int:
 
 
 def count_transmissions(obs: Observation) -> int:
-    """Count transmissions in the grid (channel 35 = transmission countdown)."""
-    return int(np.sum(obs.grid[:, :, 35] > 0))
+    """Count transmissions in the grid (channel 36 = transmission countdown)."""
+    return int(np.sum(obs.grid[:, :, 36] > 0))
 
 
 def get_block_at(obs: Observation, row: int, col: int) -> dict | None:
     """Get block info at position, or None if no block."""
-    # Block type one-hot at channels 6-8 (data, program, question)
-    if not np.any(obs.grid[row, col, 6:9] > 0):
+    # Block type one-hot at channels 7-9 (data, program, question)
+    if not np.any(obs.grid[row, col, 7:10] > 0):
         return None
 
     block_types = ["data", "program", "question"]
     for i, btype in enumerate(block_types):
-        if obs.grid[row, col, 6 + i] > 0:
-            points = int(round(obs.grid[row, col, 9] * 9))
-            siphoned = obs.grid[row, col, 10] > 0.5
+        if obs.grid[row, col, 7 + i] > 0:
+            points = int(round(obs.grid[row, col, 10] * 9))
+            siphoned = obs.grid[row, col, 11] > 0.5
             return {"type": btype, "points": points, "siphoned": siphoned}
     return None
 

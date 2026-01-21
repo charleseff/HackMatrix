@@ -66,14 +66,14 @@ class ObservationValidator:
         # Block: one-hot types (3) + points + siphoned = 5
         # Program: one-hot (23) + transmission_spawncount + transmission_turns = 25
         # Resources: credits + energy = 2
-        # Special: is_data_siphon + is_exit = 2
-        # Total: 40 channels
+        # Special: is_data_siphon + is_exit + siphon_center = 3
+        # Total: 42 channels
         grid = obs['grid']
-        if grid.shape != (6, 6, 40):
-            self.issues.append(f"Ep{episode_num} Step{step_num}: Grid should be (6,6,40), got {grid.shape}")
+        if grid.shape != (6, 6, 42):
+            self.issues.append(f"Ep{episode_num} Step{step_num}: Grid should be (6,6,42), got {grid.shape}")
         else:
             # Check for non-zero values in each channel to track coverage
-            for channel in range(40):
+            for channel in range(42):
                 if np.any(grid[:, :, channel] != 0):
                     self.observed_states['active_grid_channels'].add(channel)
 

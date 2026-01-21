@@ -40,6 +40,8 @@ class Enemy:
     col: int
     hp: int
     stunned: bool = False
+    spawnedFromSiphon: bool = False
+    isFromScheduledTask: bool = False
 
 
 @dataclass
@@ -114,17 +116,17 @@ class Observation:
     Structure:
     - player: 10-element float32 array with normalized player state
     - programs: 23-element int32 array with binary ownership flags
-    - grid: (6, 6, 40) float32 array with cell features
+    - grid: (6, 6, 42) float32 array with cell features
     """
     player: np.ndarray  # shape (10,), dtype float32
     programs: np.ndarray  # shape (23,), dtype int32
-    grid: np.ndarray  # shape (6, 6, 40), dtype float32
+    grid: np.ndarray  # shape (6, 6, 42), dtype float32
 
     def __post_init__(self):
         """Validate observation shapes and dtypes."""
         assert self.player.shape == (10,), f"player shape {self.player.shape} != (10,)"
         assert self.programs.shape == (23,), f"programs shape {self.programs.shape} != (23,)"
-        assert self.grid.shape == (6, 6, 40), f"grid shape {self.grid.shape} != (6, 6, 40)"
+        assert self.grid.shape == (6, 6, 42), f"grid shape {self.grid.shape} != (6, 6, 42)"
 
 
 # =============================================================================
@@ -277,6 +279,8 @@ def game_state_to_json(state: GameState) -> dict:
                 "col": e.col,
                 "hp": e.hp,
                 "stunned": e.stunned,
+                "spawnedFromSiphon": e.spawnedFromSiphon,
+                "isFromScheduledTask": e.isFromScheduledTask,
             }
             for e in state.enemies
         ],

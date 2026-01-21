@@ -52,7 +52,7 @@ class GameState {
     var stepActive: Bool
     var gameHistory: [GameStateSnapshot]
     var pendingSiphonTransmissions: Int
-    var atkPlusUsedThisStage: Bool
+    var atkPlusUsesThisStage: Int
     var exitPosition: (row: Int, col: Int) = (0, 0)  // Set during stage initialization
 
     // Scheduled task timing (transmission spawns)
@@ -77,7 +77,7 @@ class GameState {
         self.stepActive = false
         self.gameHistory = []
         self.pendingSiphonTransmissions = 0
-        self.atkPlusUsedThisStage = false
+        self.atkPlusUsesThisStage = 0
 
         let corners = grid.getCornerPositions()
         let playerCorner = corners.randomElement()!
@@ -223,7 +223,7 @@ class GameState {
         showActivated = false
         scheduledTasksDisabled = false
         stepActive = false
-        atkPlusUsedThisStage = false
+        atkPlusUsesThisStage = 0
 
         grid = Grid()
 
@@ -951,7 +951,8 @@ class GameState {
             return !transmissions.isEmpty
 
         case .atkPlus:
-            return !atkPlusUsedThisStage && player.attackDamage < 2
+            // ATK+ can be used twice per stage (attack: 1 -> 2 -> 3)
+            return atkPlusUsesThisStage < 2
 
         case .row, .col:
             if type == .row {
@@ -1415,9 +1416,9 @@ class GameState {
             scheduledTasksDisabled = true
 
         case .atkPlus:
-            // Increase damage to 2HP
-            player.attackDamage = 2
-            atkPlusUsedThisStage = true
+            // Increase damage by 1 (1 -> 2 -> 3)
+            player.attackDamage += 1
+            atkPlusUsesThisStage += 1
 
         case .dBomb:
             // Destroy nearest Daemon and damage/stun surrounding enemies
@@ -1848,7 +1849,7 @@ class GameState {
             },
             showActivated: showActivated,
             scheduledTasksDisabled: scheduledTasksDisabled,
-            atkPlusUsedThisStage: atkPlusUsedThisStage
+            atkPlusUsesThisStage: atkPlusUsesThisStage
         )
         gameHistory.append(snapshot)
     }
@@ -1898,7 +1899,7 @@ class GameState {
 
         showActivated = snapshot.showActivated
         scheduledTasksDisabled = snapshot.scheduledTasksDisabled
-        atkPlusUsedThisStage = snapshot.atkPlusUsedThisStage
+        atkPlusUsesThisStage = snapshot.atkPlusUsesThisStage
 
         return true
     }
@@ -2096,7 +2097,7 @@ struct GameStateSnapshot {
     let gridCells: [[CellSnapshot]]
     let showActivated: Bool
     let scheduledTasksDisabled: Bool
-    let atkPlusUsedThisStage: Bool
+    let atkPlusUsesThisStage: Int
 }
 
 struct EnemySnapshot {

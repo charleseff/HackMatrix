@@ -60,7 +60,8 @@ class ObservationBuilder {
                     enemyObs = EnemyObservation(
                         type: enemyTypeToString(enemy.type),
                         hp: enemy.hp,
-                        isStunned: enemy.isStunned
+                        isStunned: enemy.isStunned,
+                        spawnedFromSiphon: enemy.spawnedFromSiphon
                     )
                 } else if let lastRow = enemy.lastKnownRow, let lastCol = enemy.lastKnownCol {
                     // Not visible, but add hint for purple border
@@ -71,7 +72,8 @@ class ObservationBuilder {
                 enemyObs = EnemyObservation(
                     type: enemyTypeToString(enemy.type),
                     hp: enemy.hp,
-                    isStunned: enemy.isStunned
+                    isStunned: enemy.isStunned,
+                    spawnedFromSiphon: enemy.spawnedFromSiphon
                 )
             }
         }
@@ -168,7 +170,8 @@ class ObservationBuilder {
             credits: credits,
             energy: energy,
             isDataSiphon: isDataSiphon,
-            isExit: isExit
+            isExit: isExit,
+            siphonCenter: cell.siphonCenter
         )
     }
 

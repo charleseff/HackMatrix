@@ -66,8 +66,8 @@ def count_data_blocks(obs: Observation) -> int:
     count = 0
     for row in range(6):
         for col in range(6):
-            # Check block channels
-            if obs.grid[row, col, 6] > 0.5:  # Data block
+            # Check block channels (shifted by 1 after adding spawnedFromSiphon)
+            if obs.grid[row, col, 7] > 0.5:  # Data block
                 count += 1
     return count
 
@@ -77,18 +77,18 @@ def get_blocks_info(obs: Observation) -> list[dict]:
     blocks = []
     for row in range(6):
         for col in range(6):
-            if obs.grid[row, col, 6] > 0.5:  # Data block
+            if obs.grid[row, col, 7] > 0.5:  # Data block (channel 7)
                 blocks.append({
                     "row": row,
                     "col": col,
-                    "siphoned": obs.grid[row, col, 8] > 0.5
+                    "siphoned": obs.grid[row, col, 11] > 0.5  # Siphoned at channel 11
                 })
-            elif obs.grid[row, col, 7] > 0.5:  # Program block
+            elif obs.grid[row, col, 8] > 0.5:  # Program block (channel 8)
                 blocks.append({
                     "row": row,
                     "col": col,
                     "type": "program",
-                    "siphoned": obs.grid[row, col, 8] > 0.5
+                    "siphoned": obs.grid[row, col, 11] > 0.5  # Siphoned at channel 11
                 })
     return blocks
 

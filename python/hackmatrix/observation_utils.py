@@ -40,7 +40,7 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
         min(obs_dict["energy"] / 50.0, 1.0),                # 0-50+ → 0-1 (capped)
         (obs_dict["stage"] - 1) / 7.0,                      # 1-8 → 0-1
         obs_dict["dataSiphons"] / 10.0,                     # 0-10 → 0-1
-        (obs_dict["baseAttack"] - 1) / 1.0,                 # 1-2 → 0-1
+        (obs_dict["baseAttack"] - 1) / 2.0,                 # 1-3 → 0-1
         1.0 if obs_dict.get("showActivated", False) else 0.0,          # Binary flag
         1.0 if obs_dict.get("scheduledTasksDisabled", False) else 0.0  # Binary flag
     ], dtype=np.float32)
@@ -54,14 +54,14 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
             if 5 <= action_idx <= 27:
                 programs[action_idx - 5] = 1
 
-    # Grid state (6x6x40, normalized to [0, 1])
-    grid = np.zeros((6, 6, 40), dtype=np.float32)
+    # Grid state (6x6x42, normalized to [0, 1])
+    grid = np.zeros((6, 6, 42), dtype=np.float32)
 
     for row_idx, row in enumerate(obs_dict["cells"]):
         for col_idx, cell in enumerate(row):
             features = []
 
-            # Enemy features (6 features) - one-hot type encoding
+            # Enemy features (7 features) - one-hot type encoding + flags
             if "enemy" in cell:
                 enemy = cell["enemy"]
                 enemy_type = enemy["type"]
@@ -72,10 +72,11 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
                     1.0 if enemy_type == "glitch" else 0.0,
                     1.0 if enemy_type == "cryptog" else 0.0,
                     enemy["hp"] / 3.0,  # 0-3 → 0-1
-                    1.0 if enemy["isStunned"] else 0.0
+                    1.0 if enemy["isStunned"] else 0.0,
+                    1.0 if enemy.get("spawnedFromSiphon", False) else 0.0
                 ])
             else:
-                features.extend([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                features.extend([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
             # Block features (5 features) - one-hot type encoding
             if "block" in cell:
@@ -125,14 +126,15 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
                 cell.get("energy", 0) / 3.0      # 0-3 → 0-1
             ])
 
-            # Special cells (2 features)
+            # Special cells (3 features)
             features.extend([
                 1.0 if cell.get("isDataSiphon", False) else 0.0,
-                1.0 if cell.get("isExit", False) else 0.0
+                1.0 if cell.get("isExit", False) else 0.0,
+                1.0 if cell.get("siphonCenter", False) else 0.0
             ])
 
-            # Store features for this cell (ensure exactly 40 features)
-            grid[row_idx, col_idx, :] = features[:40]
+            # Store features for this cell (42 features total)
+            grid[row_idx, col_idx, :] = features[:42]
 
     return {
         "player": player,
@@ -153,7 +155,7 @@ def denormalize_player(player: np.ndarray) -> Dict[str, Any]:
         "energy": int(round(player[4] * 50)),
         "stage": int(round(player[5] * 7)) + 1,
         "dataSiphons": int(round(player[6] * 10)),
-        "baseAttack": int(round(player[7] * 1)) + 1,
+        "baseAttack": int(round(player[7] * 2)) + 1,
         "showActivated": player[8] > 0.5,
         "scheduledTasksDisabled": player[9] > 0.5
     }

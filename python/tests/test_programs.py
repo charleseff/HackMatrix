@@ -755,7 +755,7 @@ class TestDelayProgram:
 
         # Transmission countdown should increase by 3
         # Check transmission at (5,5)
-        trans_countdown = result.observation.grid[5, 5, 35]  # Transmission countdown channel
+        trans_countdown = result.observation.grid[5, 5, 36]  # Transmission countdown channel
         # Original was 2, +3 = 5, normalized by /10 = 0.5
         assert trans_countdown > 0.3, f"Transmission countdown should increase, got {trans_countdown}"
 
@@ -913,11 +913,11 @@ class TestReducProgram:
 # MARK: - Test 2.37: ATK+ Program
 
 class TestAtkPlusProgram:
-    """Test 2.37: ATK+ increases attack damage."""
+    """Test 2.37: ATK+ increases attack damage (can be used twice per stage)."""
 
     @pytest.mark.requires_set_state
     def test_atkplus_increases_damage(self, env):
-        """ATK+ should increase player's attack damage to 2."""
+        """ATK+ should increase player's attack damage by 1."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=4, energy=4, attackDamage=1),
             owned_programs=[PROGRAM_ATK_PLUS],
@@ -927,28 +927,57 @@ class TestAtkPlusProgram:
 
         result = env.step(PROGRAM_ATK_PLUS)
 
-        # Resources consumed
+        # Resources consumed (4 credits, 4 energy for ATK+)
         credits = get_player_credits(result.observation)
         energy = get_player_energy(result.observation)
         assert credits == 0, f"Credits should be 0, got {credits}"
         assert energy == 0, f"Energy should be 0, got {energy}"
 
-        # Attack damage is in player observation index 7
-        attack_damage = int(round(result.observation.player[7] * 2))
+        # Attack damage is in player observation index 7, normalized (val-1)/2 for range 1-3
+        attack_damage = int(round(result.observation.player[7] * 2)) + 1
         assert attack_damage == 2, f"Attack damage should be 2, got {attack_damage}"
 
     @pytest.mark.requires_set_state
-    def test_atkplus_requires_low_damage(self, env):
-        """ATK+ requires attackDamage < 2."""
+    def test_atkplus_can_be_used_twice(self, env):
+        """ATK+ can be used twice per stage (attack: 1 -> 2 -> 3)."""
         state = GameState(
-            player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10, attackDamage=2),
+            player=PlayerState(row=3, col=3, hp=3, credits=20, energy=20, attackDamage=1),
             owned_programs=[PROGRAM_ATK_PLUS],
             stage=1
         )
         env.set_state(state)
 
+        # First use: 1 -> 2
+        result1 = env.step(PROGRAM_ATK_PLUS)
+        attack1 = int(round(result1.observation.player[7] * 2)) + 1
+        assert attack1 == 2, f"After first ATK+, damage should be 2, got {attack1}"
+
+        # Should still be valid for second use
         valid = env.get_valid_actions()
-        assert PROGRAM_ATK_PLUS not in valid, f"ATK+ requires damage < 2, got {valid}"
+        assert PROGRAM_ATK_PLUS in valid, f"ATK+ should be valid for second use, got {valid}"
+
+        # Second use: 2 -> 3
+        result2 = env.step(PROGRAM_ATK_PLUS)
+        attack2 = int(round(result2.observation.player[7] * 2)) + 1
+        assert attack2 == 3, f"After second ATK+, damage should be 3, got {attack2}"
+
+    @pytest.mark.requires_set_state
+    def test_atkplus_blocked_after_two_uses(self, env):
+        """ATK+ should be blocked after being used twice in the same stage."""
+        state = GameState(
+            player=PlayerState(row=3, col=3, hp=3, credits=50, energy=50, attackDamage=1),
+            owned_programs=[PROGRAM_ATK_PLUS],
+            stage=1
+        )
+        env.set_state(state)
+
+        # Use ATK+ twice
+        env.step(PROGRAM_ATK_PLUS)
+        env.step(PROGRAM_ATK_PLUS)
+
+        # Third attempt should be blocked
+        valid = env.get_valid_actions()
+        assert PROGRAM_ATK_PLUS not in valid, f"ATK+ should be blocked after 2 uses, got {valid}"
 
 
 # MARK: - Test 2.38: HACK Program

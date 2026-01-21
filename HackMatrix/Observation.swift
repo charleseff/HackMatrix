@@ -39,12 +39,14 @@ struct CellObservation {
     // Special cell types
     let isDataSiphon: Bool
     let isExit: Bool
+    let siphonCenter: Bool  // True if player was on this cell when siphoning
 }
 
 struct EnemyObservation {
     let type: String  // EnemyType as string
     let hp: Int
     let isStunned: Bool
+    let spawnedFromSiphon: Bool  // Track if spawned from siphoning (extra death penalty)
 }
 
 struct BlockObservation {

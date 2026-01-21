@@ -399,7 +399,7 @@ class TestAttackTransmission:
 
         # Check transmission exists before
         obs_before = env.set_state(state)
-        trans_before = obs_before.grid[4, 3, 35]  # Transmission countdown channel
+        trans_before = obs_before.grid[4, 3, 36]  # Transmission countdown channel
         assert trans_before > 0, "Transmission should exist before attack"
 
         result = env.step(ACTION_MOVE_UP)
@@ -409,5 +409,5 @@ class TestAttackTransmission:
         assert row == 3, f"Player should stay at row 3, got {row}"
 
         # Transmission should be gone
-        trans_after = result.observation.grid[4, 3, 35]
+        trans_after = result.observation.grid[4, 3, 36]
         assert trans_after == 0, f"Transmission should be destroyed, countdown={trans_after}"

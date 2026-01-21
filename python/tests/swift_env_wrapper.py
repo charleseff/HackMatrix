@@ -107,7 +107,7 @@ class SwiftEnvWrapper:
             min(obs_dict["energy"] / 50.0, 1.0),
             (obs_dict["stage"] - 1) / 7.0,
             obs_dict["dataSiphons"] / 10.0,
-            (obs_dict["baseAttack"] - 1) / 1.0,
+            (obs_dict["baseAttack"] - 1) / 2.0,  # 1-3 → 0-1
             1.0 if obs_dict.get("showActivated", False) else 0.0,
             1.0 if obs_dict.get("scheduledTasksDisabled", False) else 0.0
         ], dtype=np.float32)
@@ -119,14 +119,14 @@ class SwiftEnvWrapper:
                 if 5 <= action_idx <= 27:
                     programs[action_idx - 5] = 1
 
-        # Grid state (6x6x40, normalized to [0, 1])
-        grid = np.zeros((6, 6, 40), dtype=np.float32)
+        # Grid state (6x6x42, normalized to [0, 1])
+        grid = np.zeros((6, 6, 42), dtype=np.float32)
 
         for row_idx, row in enumerate(obs_dict["cells"]):
             for col_idx, cell in enumerate(row):
                 features = []
 
-                # Enemy features (6 features)
+                # Enemy features (7 features)
                 if "enemy" in cell:
                     enemy = cell["enemy"]
                     enemy_type = enemy["type"]
@@ -136,10 +136,11 @@ class SwiftEnvWrapper:
                         1.0 if enemy_type == "glitch" else 0.0,
                         1.0 if enemy_type == "cryptog" else 0.0,
                         enemy["hp"] / 3.0,
-                        1.0 if enemy["isStunned"] else 0.0
+                        1.0 if enemy["isStunned"] else 0.0,
+                        1.0 if enemy.get("spawnedFromSiphon", False) else 0.0
                     ])
                 else:
-                    features.extend([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                    features.extend([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
                 # Block features (5 features)
                 if "block" in cell:
@@ -187,13 +188,14 @@ class SwiftEnvWrapper:
                     cell.get("energy", 0) / 3.0
                 ])
 
-                # Special cells (2 features)
+                # Special cells (3 features)
                 features.extend([
                     1.0 if cell.get("isDataSiphon", False) else 0.0,
-                    1.0 if cell.get("isExit", False) else 0.0
+                    1.0 if cell.get("isExit", False) else 0.0,
+                    1.0 if cell.get("siphonCenter", False) else 0.0
                 ])
 
-                grid[row_idx, col_idx, :] = features[:40]
+                grid[row_idx, col_idx, :] = features[:42]
 
         return Observation(player=player, programs=programs, grid=grid)
 
