@@ -401,6 +401,23 @@ def get_internal_state(state: EnvState) -> InternalState:
     ...
 ```
 
+## Implementation Plan Requirements
+
+For the planning phase that produces an `IMPLEMENTATION_PLAN.md` , make sure it includes:
+
+1. **JAX Code Structure** (required, detailed):
+   - Module/file organization (what goes where)
+   - Key class and function signatures with type annotations
+   - Data flow between components (how state flows through step/reset/observe)
+   - Helper function breakdown (what pure functions are needed)
+   - How JAX constraints (no mutation, fixed arrays, lax control flow) are handled in each component
+
+2. **Implementation Order**: Which functions/modules to implement first, with dependencies
+
+3. **Test Strategy**: How to incrementally verify each piece against parity tests
+
+The plan should be detailed enough that someone could implement the JAX environment by following it without needing to make significant architectural decisions.
+
 ## Development Workflow
 
 1. **Local development**: Dev container with JAX CPU backend
