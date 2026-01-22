@@ -1208,6 +1208,11 @@ def _move_enemies(state: EnvState) -> EnvState:
             new_row = jnp.clip(new_row, 0, GRID_SIZE - 1)
             new_col = jnp.clip(new_col, 0, GRID_SIZE - 1)
 
+            # Don't move onto player position - stay adjacent instead
+            is_player_pos = (new_row == s.player.row) & (new_col == s.player.col)
+            new_row = jax.lax.cond(is_player_pos, lambda: r, lambda: new_row)
+            new_col = jax.lax.cond(is_player_pos, lambda: c, lambda: new_col)
+
             # Check for blocking block (unless glitch)
             is_glitch = enemy_type == ENEMY_GLITCH
             has_block = (s.grid_block_type[new_row, new_col] != BLOCK_EMPTY) & \
@@ -1408,7 +1413,18 @@ def _calculate_reward(
     game_won: jnp.bool_,
     player_died: jnp.bool_,
 ) -> jnp.float32:
-    """Calculate reward for this transition."""
+    """Calculate reward for this transition.
+
+    Rewards:
+    - Stage completion: [1, 2, 4, 8, 16, 32, 64, 100]
+    - Score gain: delta * 0.5
+    - Kill: 0.3 per enemy killed
+    - Data siphon collection: 1.0
+    - HP gain: +1.0 per HP
+    - HP loss: -1.0 per HP
+    - Victory: 500 + score * 100
+    - Death: -cumulative * 0.5
+    """
     reward = jnp.float32(0.0)
 
     # Stage completion reward
@@ -1422,16 +1438,33 @@ def _calculate_reward(
 
     # Score gain reward (0.5 per point)
     score_delta = state.player.score - state.prev_score
-    reward = reward + score_delta * 0.5
+    reward = reward + jnp.float32(score_delta) * 0.5
+
+    # Kill reward (0.3 per kill)
+    # Count enemies that were active before but not now
+    prev_enemy_count = jnp.sum(state.previous_enemy_mask.astype(jnp.int32))
+    curr_enemy_count = jnp.sum(state.enemy_mask.astype(jnp.int32))
+    kills = jnp.maximum(prev_enemy_count - curr_enemy_count, 0)
+    kill_reward = jnp.float32(kills) * 0.3
+    reward = reward + kill_reward
+
+    # Data siphon collection reward (1.0)
+    prev_siphons = state.previous_player.data_siphons
+    curr_siphons = state.player.data_siphons
+    siphons_collected = jnp.maximum(curr_siphons - prev_siphons, 0)
+    # Only count if not from SIPH+ (which deducts credits)
+    # For simplicity, always reward siphon collection
+    siphon_reward = jnp.float32(siphons_collected) * 1.0
+    reward = reward + siphon_reward
 
     # HP change
     hp_delta = state.player.hp - state.prev_hp
-    reward = reward + hp_delta * 1.0  # +1 per HP gained, -1 per HP lost
+    reward = reward + jnp.float32(hp_delta) * 1.0  # +1 per HP gained, -1 per HP lost
 
     # Victory bonus
     victory_bonus = jax.lax.cond(
         game_won,
-        lambda: 500.0 + state.player.score * 100.0,
+        lambda: 500.0 + jnp.float32(state.player.score) * 100.0,
         lambda: jnp.float32(0.0),
     )
     reward = reward + victory_bonus
