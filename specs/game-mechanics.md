@@ -310,8 +310,8 @@ When taking a directional action (0-3):
 ### Programs (23 values)
 Binary int32 vector indicating owned programs (1 = owned, 0 = not owned).
 
-### Grid (6×6×40)
-Each cell has 40 features encoding:
+### Grid (6×6×42)
+Each cell has 42 features encoding:
 - Cell type (empty, block, etc.)
 - Enemy presence and type
 - Transmission presence

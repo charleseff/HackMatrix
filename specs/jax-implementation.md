@@ -3,7 +3,6 @@
 ## Goal
 
 Port the HackMatrix game environment to JAX to enable TPU-accelerated training via Google TPU Research Cloud.
-NOTE: THIS IS NOT READY TO BE IMPLEMENTED YET. DO NOT IMPLEMENT THIS.
 
 ## Background
 
@@ -22,21 +21,13 @@ NOTE: THIS IS NOT READY TO BE IMPLEMENTED YET. DO NOT IMPLEMENT THIS.
 - **Environment**: Swift binary communicating via subprocess stdin/stdout JSON protocol
 - **Parallelization**: Multiple subprocess instances (~8-32 practical limit)
 
-### Why TPUs?
+### Why JAX?
 
-With larger neural networks, compute becomes the bottleneck (not environment stepping). Google TPU Research Cloud provides access to TPUs, but the current stack cannot utilize them.
+With larger neural networks, compute becomes the bottleneck. Google TPU Research Cloud provides TPU access, but requires JAX-native code for the full benefit.
 
-### Why Current Stack Won't Work on TPUs
+**Key insight**: PureJaxRL offers the best TPU performance by JIT-compiling the entire training loop (including environment). This requires the environment itself to be written in JAX.
 
-| Library | TPU Support | Action Masking | Status |
-|---------|-------------|----------------|--------|
-| SB3 + torch_xla | Attempted, failed | Yes | Maintainers closed feature request |
-| SBX (JAX) | Yes | No | Would need custom action masking |
-| PureJaxRL | Yes | Unknown | Requires JAX-native environment |
-
-**Key insight**: PureJaxRL offers the best TPU performance by JIT-compiling the entire training loop (including environment), but requires the environment itself to be written in JAX.
-
-## Target Architecture
+### Target Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -54,36 +45,214 @@ With larger neural networks, compute becomes the bottleneck (not environment ste
 - Entire training loop JIT-compiled (no Python overhead)
 - Native TPU support via JAX
 
+## Success Criteria
+
+### Primary: Parity Tests Pass
+
+All tests in `python/tests/parity/` must pass with `pytest -k jax`:
+
+```bash
+cd python && source venv/bin/activate && pytest tests/parity/ -k jax -v
+```
+
+This includes:
+- `test_movement.py` - Player movement and line-of-sight attacks
+- `test_enemies.py` - Enemy types, movement, pathfinding
+- `test_programs.py` - All 23 programs with correct effects
+- `test_siphon.py` - Siphon mechanics and transmissions
+- `test_stages.py` - Stage generation and transitions
+- `test_rewards.py` - Reward calculation
+- `test_action_mask.py` - Action validity masking
+- `test_turns.py` - Turn structure
+- `test_edge_cases.py` - Edge cases
+- `test_scheduled_tasks.py` - Scheduled task mechanics
+- `test_interface_smoke.py` - Basic interface compliance
+
+### Secondary: Implementation Tests Pass
+
+Tests in `python/tests/implementation/` that use `get_internal_state()`:
+
+```bash
+cd python && source venv/bin/activate && pytest tests/implementation/ -k jax -v
+```
+
+### Additional Parity Criteria
+
+Beyond passing tests, verify:
+
+1. **Exact observation values** - Same normalized values for identical game states
+2. **Deterministic behavior** - Same RNG seed produces identical trajectories
+3. **Action masks match** - Identical valid action sets for same states
+4. **Reward values match** - Identical reward calculations
+
 ## Implementation Plan
 
-### Phase 1: SBX + Action Masking (Quick Win)
+### Incremental Milestones
 
-Get something running on TPU quickly while developing the full JAX env.
+The implementation builds from simple to complex, with each milestone verified by a subset of parity tests.
 
-1. Fork or extend SBX's PPO implementation
-2. Add action masking (~20 lines: mask logits before softmax)
-3. Keep existing Swift subprocess environment
-4. Validate TPU training works
+#### Milestone 1: Core State and Observation
 
-### Phase 2: JAX Environment Port
+**Goal**: JAX env produces valid observations matching Swift format.
 
-Rewrite the Swift game logic in JAX.
+**Components**:
+- `EnvState` dataclass with all game state fields
+- `Observation` dataclass matching Swift's 42-feature grid
+- `reset()` that initializes a valid stage 1 state
+- `get_observation()` that encodes state to observation arrays
+- `set_state()` for test compatibility
 
-#### Game Components to Port
+**Verification**: `test_interface_smoke.py` passes
 
-| Component | Swift Location | JAX Difficulty | Notes |
-|-----------|----------------|----------------|-------|
-| Grid (6x6) | `Grid.swift` | Easy | Fixed-size `jnp.array` |
-| Player state | `Player.swift` | Easy | Named tuple or dataclass |
-| Enemy types (4) | `Enemy.swift` | Medium | One-hot encoding + stats array |
-| Enemy list | `GameState.enemies` | Medium | Fixed-size array with mask |
-| Transmissions | `GameState.transmissions` | Medium | Fixed-size array with mask |
-| Programs (23) | `Program.swift` | Hard | `jax.lax.switch` for effects |
-| Pathfinding | `Pathfinding.swift` | Medium-Hard | BFS in JAX |
-| Stage generation | `GameState.initializeStage()` | Medium | Random with JAX PRNG |
-| Action execution | `GameState.tryExecuteAction()` | Hard | Core game loop |
+#### Milestone 2: Player Movement
 
-#### JAX Constraints
+**Goal**: Player can move on the grid.
+
+**Components**:
+- Grid bounds checking
+- Block collision detection
+- Movement execution
+- Turn counter increment
+
+**Verification**: Basic movement tests in `test_movement.py` pass
+
+#### Milestone 3: Enemy System
+
+**Goal**: Enemies exist, are visible, and block movement.
+
+**Components**:
+- Enemy representation (fixed-size array with mask)
+- Enemy visibility rules (Cryptog line-of-sight)
+- Enemy presence in observations
+
+**Verification**: `test_enemies.py` visibility tests pass
+
+#### Milestone 4: Combat
+
+**Goal**: Player can attack enemies, enemies can attack player.
+
+**Components**:
+- Line-of-sight attack detection
+- Damage calculation (baseAttack)
+- Enemy death and removal
+- Player HP reduction
+- Game over on HP = 0
+
+**Verification**: Combat tests in `test_movement.py`, `test_enemies.py` pass
+
+#### Milestone 5: Enemy Movement and Pathfinding
+
+**Goal**: Enemies move toward player each turn.
+
+**Components**:
+- BFS pathfinding in JAX
+- Enemy movement speeds (Virus = 2)
+- Glitch can path through blocks
+- Stunned/disabled enemy handling
+
+**Verification**: Enemy movement tests pass
+
+#### Milestone 6: Siphon and Transmissions
+
+**Goal**: Siphon action works, transmissions spawn and tick.
+
+**Components**:
+- Siphon action execution
+- Block siphoning logic
+- Transmission creation
+- Transmission countdown
+- Enemy spawning from transmissions
+
+**Verification**: `test_siphon.py` passes
+
+#### Milestone 7: Stage Transitions
+
+**Goal**: Completing stages works correctly.
+
+**Components**:
+- Exit detection at (5,5)
+- Stage generation
+- Player stat preservation
+- Stage-specific parameters
+
+**Verification**: `test_stages.py` passes
+
+#### Milestone 8: Programs (Basic)
+
+**Goal**: Simple programs work (WAIT, SIPH+, EXCH, SHOW, RESET, CALM).
+
+**Components**:
+- Program ownership tracking
+- Cost deduction (credits, energy)
+- Program applicability checking
+- Basic program effects
+
+**Verification**: Corresponding tests in `test_programs.py` pass
+
+#### Milestone 9: Programs (Combat)
+
+**Goal**: Combat programs work (PUSH, PULL, ROW, COL, DEBUG, HACK, D_BOM, ANTI-V).
+
+**Components**:
+- Enemy manipulation (push/pull)
+- Area damage
+- Stun effects
+
+**Verification**: Combat program tests pass
+
+#### Milestone 10: Programs (Complex)
+
+**Goal**: Complex programs work (WARP, POLY, CRASH, UNDO, STEP, SCORE, REDUC, DELAY, ATK+).
+
+**Components**:
+- Random target selection (WARP)
+- Type transformation (POLY)
+- State history (UNDO)
+- Stage-scoped effects (ATK+)
+
+**Verification**: All `test_programs.py` tests pass
+
+#### Milestone 11: Scheduled Tasks
+
+**Goal**: Scheduled spawns work correctly.
+
+**Components**:
+- Scheduled task interval calculation
+- Next scheduled task turn tracking
+- Transmission spawning from scheduled tasks
+- CALM program disabling
+- Siphon delay effect (+5 turns)
+
+**Verification**: `test_scheduled_tasks.py` passes
+
+#### Milestone 12: Rewards and Action Masking
+
+**Goal**: Rewards match Swift, action masks are correct.
+
+**Components**:
+- Full reward calculation
+- Complete action masking logic
+
+**Verification**: `test_rewards.py`, `test_action_mask.py` pass
+
+#### Milestone 13: Final Parity
+
+**Goal**: All parity tests pass, implementation tests pass.
+
+**Verification**: Full test suite green for JAX
+
+### Phase 2: PureJaxRL Integration
+
+Once the JAX environment is complete:
+
+1. Implement action-masked PPO (or find existing implementation)
+2. Integrate with PureJaxRL's training loop
+3. Benchmark on TPU
+4. Tune hyperparameters for massively parallel training
+
+## Technical Approach
+
+### JAX Constraints
 
 JAX requires functional programming patterns:
 
@@ -120,121 +289,157 @@ JAX requires functional programming patterns:
    - `jax.lax.fori_loop(start, stop, body_fn, init)` for loops
    - `jax.lax.scan` for sequential operations
 
-#### Proposed JAX State Structure
+### State Structure
 
 ```python
 import jax.numpy as jnp
-from typing import NamedTuple
+from flax import struct
 
-class Player(NamedTuple):
-    row: int
-    col: int
-    hp: int          # 0-3
-    credits: int
-    energy: int
-    data_siphons: int
-    base_attack: int
+@struct.dataclass
+class Player:
+    row: jnp.int32
+    col: jnp.int32
+    hp: jnp.int32           # 0-3
+    credits: jnp.int32
+    energy: jnp.int32
+    data_siphons: jnp.int32
+    base_attack: jnp.int32  # 1-2
+    score: jnp.int32
 
-class GameState(NamedTuple):
+@struct.dataclass
+class EnvState:
     # Player
     player: Player
 
-    # Grid: 6x6 cells, each with content type + resources
-    grid_content: jnp.ndarray    # (6, 6) - content type enum
-    grid_resources: jnp.ndarray  # (6, 6, 2) - credits, energy
-    grid_block_data: jnp.ndarray # (6, 6, 3) - points, spawn_count, siphoned
+    # Grid: 6x6 cells
+    # Content type: 0=empty, 1=data, 2=program, 3=question
+    grid_content: jnp.ndarray      # (6, 6) int32
+    grid_block_points: jnp.ndarray # (6, 6) int32 - points for data blocks
+    grid_block_program: jnp.ndarray # (6, 6) int32 - program index for program blocks
+    grid_block_siphoned: jnp.ndarray # (6, 6) bool
+    grid_block_spawn_count: jnp.ndarray # (6, 6) int32
+    grid_resources_credits: jnp.ndarray # (6, 6) int32
+    grid_resources_energy: jnp.ndarray  # (6, 6) int32
+    grid_data_siphon: jnp.ndarray  # (6, 6) bool
+    grid_exit: jnp.ndarray         # (6, 6) bool - only (5,5) is True
+    grid_siphon_center: jnp.ndarray # (6, 6) bool
 
     # Enemies: fixed-size array with mask
-    enemies: jnp.ndarray         # (MAX_ENEMIES, ENEMY_FEATURES)
-    enemy_mask: jnp.ndarray      # (MAX_ENEMIES,) bool
+    enemies: jnp.ndarray           # (MAX_ENEMIES, 6) - type, row, col, hp, stunned, from_siphon
+    enemy_mask: jnp.ndarray        # (MAX_ENEMIES,) bool
 
     # Transmissions: fixed-size array with mask
-    transmissions: jnp.ndarray   # (MAX_TRANSMISSIONS, TRANS_FEATURES)
-    trans_mask: jnp.ndarray      # (MAX_TRANSMISSIONS,) bool
+    transmissions: jnp.ndarray     # (MAX_TRANSMISSIONS, 4) - row, col, turns, enemy_type
+    trans_mask: jnp.ndarray        # (MAX_TRANSMISSIONS,) bool
 
     # Programs owned: binary vector
-    owned_programs: jnp.ndarray  # (23,) bool
+    owned_programs: jnp.ndarray    # (23,) bool
 
     # Game state
-    stage: int
-    turn: int
-    show_activated: bool
-    scheduled_tasks_disabled: bool
+    stage: jnp.int32
+    turn: jnp.int32
+    show_activated: jnp.bool_
+    scheduled_tasks_disabled: jnp.bool_
+    atk_plus_used_this_stage: jnp.bool_
+    next_scheduled_task_turn: jnp.int32
+    scheduled_task_interval: jnp.int32
 
-    # RNG key for stochastic operations
+    # For UNDO program
+    previous_state: "EnvState | None"  # Optional, may need special handling
+
+    # RNG key
     rng_key: jnp.ndarray
 
 # Constants
-MAX_ENEMIES = 20
-MAX_TRANSMISSIONS = 10
-ENEMY_FEATURES = 5  # type, row, col, hp, stunned
-TRANS_FEATURES = 4  # row, col, turns_remaining, enemy_type
+# These are JAX implementation choices (Swift uses dynamic arrays)
+# Values should be validated empirically - check max counts during training
+MAX_ENEMIES = 20        # Estimate: 6x6 grid, ~half could be enemies at most
+MAX_TRANSMISSIONS = 20  # Estimate: spawns are bounded by blocks siphoned
+GRID_SIZE = 6
 ```
 
-#### Core Functions to Implement
+### Observation Encoding
+
+Grid features (42 total per cell):
+- Enemy (7): 4 type one-hot + hp/3 + isStunned + spawnedFromSiphon
+- Block (5): 3 type one-hot + points/9 + isSiphoned
+- Program (23): one-hot for program type on block
+- Transmission (2): spawnCount/9 + turnsUntilSpawn/4
+- Resources (2): credits/3 + energy/3
+- Special (3): isDataSiphon + isExit + siphonCenter
+
+Player state (10 values, normalized):
+```
+[row/5, col/5, hp/3, credits/50, energy/50, (stage-1)/7, dataSiphons/10, (baseAttack-1)/2, showActivated, scheduledTasksDisabled]
+```
+
+### Core Functions
 
 ```python
-def reset(rng_key: jnp.ndarray) -> GameState:
+def reset(rng_key: jnp.ndarray) -> tuple[EnvState, Observation]:
     """Initialize a new game."""
     ...
 
-def step(state: GameState, action: int) -> tuple[GameState, float, bool, dict]:
-    """Execute one action, return (new_state, reward, done, info)."""
+def step(state: EnvState, action: int, rng_key: jnp.ndarray) -> tuple[EnvState, Observation, float, bool]:
+    """Execute one action, return (new_state, observation, reward, done)."""
     ...
 
-def get_valid_actions(state: GameState) -> jnp.ndarray:
+def get_valid_actions(state: EnvState) -> jnp.ndarray:
     """Return boolean mask of valid actions (28,)."""
     ...
 
-def get_observation(state: GameState) -> dict[str, jnp.ndarray]:
-    """Convert state to observation dict matching current format."""
+def get_observation(state: EnvState) -> Observation:
+    """Convert state to observation arrays."""
+    ...
+
+def set_state(state_dict: GameState) -> EnvState:
+    """Create EnvState from test GameState (for parity testing)."""
+    ...
+
+def get_internal_state(state: EnvState) -> InternalState:
+    """Extract internal state for implementation testing."""
     ...
 ```
 
-### Phase 3: PureJaxRL Integration
-
-Once the JAX environment is complete:
-
-1. Implement action-masked PPO (or find existing implementation)
-2. Integrate with PureJaxRL's training loop
-3. Benchmark on TPU
-4. Tune hyperparameters for massively parallel training
-
 ## Development Workflow
 
-1. **Local development**: macOS with JAX CPU backend
+1. **Local development**: Dev container with JAX CPU backend
    ```bash
-   pip install jax
+   cd python && source venv/bin/activate
+   pytest tests/parity/test_movement.py -k jax -v
    ```
 
-2. **Testing**: Verify JAX env matches Swift env behavior
-   - Run same action sequences through both
-   - Compare observations, rewards, done flags
+2. **Incremental testing**: Run specific test files as milestones complete
+   ```bash
+   pytest tests/parity/test_movement.py -k jax -v  # After milestone 2
+   pytest tests/parity/test_enemies.py -k jax -v   # After milestone 3
+   # etc.
+   ```
 
-3. **TPU deployment**: Google TPU Research Cloud
+3. **Full parity check**: All tests against both implementations
+   ```bash
+   pytest tests/parity/ -v  # Runs both swift and jax
+   ```
+
+4. **TPU deployment**: Google TPU Research Cloud
    ```bash
    pip install jax[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
    ```
 
-## Estimated Effort
-
-| Phase | Effort | Dependencies |
-|-------|--------|--------------|
-| Phase 1: SBX + masking | 2-3 days | None |
-| Phase 2: JAX env port | 2-4 weeks | JAX familiarity |
-| Phase 3: PureJaxRL | 1 week | Phase 2 complete |
-
 ## Open Questions
 
-1. **Action masking in PureJaxRL**: Does it exist? May need custom implementation.
-2. **Observation format**: Keep current Dict space or flatten for simplicity?
-3. **Vectorization**: How many parallel envs fit on TPU v2-8 / v3-8?
-4. **Mixed precision**: Use bfloat16 for better TPU performance?
+1. **UNDO program state**: How to handle previous_state in JAX? Options:
+   - Store flattened state as array
+   - Use pytree with special handling
+   - Limit UNDO history to 1 step
+
+2. **Action masking in PureJaxRL**: May need custom implementation.
+
+3. **Vectorization limits**: How many parallel envs fit on TPU v2-8 / v3-8?
 
 ## References
 
 - [PureJaxRL](https://github.com/luchris429/purejaxrl)
-- [SBX (Stable Baselines JAX)](https://github.com/araffin/sbx)
 - [JAX Documentation](https://jax.readthedocs.io/)
+- [Flax struct.dataclass](https://flax.readthedocs.io/en/latest/api_reference/flax.struct.html)
 - [Action Masking in PPO](https://costa.sh/blog-a-closer-look-at-invalid-action-masking-in-policy-gradient-algorithms.html)
-- [A Closer Look at Invalid Action Masking (paper)](https://arxiv.org/abs/2006.14171)
