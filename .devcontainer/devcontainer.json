@@ -10,7 +10,8 @@
 		},
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/stu-bell/devcontainer-features/claude-code:0": {},
-		"ghcr.io/devcontainers/features/git:1": {}
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers-extra/features/starship:1": {}
 	},
 	"runArgs": [
 		"--cap-add=NET_ADMIN",
@@ -20,8 +21,8 @@
 		// VS Code's copyGitConfig feature should copy .gitconfig automatically, but it doesn't work reliably.
 		// Mount it explicitly to ensure git user.name/email are available in the container.
 		"source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
-		"source=claude-config-${devcontainerId},target=/home/vscode/.claude,type=volume",
-		"source=zsh-history-${devcontainerId},target=/commandhistory,type=volume"
+		"source=hack-matrix-claude-config,target=/home/vscode/.claude,type=volume",
+		"source=hack-matrix-zsh-history,target=/commandhistory,type=volume"
 	],
 	"updateRemoteUserUID": true,
 	"postCreateCommand": "sudo chown -R $(whoami) /commandhistory && swift build -c release",

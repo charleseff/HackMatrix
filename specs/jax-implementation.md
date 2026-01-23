@@ -248,14 +248,11 @@ The implementation builds from simple to complex, with each milestone verified b
 
 **Verification**: Full test suite green for JAX
 
-### Phase 2: PureJaxRL Integration
+**Status**: COMPLETE - All 154 parity tests pass.
 
-Once the JAX environment is complete:
+### Next Steps
 
-1. Implement action-masked PPO (or find existing implementation)
-2. Integrate with PureJaxRL's training loop
-3. Benchmark on TPU
-4. Tune hyperparameters for massively parallel training
+PureJaxRL integration is tracked in a separate spec: [purejaxrl-integration.md](./purejaxrl-integration.md)
 
 ## Technical Approach
 
@@ -450,16 +447,13 @@ The plan should be detailed enough that someone could implement the JAX environm
    pip install jax[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
    ```
 
-## Open Questions
+## Resolved Questions
 
-1. **UNDO program state**: How to handle previous_state in JAX? Options:
-   - Store flattened state as array
-   - Use pytree with special handling
-   - Limit UNDO history to 1 step
+1. **UNDO program state**: Solved by storing previous state fields directly in EnvState (flat storage with `previous_player`, `previous_enemies`, etc.). Limited to 1 step history.
 
-2. **Action masking in PureJaxRL**: May need custom implementation.
+2. **Action masking in PureJaxRL**: Requires custom implementation - see [purejaxrl-integration.md](./purejaxrl-integration.md).
 
-3. **Vectorization limits**: How many parallel envs fit on TPU v2-8 / v3-8?
+3. **Vectorization limits**: TBD during TPU testing - tracked in PureJaxRL integration spec.
 
 ## References
 

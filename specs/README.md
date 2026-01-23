@@ -4,9 +4,9 @@ Design documents and implementation specifications for HackMatrix. As part of st
 
 ## Current Focus
 
-**Next spec:** [jax-implementation.md](./jax-implementation.md)
+**Next spec:** [purejaxrl-integration.md](./purejaxrl-integration.md)
 
-Port HackMatrix game environment to JAX for TPU-accelerated training.
+Integrate JAX environment with PureJaxRL for TPU-accelerated training with action masking.
 
 **When starting work, read the active spec first (and any related specs needed for context) without asking.** When creating or editing specs, link to other specs where useful for cross-referencing.
 
@@ -20,7 +20,8 @@ Port HackMatrix game environment to JAX for TPU-accelerated training.
 | [env-parity-tests.md](./env-parity-tests.md) | **Complete** | Interface-based test suite for validating env implementations |
 | [observation-and-attack-fixes.md](./observation-and-attack-fixes.md) | **Complete** | Add siphonCenter to obs space, ATK+ usable twice per stage |
 | [test-reorganization.md](./test-reorganization.md) | **Complete** | Reorganize tests, add scheduled task testing (depends on observation-and-attack-fixes) |
-| [jax-implementation.md](./jax-implementation.md) | **Active** | Full JAX port of game logic for TPU training |
+| [jax-implementation.md](./jax-implementation.md) | **Complete** | Full JAX port of game logic for TPU training |
+| [purejaxrl-integration.md](./purejaxrl-integration.md) | **Active** | PureJaxRL integration with action-masked PPO for TPU training |
 | [ci-setup.md](./ci-setup.md) | **Deferred** | GitHub Actions CI for Swift and Python tests |
 
 ## Usage
