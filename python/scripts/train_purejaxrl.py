@@ -151,6 +151,18 @@ def main():
         config = auto_tune_for_device(config)
         print("Config auto-tuned for device")
 
+    # Check that total_timesteps is sufficient for meaningful training
+    # Need at least 3 updates to see any learning signal
+    min_updates = 3
+    min_timesteps = config.batch_size * min_updates
+    if config.total_timesteps < min_timesteps:
+        print(f"\n⚠️  Warning: total_timesteps ({config.total_timesteps:,}) is very small")
+        print(f"   batch_size = {config.batch_size:,} (num_envs × num_steps)")
+        print(f"   Increasing to {min_timesteps:,} for at least {min_updates} updates")
+        config = TrainConfig(
+            **{**config.__dict__, "total_timesteps": min_timesteps}
+        )
+
     print_config(config)
 
     # Initialize logger
