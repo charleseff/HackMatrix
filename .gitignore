@@ -4,6 +4,9 @@
 .claude/settings.local.json
 .vscode/settings.json
 
+# Git worktrees
+.worktrees/
+
 # Xcode build artifacts
 DerivedData/
 .build/
