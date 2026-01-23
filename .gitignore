@@ -14,6 +14,7 @@ DerivedData/
 
 # Python
 python/venv/
+python/venv-arm64/
 python/__pycache__/
 *.pyc
 *.egg-info/
