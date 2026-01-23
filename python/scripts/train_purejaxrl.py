@@ -19,6 +19,13 @@ import os
 import sys
 import time
 
+# Enable JAX compilation cache (must be set before importing jax)
+# This caches compiled XLA programs to disk, speeding up subsequent runs
+if "JAX_COMPILATION_CACHE_DIR" not in os.environ:
+    cache_dir = os.path.join(os.path.dirname(__file__), "..", ".jax_cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    os.environ["JAX_COMPILATION_CACHE_DIR"] = cache_dir
+
 import jax
 import jax.numpy as jnp
 

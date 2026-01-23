@@ -23,6 +23,8 @@ python/__pycache__/
 python/logs/
 python/models*/
 python/checkpoints/
+python/.jax_cache/
+.jax_cache/
 old_training_incomplete_obs/
 logs*/
 models/
