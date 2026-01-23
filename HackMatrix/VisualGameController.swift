@@ -31,8 +31,7 @@ class VisualGameController: GameCommandExecutor {
 
         DispatchQueue.main.sync {
             print("[Visual CLI] Resetting game state on main thread")
-            scene.gameState = GameState()
-            scene.updateDisplay()
+            scene.restartGame()
         }
 
         let obs = ObservationBuilder.build(from: scene.gameState)
@@ -72,6 +71,14 @@ class VisualGameController: GameCommandExecutor {
     func executeGetValidActions() -> [Int] {
         guard let scene = gameScene else { return [] }
         return scene.gameState.getValidActions().map { $0.toIndex() }
+    }
+
+    func executeSetState(stateData: SetStateData) -> GameObservation {
+        fatalError("setState not supported in visual mode")
+    }
+
+    func executeGetInternalState() -> InternalState {
+        fatalError("getInternalState not supported in visual mode")
     }
 
     // Called by GameScene when animation completes
