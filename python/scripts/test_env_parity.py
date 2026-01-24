@@ -15,9 +15,9 @@ from pathlib import Path
 # Add python directory to path for hackmatrix import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import numpy as np
 from typing import Protocol
 
+import numpy as np
 
 # ---------------------------------------------------------------------------
 # Common test interface
@@ -68,6 +68,7 @@ class JaxEnvAdapter:
 
     def __init__(self):
         import jax
+
         from hackmatrix import jax_env
 
         self.jax = jax
@@ -160,9 +161,7 @@ def test_jax_valid_actions_format():
 
     assert isinstance(jax_valid, list), "JAX valid_actions should be list"
     assert all(isinstance(a, int) for a in jax_valid), "JAX actions should be ints"
-    assert all(
-        0 <= a < 28 for a in jax_valid
-    ), "JAX actions should be in range 0-27"
+    assert all(0 <= a < 28 for a in jax_valid), "JAX actions should be in range 0-27"
     assert jax_valid == [0, 1, 2, 3], f"Expected [0,1,2,3], got {jax_valid}"
 
     print("[PASS] JAX valid actions format correct")
@@ -177,12 +176,8 @@ def test_jax_step_return_types():
     jax_action = jax_valid[0] if jax_valid else 0
     jax_obs, jax_reward, jax_done, jax_valid = jax_adapter.step(jax_action)
 
-    assert isinstance(
-        jax_reward, float
-    ), f"JAX reward should be float, got {type(jax_reward)}"
-    assert isinstance(
-        jax_done, bool
-    ), f"JAX done should be bool, got {type(jax_done)}"
+    assert isinstance(jax_reward, float), f"JAX reward should be float, got {type(jax_reward)}"
+    assert isinstance(jax_done, bool), f"JAX done should be bool, got {type(jax_done)}"
     assert isinstance(jax_obs, dict), f"JAX obs should be dict, got {type(jax_obs)}"
 
     print("[PASS] JAX step return types correct")
@@ -192,6 +187,7 @@ def test_jax_step_return_types():
 def test_jax_batched_operations():
     """Verify batched JAX operations work correctly."""
     import jax
+
     from hackmatrix import jax_env
 
     batch_size = 4
@@ -217,9 +213,7 @@ def test_jax_batched_operations():
     # Test batched step
     actions = jax.numpy.zeros(batch_size, dtype=jax.numpy.int32)
     step_keys = jax.random.split(jax.random.PRNGKey(1), batch_size)
-    new_states, new_obs, rewards, dones = jax_env.batched_step(
-        states, actions, step_keys
-    )
+    new_states, new_obs, rewards, dones = jax_env.batched_step(states, actions, step_keys)
 
     assert rewards.shape == (batch_size,), f"Expected ({batch_size},), got {rewards.shape}"
     assert dones.shape == (batch_size,), f"Expected ({batch_size},), got {dones.shape}"
@@ -302,16 +296,10 @@ def test_valid_actions_format_parity():
 
     assert isinstance(swift_valid, list), "Swift valid_actions should be list"
     assert isinstance(jax_valid, list), "JAX valid_actions should be list"
-    assert all(
-        isinstance(a, int) for a in swift_valid
-    ), "Swift actions should be ints"
+    assert all(isinstance(a, int) for a in swift_valid), "Swift actions should be ints"
     assert all(isinstance(a, int) for a in jax_valid), "JAX actions should be ints"
-    assert all(
-        0 <= a < 28 for a in swift_valid
-    ), "Swift actions should be in range 0-27"
-    assert all(
-        0 <= a < 28 for a in jax_valid
-    ), "JAX actions should be in range 0-27"
+    assert all(0 <= a < 28 for a in swift_valid), "Swift actions should be in range 0-27"
+    assert all(0 <= a < 28 for a in jax_valid), "JAX actions should be in range 0-27"
 
     print("[PASS] Valid actions format matches between Swift and JAX")
     swift.close()
@@ -335,15 +323,9 @@ def test_step_return_types_parity():
     assert isinstance(
         swift_reward, float
     ), f"Swift reward should be float, got {type(swift_reward)}"
-    assert isinstance(
-        jax_reward, float
-    ), f"JAX reward should be float, got {type(jax_reward)}"
-    assert isinstance(
-        swift_done, bool
-    ), f"Swift done should be bool, got {type(swift_done)}"
-    assert isinstance(
-        jax_done, bool
-    ), f"JAX done should be bool, got {type(jax_done)}"
+    assert isinstance(jax_reward, float), f"JAX reward should be float, got {type(jax_reward)}"
+    assert isinstance(swift_done, bool), f"Swift done should be bool, got {type(swift_done)}"
+    assert isinstance(jax_done, bool), f"JAX done should be bool, got {type(jax_done)}"
 
     print("[PASS] Step return types match between Swift and JAX")
     swift.close()

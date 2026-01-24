@@ -13,9 +13,10 @@ from pathlib import Path
 # Add python directory to path for hackmatrix import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from typing import NamedTuple
+
 import jax
 import jax.numpy as jnp
-from typing import NamedTuple
 
 from hackmatrix import jax_env
 
@@ -58,7 +59,6 @@ def make_train(config: dict):
 
         # Collect some transitions (placeholder for actual training)
         total_reward = jnp.float32(0.0)
-        total_steps = 0
 
         def step_fn(carry, _):
             """Single environment step."""
@@ -72,16 +72,12 @@ def make_train(config: dict):
             action = valid_indices[action_idx]
 
             # Take step
-            new_state, new_obs, reward, done = jax_env.step(
-                env_state, action, step_key
-            )
+            new_state, new_obs, reward, done = jax_env.step(env_state, action, step_key)
 
             # Reset if done
             key, reset_key = jax.random.split(key)
             reset_state, reset_obs = jax_env.reset(reset_key)
-            env_state = jax.lax.cond(
-                done, lambda: reset_state, lambda: new_state
-            )
+            env_state = jax.lax.cond(done, lambda: reset_state, lambda: new_state)
             obs = jax.lax.cond(done, lambda: reset_obs, lambda: new_obs)
 
             total_reward = total_reward + reward

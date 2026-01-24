@@ -11,22 +11,21 @@ Tests for enemy behavior including:
 These tests verify that the Swift environment correctly implements enemy mechanics.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Transmission,
-    Observation,
-    ACTION_MOVE_UP,
     PROGRAM_WAIT,
+    Block,
+    Enemy,
+    GameState,
+    Observation,
+    PlayerState,
+    Transmission,
 )
 
-
 # MARK: - Helper Functions
+
 
 def get_player_hp(obs: Observation) -> int:
     """Extract player HP from observation."""
@@ -69,6 +68,7 @@ def count_transmissions(obs: Observation) -> int:
 
 # MARK: - Test 2.39: Enemy Spawns from Transmission
 
+
 class TestEnemySpawnsFromTransmission:
     """Test 2.39: Enemies spawn when transmission countdown reaches 0."""
 
@@ -80,7 +80,7 @@ class TestEnemySpawnsFromTransmission:
             transmissions=[Transmission(row=5, col=5, turnsRemaining=1, enemyType="virus")],
             enemies=[],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         obs_before = env.set_state(state)
         assert count_enemies(obs_before) == 0, "Should start with no enemies"
@@ -92,10 +92,13 @@ class TestEnemySpawnsFromTransmission:
         # Transmission should be gone, enemy should appear
         enemies_after = find_enemies(result.observation)
         assert len(enemies_after) == 1, f"Should have 1 enemy after spawn, got {len(enemies_after)}"
-        assert enemies_after[0]["type"] == "virus", f"Should spawn virus, got {enemies_after[0]['type']}"
+        assert (
+            enemies_after[0]["type"] == "virus"
+        ), f"Should spawn virus, got {enemies_after[0]['type']}"
 
 
 # MARK: - Test 2.40: Enemy Movement Toward Player
+
 
 class TestEnemyMovesIntoPlayer:
     """Test 2.40: Enemies move toward the player."""
@@ -107,7 +110,7 @@ class TestEnemyMovesIntoPlayer:
             player=PlayerState(row=0, col=0, hp=3, energy=1),
             enemies=[Enemy(type="daemon", row=3, col=0, hp=3, stunned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -122,6 +125,7 @@ class TestEnemyMovesIntoPlayer:
 
 # MARK: - Test 2.41: Virus Double-Move
 
+
 class TestVirusDoubleMoves:
     """Test 2.41: Viruses move 2 cells per turn."""
 
@@ -132,7 +136,7 @@ class TestVirusDoubleMoves:
             player=PlayerState(row=0, col=0, hp=3, energy=1),
             enemies=[Enemy(type="virus", row=4, col=0, hp=2, stunned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -146,6 +150,7 @@ class TestVirusDoubleMoves:
 
 # MARK: - Test 2.42: Glitch Can Move On Blocks
 
+
 class TestGlitchMovesOnBlocks:
     """Test 2.42: Glitch can move through/onto blocks."""
 
@@ -157,7 +162,7 @@ class TestGlitchMovesOnBlocks:
             enemies=[Enemy(type="glitch", row=3, col=0, hp=2, stunned=False)],
             blocks=[Block(row=2, col=0, type="data", points=5, spawnCount=5, siphoned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -166,10 +171,13 @@ class TestGlitchMovesOnBlocks:
         # Glitch should move onto block at (2,0)
         enemies = find_enemies(result.observation)
         assert len(enemies) == 1, "Should have 1 enemy"
-        assert enemies[0]["row"] == 2, f"Glitch should move to row 2 (onto block), got {enemies[0]['row']}"
+        assert (
+            enemies[0]["row"] == 2
+        ), f"Glitch should move to row 2 (onto block), got {enemies[0]['row']}"
 
 
 # MARK: - Test 2.43: Cryptog Visibility
+
 
 class TestCryptogVisibility:
     """Test 2.43: Cryptog visibility based on row/column alignment."""
@@ -181,7 +189,7 @@ class TestCryptogVisibility:
             player=PlayerState(row=3, col=0, hp=3),
             enemies=[Enemy(type="cryptog", row=3, col=5, hp=2, stunned=False)],
             showActivated=False,
-            stage=1
+            stage=1,
         )
         obs = env.set_state(state)
 
@@ -195,7 +203,7 @@ class TestCryptogVisibility:
             player=PlayerState(row=0, col=3, hp=3),
             enemies=[Enemy(type="cryptog", row=5, col=3, hp=2, stunned=False)],
             showActivated=False,
-            stage=1
+            stage=1,
         )
         obs = env.set_state(state)
 
@@ -209,15 +217,18 @@ class TestCryptogVisibility:
             player=PlayerState(row=0, col=0, hp=3),
             enemies=[Enemy(type="cryptog", row=5, col=5, hp=2, stunned=False)],
             showActivated=False,
-            stage=1
+            stage=1,
         )
         obs = env.set_state(state)
 
         enemies = find_enemies(obs)
-        assert len(enemies) == 0, f"Cryptog in different row/col should be hidden, found {len(enemies)}"
+        assert (
+            len(enemies) == 0
+        ), f"Cryptog in different row/col should be hidden, found {len(enemies)}"
 
 
 # MARK: - Test 2.44: Enemy Attack When Adjacent
+
 
 class TestEnemyAttacksPlayer:
     """Test 2.44: Enemies attack player when adjacent."""
@@ -229,7 +240,7 @@ class TestEnemyAttacksPlayer:
             player=PlayerState(row=3, col=3, hp=3, energy=1),
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],  # Adjacent
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -241,6 +252,7 @@ class TestEnemyAttacksPlayer:
 
 # MARK: - Test 2.45: Stunned Enemy Doesn't Move
 
+
 class TestStunnedEnemyNoMovement:
     """Test 2.45: Stunned enemies don't move or attack."""
 
@@ -251,7 +263,7 @@ class TestStunnedEnemyNoMovement:
             player=PlayerState(row=0, col=0, hp=3, energy=1),
             enemies=[Enemy(type="virus", row=3, col=0, hp=2, stunned=True)],  # Stunned
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -264,6 +276,7 @@ class TestStunnedEnemyNoMovement:
 
 
 # MARK: - Test 2.46: Non-stunned Enemies Move After Turn End
+
 
 class TestEnemiesMoveAfterTurnEnd:
     """Test 2.46: Non-stunned enemies move after player's turn ends."""
@@ -278,11 +291,13 @@ class TestEnemiesMoveAfterTurnEnd:
         state = GameState(
             player=PlayerState(row=0, col=0, hp=3, energy=1),
             enemies=[
-                Enemy(type="daemon", row=4, col=3, hp=3, stunned=False),  # Will move (not in same row/col)
-                Enemy(type="daemon", row=5, col=5, hp=3, stunned=True),   # Won't move (stunned)
+                Enemy(
+                    type="daemon", row=4, col=3, hp=3, stunned=False
+                ),  # Will move (not in same row/col)
+                Enemy(type="daemon", row=5, col=5, hp=3, stunned=True),  # Won't move (stunned)
             ],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         obs_before = env.set_state(state)
         enemies_before = find_enemies(obs_before)
@@ -293,9 +308,10 @@ class TestEnemiesMoveAfterTurnEnd:
         enemies_after = find_enemies(result.observation)
 
         # Non-stunned daemon should have moved (it was at row 4, should be at row 3)
-        non_stunned_moved = [e for e in enemies_after if e["row"] < 4 and e["stunned"] == False]
-        assert len(non_stunned_moved) >= 1, \
-            f"Non-stunned daemon should move closer, before: {enemies_before}, after: {enemies_after}"
+        non_stunned_moved = [e for e in enemies_after if e["row"] < 4 and not e["stunned"]]
+        assert (
+            len(non_stunned_moved) >= 1
+        ), f"Non-stunned daemon should move closer, before: {enemies_before}, after: {enemies_after}"
 
         # Stunned daemon at (5,5) should still be at (5,5) but now un-stunned
         stunned_one = [e for e in enemies_after if e["row"] == 5 and e["col"] == 5]

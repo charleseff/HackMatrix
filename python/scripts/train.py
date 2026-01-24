@@ -6,29 +6,22 @@ Train a MaskablePPO agent to play HackMatrix with action masking.
 
 import hashlib
 import os
-import subprocess
-import sys
-import uuid
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
-from gymnasium.wrappers import TimeLimit
+import wandb
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
-from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
-from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from wandb.integration.sb3 import WandbCallback
 
-import wandb
-from hackmatrix import HackEnv
 from hackmatrix.training_config import MODEL_CONFIG
 from hackmatrix.training_db import TrainingDB
 from hackmatrix.training_utils import make_env
 
 # MARK: Helper Functions
+
 
 def get_game_binary_info():
     """Get Swift game binary info for reproducibility tracking.
@@ -64,10 +57,17 @@ def get_game_binary_info():
 
 # MARK: Custom Callbacks
 
+
 class EpisodeStatsCallback(BaseCallback):
     """Callback to log episode statistics to W&B and SQLite."""
 
-    def __init__(self, run_id: str, wandb_enabled: bool = True, db_path: str = "training_history.db", verbose=0):
+    def __init__(
+        self,
+        run_id: str,
+        wandb_enabled: bool = True,
+        db_path: str = "training_history.db",
+        verbose=0,
+    ):
         super().__init__(verbose)
         self.episode_count = 0
         self.run_id = run_id
@@ -84,44 +84,50 @@ class EpisodeStatsCallback(BaseCallback):
 
                 # Log to W&B (if enabled)
                 if self.wandb_enabled:
-                    wandb.log({
-                        "episode/count": self.episode_count,
-                        "episode/reward_stage": breakdown.get("stage", 0),
-                        "episode/reward_kills": breakdown.get("kills", 0),
-                        "episode/reward_distance": breakdown.get("distance", 0),
-                        "episode/reward_score": breakdown.get("score", 0),
-                        "episode/reward_dataSiphon": breakdown.get("dataSiphon", 0),
-                        "episode/reward_victory": breakdown.get("victory", 0),
-                        "episode/reward_death": breakdown.get("death", 0),
-                        "episode/reward_resourceGain": breakdown.get("resourceGain", 0),
-                        "episode/reward_resourceHolding": breakdown.get("resourceHolding", 0),
-                        "episode/reward_damagePenalty": breakdown.get("damagePenalty", 0),
-                        "episode/reward_hpRecovery": breakdown.get("hpRecovery", 0),
-                        "episode/reward_siphonQuality": breakdown.get("siphonQuality", 0),
-                        "episode/reward_programWaste": breakdown.get("programWaste", 0),
-                        "episode/reward_siphonDeathPenalty": breakdown.get("siphonDeathPenalty", 0),
-                        "episode/programs_used": stats["programs_used"],
-                        "episode/highest_stage": stats["highest_stage"],
-                        "episode/steps": stats["steps"],
-                        "episode/action_moves": stats["action_counts"].get("move", 0),
-                        "episode/action_siphons": stats["action_counts"].get("siphon", 0),
-                        "episode/action_programs": stats["action_counts"].get("program", 0),
-                    }, step=self.num_timesteps)
+                    wandb.log(
+                        {
+                            "episode/count": self.episode_count,
+                            "episode/reward_stage": breakdown.get("stage", 0),
+                            "episode/reward_kills": breakdown.get("kills", 0),
+                            "episode/reward_distance": breakdown.get("distance", 0),
+                            "episode/reward_score": breakdown.get("score", 0),
+                            "episode/reward_dataSiphon": breakdown.get("dataSiphon", 0),
+                            "episode/reward_victory": breakdown.get("victory", 0),
+                            "episode/reward_death": breakdown.get("death", 0),
+                            "episode/reward_resourceGain": breakdown.get("resourceGain", 0),
+                            "episode/reward_resourceHolding": breakdown.get("resourceHolding", 0),
+                            "episode/reward_damagePenalty": breakdown.get("damagePenalty", 0),
+                            "episode/reward_hpRecovery": breakdown.get("hpRecovery", 0),
+                            "episode/reward_siphonQuality": breakdown.get("siphonQuality", 0),
+                            "episode/reward_programWaste": breakdown.get("programWaste", 0),
+                            "episode/reward_siphonDeathPenalty": breakdown.get(
+                                "siphonDeathPenalty", 0
+                            ),
+                            "episode/programs_used": stats["programs_used"],
+                            "episode/highest_stage": stats["highest_stage"],
+                            "episode/steps": stats["steps"],
+                            "episode/action_moves": stats["action_counts"].get("move", 0),
+                            "episode/action_siphons": stats["action_counts"].get("siphon", 0),
+                            "episode/action_programs": stats["action_counts"].get("program", 0),
+                        },
+                        step=self.num_timesteps,
+                    )
 
                 # Log to SQLite
                 self.db.log_episode(
                     run_id=self.run_id,
                     episode_num=self.episode_count,
                     timestep=self.num_timesteps,
-                    stats=stats
+                    stats=stats,
                 )
 
                 # Console log with percentages (using absolute values so they sum to 100%)
-                total_reward = sum(breakdown.values())
                 abs_total = sum(abs(v) for v in breakdown.values()) or 1  # Avoid div by zero
+
                 def pct(key, label=None):
                     label = label or key
                     return f"{label}:{breakdown.get(key,0)/abs_total*100:.0f}%"
+
                 # print(f"Ep {self.episode_count} | R={total_reward:.2f} | "
                 #       f"{pct('stage')} {pct('kills')} {pct('distance', 'dist')} {pct('score')} {pct('dataSiphon', 'siphon')} {pct('death')} | "
                 #       f"S{stats['highest_stage']} | {stats['steps']} steps | "
@@ -137,19 +143,20 @@ class EpisodeStatsCallback(BaseCallback):
 
 # MARK: Training Function
 
+
 def train(
-        total_timesteps: int = 1_000_000,
-        save_freq: int = 10_000,
-        eval_freq: int = 5_000,
-        log_dir: str = "./logs",
-        model_dir: str = "./models",
-        resume_path: str = None,
-        run_suffix: str = None,
-        debug: bool = False,
-        info: bool = False,
-        num_envs: int = 1,
-        max_episode_steps: int = 1000,
-        no_wandb: bool = False
+    total_timesteps: int = 1_000_000,
+    save_freq: int = 10_000,
+    eval_freq: int = 5_000,
+    log_dir: str = "./logs",
+    model_dir: str = "./models",
+    resume_path: str = None,
+    run_suffix: str = None,
+    debug: bool = False,
+    info: bool = False,
+    num_envs: int = 1,
+    max_episode_steps: int = 1000,
+    no_wandb: bool = False,
 ):
     """
     Train a MaskablePPO agent with action masking.
@@ -181,10 +188,16 @@ def train(
         print(f"Resuming run: {run_name}")
     else:
         # New run - create friendly name like hackmatrix-dec29-25-1
-        date_prefix = datetime.now().strftime("hackmatrix-%b%d-%y").lower()  # e.g., hackmatrix-dec29-25
+        date_prefix = (
+            datetime.now().strftime("hackmatrix-%b%d-%y").lower()
+        )  # e.g., hackmatrix-dec29-25
 
         # Find next available number
-        existing = [d for d in os.listdir(model_dir) if d.startswith(date_prefix)] if os.path.exists(model_dir) else []
+        existing = (
+            [d for d in os.listdir(model_dir) if d.startswith(date_prefix)]
+            if os.path.exists(model_dir)
+            else []
+        )
         next_num = 1
         for name in existing:
             try:
@@ -219,7 +232,6 @@ def train(
             config={
                 # Model hyperparameters
                 **MODEL_CONFIG,
-
                 # Reward structure
                 "reward_stage_multipliers": [1, 2, 4, 8, 16, 32, 64, 100],
                 "reward_score_multiplier": 0.5,
@@ -229,31 +241,24 @@ def train(
                 "reward_victory_base": 500,
                 "reward_victory_score_mult": 100,
                 "reward_death_penalty_pct": 0.5,
-
                 # NEW: Resource rewards
                 "reward_credit_gain_multiplier": 0.05,
                 "reward_energy_gain_multiplier": 0.05,
                 "reward_credit_holding_multiplier": 0.001,
                 "reward_energy_holding_multiplier": 0.001,
-
                 # NEW: HP penalties and recovery
                 "reward_damage_penalty_per_hp": -1.0,
                 "reward_hp_recovery_per_hp": 1.0,
-
                 # NEW: Siphon optimization
                 "reward_siphon_suboptimal_penalty": -0.5,
-
                 # NEW: Program waste
                 "reward_reset_at_2hp_penalty": -0.3,
-
                 # NEW: Siphon-caused death
                 "reward_siphon_caused_death_penalty": -10.0,
-
                 # Environment
                 "num_envs": num_envs,
                 "max_episode_steps": max_episode_steps,
                 "total_timesteps": total_timesteps,
-
                 # Game binary tracking (Swift environment)
                 **get_game_binary_info(),
             },
@@ -279,26 +284,29 @@ def train(
     print("Creating environment...")
     if num_envs > 1:
         # Use SubprocVecEnv for parallel environments (faster on multi-core CPUs)
-        env = SubprocVecEnv([lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)
-                             for _ in range(num_envs)])
+        env = SubprocVecEnv(
+            [
+                lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)
+                for _ in range(num_envs)
+            ]
+        )
     else:
         # Use DummyVecEnv for single environment (easier debugging)
-        env = DummyVecEnv([lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)])
+        env = DummyVecEnv(
+            [lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)]
+        )
 
     print("Creating eval environment...")
     # Always use single environment for evaluation (deterministic)
-    eval_env = DummyVecEnv([lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)])
+    eval_env = DummyVecEnv(
+        [lambda: make_env(debug=debug, info=info, max_episode_steps=max_episode_steps)]
+    )
 
     # MARK: Initialize Model
 
     if resume_path:
         print(f"Resuming training from: {resume_path}")
-        model = MaskablePPO.load(
-            resume_path,
-            env=env,
-            verbose=1,
-            tensorboard_log=run_log_dir
-        )
+        model = MaskablePPO.load(resume_path, env=env, verbose=1, tensorboard_log=run_log_dir)
         # Increase exploration when resuming
         model.ent_coef = 0.3  # Increased from 0.1 for more exploration
         print(f"Model loaded successfully! Entropy coefficient set to {model.ent_coef}")
@@ -309,7 +317,7 @@ def train(
             env,
             verbose=1,
             tensorboard_log=run_log_dir,
-            **MODEL_CONFIG  # Use shared config from training_config
+            **MODEL_CONFIG,  # Use shared config from training_config
         )
 
     # MARK: Setup Callbacks
@@ -323,7 +331,7 @@ def train(
         save_path=run_model_dir,
         name_prefix="maskable_ppo_hack",
         save_replay_buffer=False,
-        save_vecnormalize=False
+        save_vecnormalize=False,
     )
 
     # Adjust eval_freq for parallel environments
@@ -337,7 +345,7 @@ def train(
         deterministic=True,
         render=False,
         n_eval_episodes=5,
-        use_masking=True  # Enable action masking during evaluation
+        use_masking=True,  # Enable action masking during evaluation
     )
 
     # MARK: Training Loop
@@ -361,11 +369,7 @@ def train(
         callbacks.append(wandb_callback)
 
     try:
-        model.learn(
-            total_timesteps=total_timesteps,
-            callback=callbacks,
-            progress_bar=True
-        )
+        model.learn(total_timesteps=total_timesteps, callback=callbacks, progress_bar=True)
 
         final_model_path = os.path.join(run_model_dir, "final_model")
         model.save(final_model_path)
@@ -383,7 +387,7 @@ def train(
         crash_model_path = os.path.join(run_model_dir, "crash_recovery_model")
         model.save(crash_model_path)
         print(f"✓ Model saved to: {crash_model_path}")
-        print(f"\nTo resume training:")
+        print("\nTo resume training:")
         print(f"  python scripts/train.py --resume {crash_model_path} --timesteps <remaining>")
         raise  # Re-raise to show full traceback
 
@@ -410,30 +414,58 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Train MaskablePPO agent for HackMatrix")
-    parser.add_argument("--timesteps", type=int, default=1_000_000,
-                        help="Total timesteps to train (default: 1,000,000)")
-    parser.add_argument("--save-freq", type=int, default=10_000,
-                        help="Save checkpoint every N steps (default: 10,000)")
-    parser.add_argument("--eval-freq", type=int, default=5_000,
-                        help="Evaluate every N steps (default: 5,000)")
-    parser.add_argument("--log-dir", type=str, default="./logs",
-                        help="Directory for TensorBoard logs")
-    parser.add_argument("--model-dir", type=str, default="./models",
-                        help="Directory to save models")
-    parser.add_argument("--resume", type=str, default=None,
-                        help="Path to checkpoint to resume training from (e.g., './models/maskable_ppo_20241218_120000/maskable_ppo_hack_100000_steps.zip')")
-    parser.add_argument("--run-suffix", type=str, default=None,
-                        help="Optional suffix for run name (e.g., 'bignet' → hackmatrix-jan05-26-1-bignet)")
-    parser.add_argument("--debug", action="store_true",
-                        help="Enable verbose debug logging (Swift + Python)")
-    parser.add_argument("--info", action="store_true",
-                        help="Enable info-level logging (important events only)")
-    parser.add_argument("--num-envs", type=int, default=1,
-                        help="Number of parallel environments (1=single, 4-8=parallel, default: 1)")
-    parser.add_argument("--max-episode-steps", type=int, default=1000,
-                        help="Maximum steps per episode before truncation (default: 1000)")
-    parser.add_argument("--no-wandb", action="store_true",
-                        help="Disable Weights & Biases logging")
+    parser.add_argument(
+        "--timesteps",
+        type=int,
+        default=1_000_000,
+        help="Total timesteps to train (default: 1,000,000)",
+    )
+    parser.add_argument(
+        "--save-freq",
+        type=int,
+        default=10_000,
+        help="Save checkpoint every N steps (default: 10,000)",
+    )
+    parser.add_argument(
+        "--eval-freq", type=int, default=5_000, help="Evaluate every N steps (default: 5,000)"
+    )
+    parser.add_argument(
+        "--log-dir", type=str, default="./logs", help="Directory for TensorBoard logs"
+    )
+    parser.add_argument(
+        "--model-dir", type=str, default="./models", help="Directory to save models"
+    )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        help="Path to checkpoint to resume training from (e.g., './models/maskable_ppo_20241218_120000/maskable_ppo_hack_100000_steps.zip')",
+    )
+    parser.add_argument(
+        "--run-suffix",
+        type=str,
+        default=None,
+        help="Optional suffix for run name (e.g., 'bignet' → hackmatrix-jan05-26-1-bignet)",
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable verbose debug logging (Swift + Python)"
+    )
+    parser.add_argument(
+        "--info", action="store_true", help="Enable info-level logging (important events only)"
+    )
+    parser.add_argument(
+        "--num-envs",
+        type=int,
+        default=1,
+        help="Number of parallel environments (1=single, 4-8=parallel, default: 1)",
+    )
+    parser.add_argument(
+        "--max-episode-steps",
+        type=int,
+        default=1000,
+        help="Maximum steps per episode before truncation (default: 1000)",
+    )
+    parser.add_argument("--no-wandb", action="store_true", help="Disable Weights & Biases logging")
 
     args = parser.parse_args()
 
@@ -449,5 +481,5 @@ if __name__ == "__main__":
         info=args.info,
         num_envs=args.num_envs,
         max_episode_steps=args.max_episode_steps,
-        no_wandb=args.no_wandb
+        no_wandb=args.no_wandb,
     )

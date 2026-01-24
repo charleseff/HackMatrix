@@ -15,18 +15,13 @@ import numpy as np
 import pytest
 
 from ..env_interface import (
+    GRID_SIZE,
     Observation,
     StepResult,
-    GRID_SIZE,
-    ACTION_MOVE_UP,
-    ACTION_MOVE_DOWN,
-    ACTION_MOVE_LEFT,
-    ACTION_MOVE_RIGHT,
-    ACTION_SIPHON,
 )
 
-
 # MARK: - Observation Structure Tests
+
 
 class TestObservationStructure:
     """Verify observation shape and dtype requirements."""
@@ -73,8 +68,9 @@ class TestObservationStructure:
         """Programs should be binary (0 or 1)."""
         obs = env.reset()
 
-        assert np.all((obs.programs == 0) | (obs.programs == 1)), \
-            "Programs should only contain 0 or 1"
+        assert np.all(
+            (obs.programs == 0) | (obs.programs == 1)
+        ), "Programs should only contain 0 or 1"
 
     def test_grid_values_normalized(self, env):
         """Grid values should be in [0, 1] range."""
@@ -85,6 +81,7 @@ class TestObservationStructure:
 
 
 # MARK: - Step Function Tests
+
 
 class TestStepFunction:
     """Verify step() function behavior."""
@@ -127,6 +124,7 @@ class TestStepFunction:
 
 # MARK: - Valid Actions Tests
 
+
 class TestValidActions:
     """Verify get_valid_actions() behavior."""
 
@@ -143,16 +141,16 @@ class TestValidActions:
         env.reset()
         valid_actions = env.get_valid_actions()
 
-        assert all(0 <= a <= 27 for a in valid_actions), \
-            f"Actions out of range: {[a for a in valid_actions if not 0 <= a <= 27]}"
+        assert all(
+            0 <= a <= 27 for a in valid_actions
+        ), f"Actions out of range: {[a for a in valid_actions if not 0 <= a <= 27]}"
 
     def test_valid_actions_unique(self, env):
         """Valid actions should not contain duplicates."""
         env.reset()
         valid_actions = env.get_valid_actions()
 
-        assert len(valid_actions) == len(set(valid_actions)), \
-            "Valid actions contain duplicates"
+        assert len(valid_actions) == len(set(valid_actions)), "Valid actions contain duplicates"
 
     def test_at_least_one_valid_action(self, env):
         """There should always be at least one valid action after reset."""
@@ -163,6 +161,7 @@ class TestValidActions:
 
 
 # MARK: - Reset Tests
+
 
 class TestReset:
     """Verify reset() behavior."""
@@ -176,7 +175,7 @@ class TestReset:
     def test_reset_clears_state(self, env):
         """reset() should provide a fresh state."""
         # First episode
-        obs1 = env.reset()
+        env.reset()
         valid_actions = env.get_valid_actions()
         if valid_actions:
             env.step(valid_actions[0])
@@ -189,6 +188,7 @@ class TestReset:
 
 # MARK: - Swift-Only set_state Tests
 
+
 class TestSetState:
     """Verify set_state() behavior (Swift only)."""
 
@@ -197,9 +197,7 @@ class TestSetState:
         """set_state() should return an Observation."""
         from ..env_interface import GameState, PlayerState
 
-        state = GameState(
-            player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0)
-        )
+        state = GameState(player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0))
         obs = env.set_state(state)
 
         assert isinstance(obs, Observation)
@@ -210,9 +208,7 @@ class TestSetState:
         """set_state() should correctly set player position."""
         from ..env_interface import GameState, PlayerState
 
-        state = GameState(
-            player=PlayerState(row=2, col=4, hp=3)
-        )
+        state = GameState(player=PlayerState(row=2, col=4, hp=3))
         obs = env.set_state(state)
 
         # Denormalize to verify: row = normalized * 5, col = normalized * 5
@@ -227,9 +223,7 @@ class TestSetState:
         """set_state() should correctly set player resources."""
         from ..env_interface import GameState, PlayerState
 
-        state = GameState(
-            player=PlayerState(row=3, col=3, hp=2, credits=10, energy=5)
-        )
+        state = GameState(player=PlayerState(row=3, col=3, hp=2, credits=10, energy=5))
         obs = env.set_state(state)
 
         # Denormalize: hp = normalized * 3, credits = normalized * 50, energy = normalized * 50
@@ -244,13 +238,10 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_with_enemies(self, env):
         """set_state() should correctly set enemies."""
-        from ..env_interface import GameState, PlayerState, Enemy
+        from ..env_interface import Enemy, GameState, PlayerState
 
         state = GameState(
-            player=PlayerState(row=0, col=0),
-            enemies=[
-                Enemy(type="virus", row=5, col=5, hp=2)
-            ]
+            player=PlayerState(row=0, col=0), enemies=[Enemy(type="virus", row=5, col=5, hp=2)]
         )
         obs = env.set_state(state)
 
@@ -261,11 +252,11 @@ class TestSetState:
     @pytest.mark.requires_set_state
     def test_set_state_with_programs(self, env):
         """set_state() should correctly set owned programs."""
-        from ..env_interface import GameState, PlayerState, PROGRAM_PUSH, PROGRAM_WAIT
+        from ..env_interface import PROGRAM_PUSH, PROGRAM_WAIT, GameState, PlayerState
 
         state = GameState(
             player=PlayerState(row=3, col=3),
-            owned_programs=[PROGRAM_PUSH, PROGRAM_WAIT]  # indices 5 and 10
+            owned_programs=[PROGRAM_PUSH, PROGRAM_WAIT],  # indices 5 and 10
         )
         obs = env.set_state(state)
 
@@ -279,9 +270,7 @@ class TestSetState:
         from ..env_interface import GameState, PlayerState
 
         # Minimal state: just player position
-        state = GameState(
-            player=PlayerState(row=0, col=0)
-        )
+        state = GameState(player=PlayerState(row=0, col=0))
         obs = env.set_state(state)
 
         assert isinstance(obs, Observation)

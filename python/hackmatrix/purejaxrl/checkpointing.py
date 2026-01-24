@@ -7,7 +7,8 @@ Uses simple pickle/numpy format for portability.
 
 import os
 import pickle
-from typing import Dict, Any, Optional
+from typing import Any
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -18,7 +19,7 @@ def save_checkpoint(
     train_state: TrainState,
     path: str,
     step: int,
-    metrics: Optional[Dict[str, float]] = None,
+    metrics: dict[str, float] | None = None,
 ):
     """Save training checkpoint.
 
@@ -52,8 +53,8 @@ def save_checkpoint(
 def load_checkpoint(
     path: str,
     train_state: TrainState,
-    step: Optional[int] = None,
-) -> tuple[TrainState, int, Dict[str, float]]:
+    step: int | None = None,
+) -> tuple[TrainState, int, dict[str, float]]:
     """Load training checkpoint.
 
     Args:
@@ -88,7 +89,7 @@ def load_checkpoint(
     return train_state, checkpoint["step"], checkpoint["metrics"]
 
 
-def save_params_npz(params: Dict[str, Any], path: str):
+def save_params_npz(params: dict[str, Any], path: str):
     """Save model parameters as numpy .npz file.
 
     This format is easy to load for inference in other frameworks.
@@ -102,7 +103,7 @@ def save_params_npz(params: Dict[str, Any], path: str):
     print(f"Saved parameters to {path}")
 
 
-def load_params_npz(path: str) -> Dict[str, np.ndarray]:
+def load_params_npz(path: str) -> dict[str, np.ndarray]:
     """Load model parameters from .npz file.
 
     Args:
@@ -115,7 +116,7 @@ def load_params_npz(path: str) -> Dict[str, np.ndarray]:
         return dict(data)
 
 
-def flatten_params(params: Dict[str, Any], prefix: str = "") -> Dict[str, np.ndarray]:
+def flatten_params(params: dict[str, Any], prefix: str = "") -> dict[str, np.ndarray]:
     """Flatten nested parameter dict to flat dict with dotted keys.
 
     Args:
@@ -135,7 +136,7 @@ def flatten_params(params: Dict[str, Any], prefix: str = "") -> Dict[str, np.nda
     return flat
 
 
-def unflatten_params(flat_params: Dict[str, np.ndarray]) -> Dict[str, Any]:
+def unflatten_params(flat_params: dict[str, np.ndarray]) -> dict[str, Any]:
     """Unflatten dotted key dict back to nested dict.
 
     Args:
@@ -156,7 +157,7 @@ def unflatten_params(flat_params: Dict[str, np.ndarray]) -> Dict[str, Any]:
     return nested
 
 
-def infer_architecture(flat_params: Dict[str, np.ndarray]) -> Dict[str, int]:
+def infer_architecture(flat_params: dict[str, np.ndarray]) -> dict[str, int]:
     """Infer network architecture from saved parameters.
 
     Args:

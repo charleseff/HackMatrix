@@ -12,13 +12,14 @@ These utilities are shared across:
 - Any other scripts that need to display observations
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
 # MARK: Observation Parsing
 
-def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
+
+def parse_observation(obs_dict: dict[str, Any]) -> dict[str, np.ndarray]:
     """
     Convert JSON observation to numpy arrays.
 
@@ -32,18 +33,21 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
         Dictionary with keys 'player', 'programs', 'grid' containing numpy arrays
     """
     # Player state (10 values, normalized to [0, 1])
-    player = np.array([
-        obs_dict["playerRow"] / 5.0,                        # 0-5 → 0-1
-        obs_dict["playerCol"] / 5.0,                        # 0-5 → 0-1
-        obs_dict["playerHP"] / 3.0,                         # 0-3 → 0-1
-        min(obs_dict["credits"] / 50.0, 1.0),               # 0-50+ → 0-1 (capped)
-        min(obs_dict["energy"] / 50.0, 1.0),                # 0-50+ → 0-1 (capped)
-        (obs_dict["stage"] - 1) / 7.0,                      # 1-8 → 0-1
-        obs_dict["dataSiphons"] / 10.0,                     # 0-10 → 0-1
-        (obs_dict["baseAttack"] - 1) / 2.0,                 # 1-3 → 0-1
-        1.0 if obs_dict.get("showActivated", False) else 0.0,          # Binary flag
-        1.0 if obs_dict.get("scheduledTasksDisabled", False) else 0.0  # Binary flag
-    ], dtype=np.float32)
+    player = np.array(
+        [
+            obs_dict["playerRow"] / 5.0,  # 0-5 → 0-1
+            obs_dict["playerCol"] / 5.0,  # 0-5 → 0-1
+            obs_dict["playerHP"] / 3.0,  # 0-3 → 0-1
+            min(obs_dict["credits"] / 50.0, 1.0),  # 0-50+ → 0-1 (capped)
+            min(obs_dict["energy"] / 50.0, 1.0),  # 0-50+ → 0-1 (capped)
+            (obs_dict["stage"] - 1) / 7.0,  # 1-8 → 0-1
+            obs_dict["dataSiphons"] / 10.0,  # 0-10 → 0-1
+            (obs_dict["baseAttack"] - 1) / 2.0,  # 1-3 → 0-1
+            1.0 if obs_dict.get("showActivated", False) else 0.0,  # Binary flag
+            1.0 if obs_dict.get("scheduledTasksDisabled", False) else 0.0,  # Binary flag
+        ],
+        dtype=np.float32,
+    )
 
     # Program inventory (23 values, binary vector)
     programs = np.zeros(23, dtype=np.int32)
@@ -66,15 +70,17 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
                 enemy = cell["enemy"]
                 enemy_type = enemy["type"]
                 # One-hot encoding for enemy types
-                features.extend([
-                    1.0 if enemy_type == "virus" else 0.0,
-                    1.0 if enemy_type == "daemon" else 0.0,
-                    1.0 if enemy_type == "glitch" else 0.0,
-                    1.0 if enemy_type == "cryptog" else 0.0,
-                    enemy["hp"] / 3.0,  # 0-3 → 0-1
-                    1.0 if enemy["isStunned"] else 0.0,
-                    1.0 if enemy.get("spawnedFromSiphon", False) else 0.0
-                ])
+                features.extend(
+                    [
+                        1.0 if enemy_type == "virus" else 0.0,
+                        1.0 if enemy_type == "daemon" else 0.0,
+                        1.0 if enemy_type == "glitch" else 0.0,
+                        1.0 if enemy_type == "cryptog" else 0.0,
+                        enemy["hp"] / 3.0,  # 0-3 → 0-1
+                        1.0 if enemy["isStunned"] else 0.0,
+                        1.0 if enemy.get("spawnedFromSiphon", False) else 0.0,
+                    ]
+                )
             else:
                 features.extend([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
@@ -83,13 +89,15 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
                 block = cell["block"]
                 block_type = block["blockType"]
                 # One-hot encoding for block types
-                features.extend([
-                    1.0 if block_type == "data" else 0.0,
-                    1.0 if block_type == "program" else 0.0,
-                    1.0 if block_type == "question" else 0.0,
-                    block.get("points", 0) / 9.0,  # 0-9 → 0-1
-                    1.0 if block["isSiphoned"] else 0.0
-                ])
+                features.extend(
+                    [
+                        1.0 if block_type == "data" else 0.0,
+                        1.0 if block_type == "program" else 0.0,
+                        1.0 if block_type == "question" else 0.0,
+                        block.get("points", 0) / 9.0,  # 0-9 → 0-1
+                        1.0 if block["isSiphoned"] else 0.0,
+                    ]
+                )
             else:
                 features.extend([0.0, 0.0, 0.0, 0.0, 0.0])
 
@@ -115,37 +123,40 @@ def parse_observation(obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
                 trans = cell["transmission"]
                 transmission_turns = trans["turnsUntilSpawn"]
 
-            features.extend([
-                transmission_spawncount / 9.0,               # 0-9 → 0-1
-                min(transmission_turns / 4.0, 1.0)           # 0-4 → 0-1 (capped)
-            ])
+            features.extend(
+                [
+                    transmission_spawncount / 9.0,  # 0-9 → 0-1
+                    min(transmission_turns / 4.0, 1.0),  # 0-4 → 0-1 (capped)
+                ]
+            )
 
             # Resources (2 features)
-            features.extend([
-                cell.get("credits", 0) / 3.0,    # 0-3 → 0-1
-                cell.get("energy", 0) / 3.0      # 0-3 → 0-1
-            ])
+            features.extend(
+                [
+                    cell.get("credits", 0) / 3.0,  # 0-3 → 0-1
+                    cell.get("energy", 0) / 3.0,  # 0-3 → 0-1
+                ]
+            )
 
             # Special cells (3 features)
-            features.extend([
-                1.0 if cell.get("isDataSiphon", False) else 0.0,
-                1.0 if cell.get("isExit", False) else 0.0,
-                1.0 if cell.get("siphonCenter", False) else 0.0
-            ])
+            features.extend(
+                [
+                    1.0 if cell.get("isDataSiphon", False) else 0.0,
+                    1.0 if cell.get("isExit", False) else 0.0,
+                    1.0 if cell.get("siphonCenter", False) else 0.0,
+                ]
+            )
 
             # Store features for this cell (42 features total)
             grid[row_idx, col_idx, :] = features[:42]
 
-    return {
-        "player": player,
-        "programs": programs,
-        "grid": grid
-    }
+    return {"player": player, "programs": programs, "grid": grid}
 
 
 # MARK: Value Denormalization
 
-def denormalize_player(player: np.ndarray) -> Dict[str, Any]:
+
+def denormalize_player(player: np.ndarray) -> dict[str, Any]:
     """Convert normalized player array back to raw values."""
     return {
         "row": int(round(player[0] * 5)),
@@ -157,19 +168,20 @@ def denormalize_player(player: np.ndarray) -> Dict[str, Any]:
         "dataSiphons": int(round(player[6] * 10)),
         "baseAttack": int(round(player[7] * 2)) + 1,
         "showActivated": player[8] > 0.5,
-        "scheduledTasksDisabled": player[9] > 0.5
+        "scheduledTasksDisabled": player[9] > 0.5,
     }
 
 
 # MARK: Detailed Printer
 
+
 def print_observation_detailed(
-    observation: Dict[str, np.ndarray],
+    observation: dict[str, np.ndarray],
     step: int = 0,
     reward: float = 0.0,
     done: bool = False,
-    info: Optional[Dict[str, Any]] = None,
-    valid_actions: Optional[List[int]] = None
+    info: dict[str, Any] | None = None,
+    valid_actions: list[int] | None = None,
 ):
     """
     Print observation in detailed format with full grid analysis.
@@ -188,24 +200,47 @@ def print_observation_detailed(
 
     # Program names by action index (5-27) - must match ProgramType in Program.swift
     program_names = [
-        "PUSH", "PULL", "CRASH", "WARP", "POLY", "WAIT", "DEBUG",
-        "ROW", "COL", "UNDO", "STEP", "SIPH+", "EXCH", "SHOW",
-        "RESET", "CALM", "D_BOM", "DELAY", "ANTI-V", "SCORE",
-        "REDUC", "ATK+", "HACK"
+        "PUSH",
+        "PULL",
+        "CRASH",
+        "WARP",
+        "POLY",
+        "WAIT",
+        "DEBUG",
+        "ROW",
+        "COL",
+        "UNDO",
+        "STEP",
+        "SIPH+",
+        "EXCH",
+        "SHOW",
+        "RESET",
+        "CALM",
+        "D_BOM",
+        "DELAY",
+        "ANTI-V",
+        "SCORE",
+        "REDUC",
+        "ATK+",
+        "HACK",
     ]
 
     print(f"\n{'='*80}")
     print(f"STEP {step}")
-    print('='*80)
+    print("=" * 80)
 
     # PLAYER STATE
-    print(f"\n📍 Player State:")
+    print("\n📍 Player State:")
     print(f"  Position: ({player_raw['row']}, {player_raw['col']})")
-    print(f"  HP: {player_raw['hp']}/3  |  Credits: {player_raw['credits']}  |  Energy: {player_raw['energy']}")
+    print(
+        f"  HP: {player_raw['hp']}/3  |  Credits: {player_raw['credits']}  |  Energy: {player_raw['energy']}"
+    )
     print(f"  Stage: {player_raw['stage']}/8  |  Turn: {info.get('turn', 0) if info else 0}")
     print(f"  Siphons: {player_raw['dataSiphons']}  |  Attack: {player_raw['baseAttack']}")
-    print(f"  Show: {'ON' if player_raw['showActivated'] else 'off'}  |  "
-          f"Calm: {'ON' if player_raw['scheduledTasksDisabled'] else 'off'}")
+    print(
+        f"  Show: {'ON' if player_raw['showActivated'] else 'off'}  |  "
+        f"Calm: {'ON' if player_raw['scheduledTasksDisabled'] else 'off'}"
+    )
 
     # PROGRAMS
     owned_indices = np.where(programs == 1)[0]
@@ -217,14 +252,16 @@ def print_observation_detailed(
         print(f"  Action indices: {action_indices}")
 
     # GRID ANALYSIS
-    print(f"\n🗺️  Grid Analysis (6×6×40):")
+    print("\n🗺️  Grid Analysis (6×6×40):")
 
     # Count entities
     enemy_count = np.sum(np.any(grid[:, :, 0:4] > 0, axis=2))
     block_count = np.sum(np.any(grid[:, :, 6:9] > 0, axis=2))
     transmission_count = np.sum(grid[:, :, 34] > 0)
 
-    print(f"  Enemies: {enemy_count}  |  Blocks: {block_count}  |  Transmissions: {transmission_count}")
+    print(
+        f"  Enemies: {enemy_count}  |  Blocks: {block_count}  |  Transmissions: {transmission_count}"
+    )
 
     # Show active grid channels
     active_channels = []
@@ -233,26 +270,36 @@ def print_observation_detailed(
             active_channels.append(ch)
 
     channel_names = {
-        0: "Virus", 1: "Daemon", 2: "Glitch", 3: "Cryptog",
-        4: "Enemy HP", 5: "Enemy Stunned",
-        6: "Data Block", 7: "Program Block", 8: "Question Block",
-        9: "Block Points", 10: "Block Siphoned",
+        0: "Virus",
+        1: "Daemon",
+        2: "Glitch",
+        3: "Cryptog",
+        4: "Enemy HP",
+        5: "Enemy Stunned",
+        6: "Data Block",
+        7: "Program Block",
+        8: "Question Block",
+        9: "Block Points",
+        10: "Block Siphoned",
         # Channels 11-33: Program type one-hot (action indices 5-27)
         **{11 + i: f"Program: {program_names[i]}" for i in range(23)},
-        34: "Siphon Spawn Cost", 35: "Transmission Countdown",
-        36: "Credits", 37: "Energy",
-        38: "Data Siphon Cell", 39: "Exit Cell"
+        34: "Siphon Spawn Cost",
+        35: "Transmission Countdown",
+        36: "Credits",
+        37: "Energy",
+        38: "Data Siphon Cell",
+        39: "Exit Cell",
     }
 
     # Denormalization multipliers for channels that represent counts
     # Maps channel -> multiplier to convert normalized [0,1] back to raw value
     channel_denorm = {
-        4: 3,    # Enemy HP: 0-3
-        9: 9,    # Block Points: 0-9
-        34: 9,   # Siphon Spawn Cost: 1-9 (stored as 0-9 normalized)
-        35: 4,   # Transmission Countdown: 0-4 turns
-        36: 3,   # Credits: 0-3
-        37: 3,   # Energy: 0-3
+        4: 3,  # Enemy HP: 0-3
+        9: 9,  # Block Points: 0-9
+        34: 9,  # Siphon Spawn Cost: 1-9 (stored as 0-9 normalized)
+        35: 4,  # Transmission Countdown: 0-4 turns
+        36: 3,  # Credits: 0-3
+        37: 3,  # Energy: 0-3
     }
 
     if active_channels:
@@ -303,9 +350,7 @@ def print_observation_detailed(
         print(f"\n🎮 Valid Actions: {len(valid_actions)}/28")
 
         # Map action indices to names
-        action_names = {
-            0: "Up(W)", 1: "Down(S)", 2: "Left(A)", 3: "Right(D)", 4: "Siphon"
-        }
+        action_names = {0: "Up(W)", 1: "Down(S)", 2: "Left(A)", 3: "Right(D)", 4: "Siphon"}
         for i in range(5, 28):
             action_names[i] = f"Prog{i-5}"
 
@@ -324,16 +369,17 @@ def print_observation_detailed(
     if done:
         print("\n🏁 EPISODE DONE")
 
-    print("="*80)
+    print("=" * 80)
 
 
 # MARK: Compact Printer
 
+
 def print_observation_compact(
-    observation: Dict[str, np.ndarray],
+    observation: dict[str, np.ndarray],
     step: int = 0,
     reward: float = 0.0,
-    valid_actions: Optional[List[int]] = None
+    valid_actions: list[int] | None = None,
 ):
     """
     Print observation in compact single-line format.
@@ -353,20 +399,23 @@ def print_observation_compact(
     block_count = np.sum(np.any(grid[:, :, 6:9] > 0, axis=2))
     owned_programs = len(np.where(programs == 1)[0])
 
-    print(f"Step {step:4d} | "
-          f"Pos:({player_raw['row']},{player_raw['col']}) "
-          f"HP:{player_raw['hp']} "
-          f"$:{player_raw['credits']:2d} "
-          f"⚡:{player_raw['energy']:2d} "
-          f"Stage:{player_raw['stage']} | "
-          f"Enemies:{enemy_count} "
-          f"Blocks:{block_count} "
-          f"Programs:{owned_programs}/23 | "
-          f"Reward:{reward:+.3f} | "
-          f"Actions:{len(valid_actions) if valid_actions else '?'}/28")
+    print(
+        f"Step {step:4d} | "
+        f"Pos:({player_raw['row']},{player_raw['col']}) "
+        f"HP:{player_raw['hp']} "
+        f"$:{player_raw['credits']:2d} "
+        f"⚡:{player_raw['energy']:2d} "
+        f"Stage:{player_raw['stage']} | "
+        f"Enemies:{enemy_count} "
+        f"Blocks:{block_count} "
+        f"Programs:{owned_programs}/23 | "
+        f"Reward:{reward:+.3f} | "
+        f"Actions:{len(valid_actions) if valid_actions else '?'}/28"
+    )
 
 
 # MARK: Grid Visualization
+
 
 def print_grid_map(grid: np.ndarray, player_pos: tuple):
     """

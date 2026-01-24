@@ -7,37 +7,37 @@ import jax
 import jax.numpy as jnp
 
 from .state import (
-    EnvState,
-    GRID_SIZE,
     BLOCK_EMPTY,
-    PLAYER_MAX_HP,
-    PROGRAM_COSTS,
-    PROGRAM_PUSH,
-    PROGRAM_PULL,
-    PROGRAM_CRASH,
-    PROGRAM_WARP,
-    PROGRAM_POLY,
-    PROGRAM_WAIT,
-    PROGRAM_DEBUG,
-    PROGRAM_ROW,
-    PROGRAM_COL,
-    PROGRAM_UNDO,
-    PROGRAM_STEP,
-    PROGRAM_SIPH_PLUS,
-    PROGRAM_EXCH,
-    PROGRAM_SHOW,
-    PROGRAM_RESET,
-    PROGRAM_CALM,
-    PROGRAM_D_BOM,
-    PROGRAM_DELAY,
-    PROGRAM_ANTI_V,
-    PROGRAM_SCORE,
-    PROGRAM_REDUC,
-    PROGRAM_ATK_PLUS,
-    PROGRAM_HACK,
-    ENEMY_VIRUS,
     ENEMY_DAEMON,
     ENEMY_MAX_HP,
+    ENEMY_VIRUS,
+    GRID_SIZE,
+    PLAYER_MAX_HP,
+    PROGRAM_ANTI_V,
+    PROGRAM_ATK_PLUS,
+    PROGRAM_CALM,
+    PROGRAM_COL,
+    PROGRAM_COSTS,
+    PROGRAM_CRASH,
+    PROGRAM_D_BOM,
+    PROGRAM_DEBUG,
+    PROGRAM_DELAY,
+    PROGRAM_EXCH,
+    PROGRAM_HACK,
+    PROGRAM_POLY,
+    PROGRAM_PULL,
+    PROGRAM_PUSH,
+    PROGRAM_REDUC,
+    PROGRAM_RESET,
+    PROGRAM_ROW,
+    PROGRAM_SCORE,
+    PROGRAM_SHOW,
+    PROGRAM_SIPH_PLUS,
+    PROGRAM_STEP,
+    PROGRAM_UNDO,
+    PROGRAM_WAIT,
+    PROGRAM_WARP,
+    EnvState,
 )
 
 
@@ -91,9 +91,7 @@ def execute_program(
     # SIPH+ - add 1 data siphon
     state = jax.lax.cond(
         prog_idx == PROGRAM_SIPH_PLUS,
-        lambda s: s.replace(
-            player=s.player.replace(data_siphons=s.player.data_siphons + 1)
-        ),
+        lambda s: s.replace(player=s.player.replace(data_siphons=s.player.data_siphons + 1)),
         lambda s: s,
         state,
     )
@@ -101,9 +99,7 @@ def execute_program(
     # RESET - restore HP to max
     state = jax.lax.cond(
         prog_idx == PROGRAM_RESET,
-        lambda s: s.replace(
-            player=s.player.replace(hp=jnp.int32(PLAYER_MAX_HP))
-        ),
+        lambda s: s.replace(player=s.player.replace(hp=jnp.int32(PLAYER_MAX_HP))),
         lambda s: s,
         state,
     )
@@ -137,9 +133,7 @@ def execute_program(
     state = jax.lax.cond(
         can_use_atkplus,
         lambda s: s.replace(
-            player=s.player.replace(
-                attack_damage=jnp.minimum(s.player.attack_damage + 1, 3)
-            ),
+            player=s.player.replace(attack_damage=jnp.minimum(s.player.attack_damage + 1, 3)),
             atk_plus_uses_this_stage=s.atk_plus_uses_this_stage + 1,
         ),
         lambda s: s,
@@ -288,6 +282,7 @@ def execute_program(
 
 def _apply_debug(s: EnvState) -> EnvState:
     """DEBUG - damage and stun enemies ON BLOCKS."""
+
     def damage_on_block(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -308,12 +303,14 @@ def _apply_debug(s: EnvState) -> EnvState:
             lambda: state.enemy_mask,
         )
         return state.replace(enemies=new_enemies, enemy_mask=new_mask), None
+
     state_out, _ = jax.lax.scan(damage_on_block, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
 
 def _apply_row(s: EnvState) -> EnvState:
     """ROW - damage enemies in player's row."""
+
     def damage_in_row(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -333,12 +330,14 @@ def _apply_row(s: EnvState) -> EnvState:
             lambda: state.enemy_mask,
         )
         return state.replace(enemies=new_enemies, enemy_mask=new_mask), None
+
     state_out, _ = jax.lax.scan(damage_in_row, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
 
 def _apply_col(s: EnvState) -> EnvState:
     """COL - damage enemies in player's column."""
+
     def damage_in_col(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -358,12 +357,14 @@ def _apply_col(s: EnvState) -> EnvState:
             lambda: state.enemy_mask,
         )
         return state.replace(enemies=new_enemies, enemy_mask=new_mask), None
+
     state_out, _ = jax.lax.scan(damage_in_col, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
 
 def _apply_crash(s: EnvState) -> EnvState:
     """CRASH - damage ALL enemies (1 damage)."""
+
     def damage_enemy(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -380,12 +381,14 @@ def _apply_crash(s: EnvState) -> EnvState:
             lambda: state.enemy_mask,
         )
         return state.replace(enemies=new_enemies, enemy_mask=new_mask), None
+
     state_out, _ = jax.lax.scan(damage_enemy, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
 
 def _apply_antiv(s: EnvState) -> EnvState:
     """ANTI-V - damage and stun all viruses."""
+
     def damage_virus(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -404,12 +407,14 @@ def _apply_antiv(s: EnvState) -> EnvState:
             lambda: state.enemy_mask,
         )
         return state.replace(enemies=new_enemies, enemy_mask=new_mask), None
+
     state_out, _ = jax.lax.scan(damage_virus, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
 
 def _apply_hack(s: EnvState) -> EnvState:
     """HACK - damage enemies on siphoned cells."""
+
     def damage_on_siphoned(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -430,12 +435,14 @@ def _apply_hack(s: EnvState) -> EnvState:
             lambda: state.enemy_mask,
         )
         return state.replace(enemies=new_enemies, enemy_mask=new_mask), None
+
     state_out, _ = jax.lax.scan(damage_on_siphoned, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
 
 def _apply_push(s: EnvState) -> EnvState:
     """PUSH - push enemies away from player."""
+
     def push_enemy(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -452,12 +459,14 @@ def _apply_push(s: EnvState) -> EnvState:
             lambda: state.enemies,
         )
         return state.replace(enemies=new_enemies), None
+
     state_out, _ = jax.lax.scan(push_enemy, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
 
 def _apply_pull(s: EnvState) -> EnvState:
     """PULL - pull enemies toward player."""
+
     def pull_enemy(carry, idx):
         state = carry
         is_active = state.enemy_mask[idx]
@@ -474,6 +483,7 @@ def _apply_pull(s: EnvState) -> EnvState:
             lambda: state.enemies,
         )
         return state.replace(enemies=new_enemies), None
+
     state_out, _ = jax.lax.scan(pull_enemy, s, jnp.arange(s.enemy_mask.shape[0]))
     return state_out
 
@@ -499,22 +509,19 @@ def _apply_warp(s: EnvState) -> EnvState:
     (_, enemy_idx, _), _ = jax.lax.scan(
         find_enemy_target,
         (jnp.int32(0), jnp.int32(-1), target_choice),
-        jnp.arange(s.enemy_mask.shape[0])
+        jnp.arange(s.enemy_mask.shape[0]),
     )
 
     is_enemy_target = target_choice < enemy_count
     enemy_row = jax.lax.cond(
-        is_enemy_target & (enemy_idx >= 0),
-        lambda: s.enemies[enemy_idx, 1],
-        lambda: jnp.int32(0)
+        is_enemy_target & (enemy_idx >= 0), lambda: s.enemies[enemy_idx, 1], lambda: jnp.int32(0)
     )
     enemy_col = jax.lax.cond(
-        is_enemy_target & (enemy_idx >= 0),
-        lambda: s.enemies[enemy_idx, 2],
-        lambda: jnp.int32(0)
+        is_enemy_target & (enemy_idx >= 0), lambda: s.enemies[enemy_idx, 2], lambda: jnp.int32(0)
     )
 
     trans_target = target_choice - enemy_count
+
     def find_trans_target(carry, idx):
         count, found_idx, target = carry
         is_active = s.trans_mask[idx]
@@ -526,18 +533,18 @@ def _apply_warp(s: EnvState) -> EnvState:
     (_, trans_idx, _), _ = jax.lax.scan(
         find_trans_target,
         (jnp.int32(0), jnp.int32(-1), trans_target),
-        jnp.arange(s.trans_mask.shape[0])
+        jnp.arange(s.trans_mask.shape[0]),
     )
 
     trans_row = jax.lax.cond(
         ~is_enemy_target & (trans_idx >= 0),
         lambda: s.transmissions[trans_idx, 0],
-        lambda: jnp.int32(0)
+        lambda: jnp.int32(0),
     )
     trans_col = jax.lax.cond(
         ~is_enemy_target & (trans_idx >= 0),
         lambda: s.transmissions[trans_idx, 1],
-        lambda: jnp.int32(0)
+        lambda: jnp.int32(0),
     )
 
     new_row = jax.lax.cond(is_enemy_target, lambda: enemy_row, lambda: trans_row)
@@ -547,19 +554,16 @@ def _apply_warp(s: EnvState) -> EnvState:
     new_enemy_mask = jax.lax.cond(
         is_enemy_target & (enemy_idx >= 0),
         lambda: s.enemy_mask.at[enemy_idx].set(False),
-        lambda: s.enemy_mask
+        lambda: s.enemy_mask,
     )
     new_trans_mask = jax.lax.cond(
         ~is_enemy_target & (trans_idx >= 0),
         lambda: s.trans_mask.at[trans_idx].set(False),
-        lambda: s.trans_mask
+        lambda: s.trans_mask,
     )
 
     return s.replace(
-        player=new_player,
-        enemy_mask=new_enemy_mask,
-        trans_mask=new_trans_mask,
-        rng_key=key
+        player=new_player, enemy_mask=new_enemy_mask, trans_mask=new_trans_mask, rng_key=key
     )
 
 
@@ -579,20 +583,19 @@ def _apply_poly(s: EnvState) -> EnvState:
         new_enemies = jax.lax.cond(
             is_active,
             lambda: state.enemies.at[idx, 0].set(new_type).at[idx, 3].set(new_hp),
-            lambda: state.enemies
+            lambda: state.enemies,
         )
         return (state.replace(enemies=new_enemies), key), None
 
     (new_state, new_key), _ = jax.lax.scan(
-        change_enemy_type,
-        (s, key),
-        jnp.arange(s.enemy_mask.shape[0])
+        change_enemy_type, (s, key), jnp.arange(s.enemy_mask.shape[0])
     )
     return new_state.replace(rng_key=new_key)
 
 
 def _apply_dbom(s: EnvState) -> EnvState:
     """D_BOM - destroy nearest daemon, splash damage + stun around it."""
+
     def find_nearest_daemon(carry, idx):
         min_dist, nearest_idx, state = carry
         is_active = state.enemy_mask[idx]
@@ -607,14 +610,18 @@ def _apply_dbom(s: EnvState) -> EnvState:
         return (new_min_dist, new_nearest, state), None
 
     (_, daemon_idx, _), _ = jax.lax.scan(
-        find_nearest_daemon,
-        (jnp.int32(100), jnp.int32(-1), s),
-        jnp.arange(s.enemy_mask.shape[0])
+        find_nearest_daemon, (jnp.int32(100), jnp.int32(-1), s), jnp.arange(s.enemy_mask.shape[0])
     )
 
-    daemon_row = jax.lax.cond(daemon_idx >= 0, lambda: s.enemies[daemon_idx, 1], lambda: jnp.int32(-10))
-    daemon_col = jax.lax.cond(daemon_idx >= 0, lambda: s.enemies[daemon_idx, 2], lambda: jnp.int32(-10))
-    new_mask = jax.lax.cond(daemon_idx >= 0, lambda: s.enemy_mask.at[daemon_idx].set(False), lambda: s.enemy_mask)
+    daemon_row = jax.lax.cond(
+        daemon_idx >= 0, lambda: s.enemies[daemon_idx, 1], lambda: jnp.int32(-10)
+    )
+    daemon_col = jax.lax.cond(
+        daemon_idx >= 0, lambda: s.enemies[daemon_idx, 2], lambda: jnp.int32(-10)
+    )
+    new_mask = jax.lax.cond(
+        daemon_idx >= 0, lambda: s.enemy_mask.at[daemon_idx].set(False), lambda: s.enemy_mask
+    )
 
     def splash_damage(carry, idx):
         state = carry
@@ -631,12 +638,12 @@ def _apply_dbom(s: EnvState) -> EnvState:
         new_enemies = jax.lax.cond(
             should_damage,
             lambda: state.enemies.at[idx, 3].set(new_hp).at[idx, 5].set(jnp.int32(new_hp > 0)),
-            lambda: state.enemies
+            lambda: state.enemies,
         )
         new_enemy_mask = jax.lax.cond(
             should_damage & (new_hp <= 0),
             lambda: state.enemy_mask.at[idx].set(False),
-            lambda: state.enemy_mask
+            lambda: state.enemy_mask,
         )
         return state.replace(enemies=new_enemies, enemy_mask=new_enemy_mask), None
 
@@ -658,9 +665,7 @@ def _apply_reduc(s: EnvState) -> EnvState:
     not_siphoned = ~s.grid_block_siphoned
     should_reduce = has_block & not_siphoned
     new_spawn_count = jnp.where(
-        should_reduce,
-        jnp.maximum(s.grid_block_spawn_count - 1, 0),
-        s.grid_block_spawn_count
+        should_reduce, jnp.maximum(s.grid_block_spawn_count - 1, 0), s.grid_block_spawn_count
     )
     return s.replace(grid_block_spawn_count=new_spawn_count)
 
@@ -682,15 +687,17 @@ def _apply_undo(s: EnvState) -> EnvState:
 
 def _apply_delay(s: EnvState) -> EnvState:
     """DELAY - add 3 turns to all active transmissions."""
+
     def delay_transmission(carry, idx):
         state = carry
         is_active = state.trans_mask[idx]
         new_trans = jax.lax.cond(
             is_active,
             lambda: state.transmissions.at[idx, 2].set(state.transmissions[idx, 2] + 3),
-            lambda: state.transmissions
+            lambda: state.transmissions,
         )
         return state.replace(transmissions=new_trans), None
+
     state_out, _ = jax.lax.scan(delay_transmission, s, jnp.arange(s.trans_mask.shape[0]))
     return state_out
 
@@ -725,7 +732,10 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
             col_dist = jnp.abs(enemy[2] - state.player.col)
             is_adjacent = (row_dist + col_dist) == 1
             return (found | (is_active & is_adjacent), state), None
-        (found, _), _ = jax.lax.scan(check_adjacent, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0]))
+
+        (found, _), _ = jax.lax.scan(
+            check_adjacent, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0])
+        )
         return found
 
     # Check for enemy in row/column
@@ -736,7 +746,10 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
             enemy = state.enemies[idx]
             in_row = enemy[1] == state.player.row
             return (found | (is_active & in_row), state), None
-        (found, _), _ = jax.lax.scan(check_row, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0]))
+
+        (found, _), _ = jax.lax.scan(
+            check_row, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0])
+        )
         return found
 
     def has_enemy_in_col(state):
@@ -746,7 +759,10 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
             enemy = state.enemies[idx]
             in_col = enemy[2] == state.player.col
             return (found | (is_active & in_col), state), None
-        (found, _), _ = jax.lax.scan(check_col, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0]))
+
+        (found, _), _ = jax.lax.scan(
+            check_col, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0])
+        )
         return found
 
     enemy_in_row = has_enemy_in_row(state)
@@ -759,7 +775,10 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
             is_active = state.enemy_mask[idx]
             is_virus = state.enemies[idx, 0] == ENEMY_VIRUS
             return (found | (is_active & is_virus), state), None
-        (found, _), _ = jax.lax.scan(check_virus, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0]))
+
+        (found, _), _ = jax.lax.scan(
+            check_virus, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0])
+        )
         return found
 
     def has_daemon(state):
@@ -768,7 +787,10 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
             is_active = state.enemy_mask[idx]
             is_daemon = state.enemies[idx, 0] == ENEMY_DAEMON
             return (found | (is_active & is_daemon), state), None
-        (found, _), _ = jax.lax.scan(check_daemon, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0]))
+
+        (found, _), _ = jax.lax.scan(
+            check_daemon, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0])
+        )
         return found
 
     has_any_virus = has_virus(state)
@@ -783,7 +805,10 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
             col = state.enemies[idx, 2]
             on_block = state.grid_block_type[row, col] != BLOCK_EMPTY
             return (found | (is_active & on_block), state), None
-        (found, _), _ = jax.lax.scan(check_on_block, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0]))
+
+        (found, _), _ = jax.lax.scan(
+            check_on_block, (jnp.bool_(False), state), jnp.arange(state.enemy_mask.shape[0])
+        )
         return found
 
     enemy_on_block = has_enemy_on_block(state)
@@ -791,9 +816,9 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
     # Check for blocks
     has_siphoned = jnp.any(state.grid_block_siphoned)
     has_unsiphoned_with_spawn = jnp.any(
-        (state.grid_block_type != BLOCK_EMPTY) &
-        ~state.grid_block_siphoned &
-        (state.grid_block_spawn_count > 0)
+        (state.grid_block_type != BLOCK_EMPTY)
+        & ~state.grid_block_siphoned
+        & (state.grid_block_spawn_count > 0)
     )
 
     # Check for transmissions
@@ -810,33 +835,61 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
             col_off = jnp.array([-1, 0, 1, -1, 1, -1, 0, 1])[offset_idx]
             cell_row = player_row + row_off
             cell_col = player_col + col_off
-            in_bounds = (cell_row >= 0) & (cell_row < GRID_SIZE) & (cell_col >= 0) & (cell_col < GRID_SIZE)
+            in_bounds = (
+                (cell_row >= 0) & (cell_row < GRID_SIZE) & (cell_col >= 0) & (cell_col < GRID_SIZE)
+            )
 
             has_block_at = jax.lax.cond(
                 in_bounds,
                 lambda: state.grid_block_type[cell_row, cell_col] != BLOCK_EMPTY,
-                lambda: jnp.bool_(False)
+                lambda: jnp.bool_(False),
             )
 
             def check_enemy_at(state, r, c):
                 def check_one(carry, idx):
                     found, state, r, c = carry
-                    is_at = state.enemy_mask[idx] & (state.enemies[idx, 1] == r) & (state.enemies[idx, 2] == c)
+                    is_at = (
+                        state.enemy_mask[idx]
+                        & (state.enemies[idx, 1] == r)
+                        & (state.enemies[idx, 2] == c)
+                    )
                     return (found | is_at, state, r, c), None
-                (found, _, _, _), _ = jax.lax.scan(check_one, (jnp.bool_(False), state, r, c), jnp.arange(state.enemy_mask.shape[0]))
+
+                (found, _, _, _), _ = jax.lax.scan(
+                    check_one,
+                    (jnp.bool_(False), state, r, c),
+                    jnp.arange(state.enemy_mask.shape[0]),
+                )
                 return found
 
-            has_enemy_at = jax.lax.cond(in_bounds, lambda: check_enemy_at(state, cell_row, cell_col), lambda: jnp.bool_(False))
+            has_enemy_at = jax.lax.cond(
+                in_bounds,
+                lambda: check_enemy_at(state, cell_row, cell_col),
+                lambda: jnp.bool_(False),
+            )
 
             def check_trans_at(state, r, c):
                 def check_one(carry, idx):
                     found, state, r, c = carry
-                    is_at = state.trans_mask[idx] & (state.transmissions[idx, 0] == r) & (state.transmissions[idx, 1] == c)
+                    is_at = (
+                        state.trans_mask[idx]
+                        & (state.transmissions[idx, 0] == r)
+                        & (state.transmissions[idx, 1] == c)
+                    )
                     return (found | is_at, state, r, c), None
-                (found, _, _, _), _ = jax.lax.scan(check_one, (jnp.bool_(False), state, r, c), jnp.arange(state.trans_mask.shape[0]))
+
+                (found, _, _, _), _ = jax.lax.scan(
+                    check_one,
+                    (jnp.bool_(False), state, r, c),
+                    jnp.arange(state.trans_mask.shape[0]),
+                )
                 return found
 
-            has_trans_at = jax.lax.cond(in_bounds, lambda: check_trans_at(state, cell_row, cell_col), lambda: jnp.bool_(False))
+            has_trans_at = jax.lax.cond(
+                in_bounds,
+                lambda: check_trans_at(state, cell_row, cell_col),
+                lambda: jnp.bool_(False),
+            )
 
             return (found | has_block_at | has_enemy_at | has_trans_at, state), None
 
@@ -846,32 +899,79 @@ def is_program_valid(state: EnvState, prog_idx: jnp.int32) -> jnp.bool_:
     has_surrounding = has_surrounding_targets(state)
 
     # Apply applicability based on program type
-    needs_enemies = (prog_idx == PROGRAM_PUSH) | (prog_idx == PROGRAM_PULL) | (prog_idx == PROGRAM_POLY)
+    needs_enemies = (
+        (prog_idx == PROGRAM_PUSH) | (prog_idx == PROGRAM_PULL) | (prog_idx == PROGRAM_POLY)
+    )
     enemy_check = jax.lax.cond(needs_enemies, lambda: has_enemies, lambda: jnp.bool_(True))
 
-    warp_check = jax.lax.cond(prog_idx == PROGRAM_WARP, lambda: has_enemies | has_transmissions, lambda: jnp.bool_(True))
-    crash_check = jax.lax.cond(prog_idx == PROGRAM_CRASH, lambda: has_surrounding, lambda: jnp.bool_(True))
-    debug_check = jax.lax.cond(prog_idx == PROGRAM_DEBUG, lambda: enemy_on_block, lambda: jnp.bool_(True))
+    warp_check = jax.lax.cond(
+        prog_idx == PROGRAM_WARP, lambda: has_enemies | has_transmissions, lambda: jnp.bool_(True)
+    )
+    crash_check = jax.lax.cond(
+        prog_idx == PROGRAM_CRASH, lambda: has_surrounding, lambda: jnp.bool_(True)
+    )
+    debug_check = jax.lax.cond(
+        prog_idx == PROGRAM_DEBUG, lambda: enemy_on_block, lambda: jnp.bool_(True)
+    )
     row_check = jax.lax.cond(prog_idx == PROGRAM_ROW, lambda: enemy_in_row, lambda: jnp.bool_(True))
     col_check = jax.lax.cond(prog_idx == PROGRAM_COL, lambda: enemy_in_col, lambda: jnp.bool_(True))
-    undo_check = jax.lax.cond(prog_idx == PROGRAM_UNDO, lambda: state.previous_state_valid, lambda: jnp.bool_(True))
-    exch_check = jax.lax.cond(prog_idx == PROGRAM_EXCH, lambda: state.player.credits > 0, lambda: jnp.bool_(True))
-    show_check = jax.lax.cond(prog_idx == PROGRAM_SHOW, lambda: ~state.show_activated, lambda: jnp.bool_(True))
-    reset_check = jax.lax.cond(prog_idx == PROGRAM_RESET, lambda: state.player.hp < PLAYER_MAX_HP, lambda: jnp.bool_(True))
-    calm_check = jax.lax.cond(prog_idx == PROGRAM_CALM, lambda: ~state.scheduled_tasks_disabled, lambda: jnp.bool_(True))
-    dbom_check = jax.lax.cond(prog_idx == PROGRAM_D_BOM, lambda: has_any_daemon, lambda: jnp.bool_(True))
-    score_check = jax.lax.cond(prog_idx == PROGRAM_SCORE, lambda: state.stage < 8, lambda: jnp.bool_(True))
-    delay_check = jax.lax.cond(prog_idx == PROGRAM_DELAY, lambda: has_transmissions, lambda: jnp.bool_(True))
-    antiv_check = jax.lax.cond(prog_idx == PROGRAM_ANTI_V, lambda: has_any_virus, lambda: jnp.bool_(True))
-    reduc_check = jax.lax.cond(prog_idx == PROGRAM_REDUC, lambda: has_unsiphoned_with_spawn, lambda: jnp.bool_(True))
+    undo_check = jax.lax.cond(
+        prog_idx == PROGRAM_UNDO, lambda: state.previous_state_valid, lambda: jnp.bool_(True)
+    )
+    exch_check = jax.lax.cond(
+        prog_idx == PROGRAM_EXCH, lambda: state.player.credits > 0, lambda: jnp.bool_(True)
+    )
+    show_check = jax.lax.cond(
+        prog_idx == PROGRAM_SHOW, lambda: ~state.show_activated, lambda: jnp.bool_(True)
+    )
+    reset_check = jax.lax.cond(
+        prog_idx == PROGRAM_RESET, lambda: state.player.hp < PLAYER_MAX_HP, lambda: jnp.bool_(True)
+    )
+    calm_check = jax.lax.cond(
+        prog_idx == PROGRAM_CALM, lambda: ~state.scheduled_tasks_disabled, lambda: jnp.bool_(True)
+    )
+    dbom_check = jax.lax.cond(
+        prog_idx == PROGRAM_D_BOM, lambda: has_any_daemon, lambda: jnp.bool_(True)
+    )
+    score_check = jax.lax.cond(
+        prog_idx == PROGRAM_SCORE, lambda: state.stage < 8, lambda: jnp.bool_(True)
+    )
+    delay_check = jax.lax.cond(
+        prog_idx == PROGRAM_DELAY, lambda: has_transmissions, lambda: jnp.bool_(True)
+    )
+    antiv_check = jax.lax.cond(
+        prog_idx == PROGRAM_ANTI_V, lambda: has_any_virus, lambda: jnp.bool_(True)
+    )
+    reduc_check = jax.lax.cond(
+        prog_idx == PROGRAM_REDUC, lambda: has_unsiphoned_with_spawn, lambda: jnp.bool_(True)
+    )
     atkplus_check = jax.lax.cond(
         prog_idx == PROGRAM_ATK_PLUS,
         lambda: (state.atk_plus_uses_this_stage < 2) & (state.player.attack_damage < 3),
-        lambda: jnp.bool_(True)
+        lambda: jnp.bool_(True),
     )
-    hack_check = jax.lax.cond(prog_idx == PROGRAM_HACK, lambda: has_siphoned, lambda: jnp.bool_(True))
+    hack_check = jax.lax.cond(
+        prog_idx == PROGRAM_HACK, lambda: has_siphoned, lambda: jnp.bool_(True)
+    )
 
-    return (base_valid & enemy_check & warp_check & crash_check & debug_check &
-            row_check & col_check & undo_check & exch_check & show_check &
-            reset_check & calm_check & dbom_check & delay_check & antiv_check &
-            score_check & reduc_check & atkplus_check & hack_check)
+    return (
+        base_valid
+        & enemy_check
+        & warp_check
+        & crash_check
+        & debug_check
+        & row_check
+        & col_check
+        & undo_check
+        & exch_check
+        & show_check
+        & reset_check
+        & calm_check
+        & dbom_check
+        & delay_check
+        & antiv_check
+        & score_check
+        & reduc_check
+        & atkplus_check
+        & hack_check
+    )

@@ -5,8 +5,7 @@ Allows historical analysis of training runs and reward breakdown trends.
 
 import sqlite3
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class TrainingDB:
@@ -64,7 +63,7 @@ class TrainingDB:
 
         self.conn.commit()
 
-    def log_episode(self, run_id: str, episode_num: int, timestep: int, stats: Dict[str, Any]):
+    def log_episode(self, run_id: str, episode_num: int, timestep: int, stats: dict[str, Any]):
         """
         Log an episode to the database.
 
@@ -79,7 +78,8 @@ class TrainingDB:
 
         total_reward = sum(breakdown.values()) if breakdown else 0
 
-        self.conn.execute("""
+        self.conn.execute(
+            """
             INSERT INTO episodes (
                 run_id, timestamp, episode_num, timestep, total_reward,
                 reward_stage, reward_kills, reward_distance, reward_score,
@@ -90,36 +90,38 @@ class TrainingDB:
                 programs_used, highest_stage, steps,
                 action_moves, action_siphons, action_programs
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            run_id,
-            datetime.now().isoformat(),
-            episode_num,
-            timestep,
-            total_reward,
-            breakdown.get("stage", 0),
-            breakdown.get("kills", 0),
-            breakdown.get("distance", 0),
-            breakdown.get("score", 0),
-            breakdown.get("dataSiphon", 0),
-            breakdown.get("victory", 0),
-            breakdown.get("death", 0),
-            breakdown.get("resourceGain", 0),
-            breakdown.get("resourceHolding", 0),
-            breakdown.get("damagePenalty", 0),
-            breakdown.get("hpRecovery", 0),
-            breakdown.get("siphonQuality", 0),
-            breakdown.get("programWaste", 0),
-            breakdown.get("siphonDeathPenalty", 0),
-            stats.get("programs_used", 0),
-            stats.get("highest_stage", 1),
-            stats.get("steps", 0),
-            actions.get("move", 0),
-            actions.get("siphon", 0),
-            actions.get("program", 0),
-        ))
+        """,
+            (
+                run_id,
+                datetime.now().isoformat(),
+                episode_num,
+                timestep,
+                total_reward,
+                breakdown.get("stage", 0),
+                breakdown.get("kills", 0),
+                breakdown.get("distance", 0),
+                breakdown.get("score", 0),
+                breakdown.get("dataSiphon", 0),
+                breakdown.get("victory", 0),
+                breakdown.get("death", 0),
+                breakdown.get("resourceGain", 0),
+                breakdown.get("resourceHolding", 0),
+                breakdown.get("damagePenalty", 0),
+                breakdown.get("hpRecovery", 0),
+                breakdown.get("siphonQuality", 0),
+                breakdown.get("programWaste", 0),
+                breakdown.get("siphonDeathPenalty", 0),
+                stats.get("programs_used", 0),
+                stats.get("highest_stage", 1),
+                stats.get("steps", 0),
+                actions.get("move", 0),
+                actions.get("siphon", 0),
+                actions.get("program", 0),
+            ),
+        )
         self.conn.commit()
 
-    def get_run_summary(self, run_id: str) -> Dict[str, Any]:
+    def get_run_summary(self, run_id: str) -> dict[str, Any]:
         """
         Get summary statistics for a training run.
 
@@ -129,7 +131,8 @@ class TrainingDB:
         Returns:
             Dictionary with summary statistics
         """
-        cursor = self.conn.execute("""
+        cursor = self.conn.execute(
+            """
             SELECT
                 COUNT(*) as episode_count,
                 AVG(total_reward) as avg_reward,
@@ -140,7 +143,9 @@ class TrainingDB:
                 SUM(reward_victory) as total_victories
             FROM episodes
             WHERE run_id = ?
-        """, (run_id,))
+        """,
+            (run_id,),
+        )
 
         row = cursor.fetchone()
         if row:
@@ -166,7 +171,8 @@ class TrainingDB:
         Returns:
             List of episode dictionaries
         """
-        cursor = self.conn.execute("""
+        cursor = self.conn.execute(
+            """
             SELECT
                 episode_num, timestep, total_reward, highest_stage, steps,
                 reward_stage, reward_kills, reward_distance, reward_score,
@@ -178,7 +184,9 @@ class TrainingDB:
             WHERE run_id = ?
             ORDER BY episode_num DESC
             LIMIT ?
-        """, (run_id, limit))
+        """,
+            (run_id, limit),
+        )
 
         return [
             {
@@ -202,7 +210,7 @@ class TrainingDB:
                     "siphonQuality": row[16],
                     "programWaste": row[17],
                     "siphonDeathPenalty": row[18],
-                }
+                },
             }
             for row in cursor.fetchall()
         ]
@@ -215,5 +223,5 @@ class TrainingDB:
         """Cleanup on deletion."""
         try:
             self.close()
-        except:
+        except Exception:
             pass

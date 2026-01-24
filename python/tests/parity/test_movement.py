@@ -14,26 +14,25 @@ These tests verify that the Swift environment correctly implements movement mech
 as documented in specs/game-mechanics.md.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Transmission,
-    Resource,
-    Observation,
-    ACTION_MOVE_UP,
     ACTION_MOVE_DOWN,
     ACTION_MOVE_LEFT,
     ACTION_MOVE_RIGHT,
-    GRID_SIZE,
+    ACTION_MOVE_UP,
+    Block,
+    Enemy,
+    GameState,
+    Observation,
+    PlayerState,
+    Resource,
+    Transmission,
 )
 
-
 # MARK: - Helper Functions
+
 
 def get_player_position(obs: Observation) -> tuple[int, int]:
     """Extract player row, col from observation."""
@@ -75,6 +74,7 @@ def get_enemy_at(obs: Observation, row: int, col: int) -> dict | None:
 
 # MARK: - Test 2.1: Move to Empty Cell
 
+
 class TestMoveToEmptyCell:
     """Test 2.1: Move to empty cell (all 4 directions)."""
 
@@ -82,8 +82,9 @@ class TestMoveToEmptyCell:
     def test_move_up_to_empty_cell(self, env):
         """Moving up from center should increase row by 1."""
         state = GameState(
-            player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0,
-                             dataSiphons=0, attackDamage=1, score=0),
+            player=PlayerState(
+                row=3, col=3, hp=3, credits=0, energy=0, dataSiphons=0, attackDamage=1, score=0
+            ),
             enemies=[],
             transmissions=[],
             blocks=[],
@@ -92,7 +93,7 @@ class TestMoveToEmptyCell:
             stage=1,
             turn=0,
             showActivated=False,
-            scheduledTasksDisabled=False
+            scheduledTasksDisabled=False,
         )
         env.set_state(state)
 
@@ -105,11 +106,7 @@ class TestMoveToEmptyCell:
     @pytest.mark.requires_set_state
     def test_move_down_to_empty_cell(self, env):
         """Moving down from center should decrease row by 1."""
-        state = GameState(
-            player=PlayerState(row=3, col=3, hp=3),
-            enemies=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=3, col=3, hp=3), enemies=[], stage=1)
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_DOWN)
@@ -121,11 +118,7 @@ class TestMoveToEmptyCell:
     @pytest.mark.requires_set_state
     def test_move_left_to_empty_cell(self, env):
         """Moving left should decrease column by 1."""
-        state = GameState(
-            player=PlayerState(row=3, col=3, hp=3),
-            enemies=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=3, col=3, hp=3), enemies=[], stage=1)
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_LEFT)
@@ -137,11 +130,7 @@ class TestMoveToEmptyCell:
     @pytest.mark.requires_set_state
     def test_move_right_to_empty_cell(self, env):
         """Moving right should increase column by 1."""
-        state = GameState(
-            player=PlayerState(row=3, col=3, hp=3),
-            enemies=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=3, col=3, hp=3), enemies=[], stage=1)
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_RIGHT)
@@ -153,67 +142,57 @@ class TestMoveToEmptyCell:
 
 # MARK: - Test 2.2: Move Blocked by Grid Edge
 
+
 class TestMoveBlockedByEdge:
     """Test 2.2: Movement blocked by grid edges."""
 
     @pytest.mark.requires_set_state
     def test_move_blocked_by_top_edge(self, env):
         """Moving up from top row should be invalid."""
-        state = GameState(
-            player=PlayerState(row=5, col=3, hp=3),
-            enemies=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=5, col=3, hp=3), enemies=[], stage=1)
         env.set_state(state)
 
         valid_actions = env.get_valid_actions()
-        assert ACTION_MOVE_UP not in valid_actions, \
-            f"Move up should be blocked at top edge, but found in {valid_actions}"
+        assert (
+            ACTION_MOVE_UP not in valid_actions
+        ), f"Move up should be blocked at top edge, but found in {valid_actions}"
 
     @pytest.mark.requires_set_state
     def test_move_blocked_by_bottom_edge(self, env):
         """Moving down from bottom row should be invalid."""
-        state = GameState(
-            player=PlayerState(row=0, col=3, hp=3),
-            enemies=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=0, col=3, hp=3), enemies=[], stage=1)
         env.set_state(state)
 
         valid_actions = env.get_valid_actions()
-        assert ACTION_MOVE_DOWN not in valid_actions, \
-            f"Move down should be blocked at bottom edge, but found in {valid_actions}"
+        assert (
+            ACTION_MOVE_DOWN not in valid_actions
+        ), f"Move down should be blocked at bottom edge, but found in {valid_actions}"
 
     @pytest.mark.requires_set_state
     def test_move_blocked_by_left_edge(self, env):
         """Moving left from left edge should be invalid."""
-        state = GameState(
-            player=PlayerState(row=3, col=0, hp=3),
-            enemies=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=3, col=0, hp=3), enemies=[], stage=1)
         env.set_state(state)
 
         valid_actions = env.get_valid_actions()
-        assert ACTION_MOVE_LEFT not in valid_actions, \
-            f"Move left should be blocked at left edge, but found in {valid_actions}"
+        assert (
+            ACTION_MOVE_LEFT not in valid_actions
+        ), f"Move left should be blocked at left edge, but found in {valid_actions}"
 
     @pytest.mark.requires_set_state
     def test_move_blocked_by_right_edge(self, env):
         """Moving right from right edge should be invalid."""
-        state = GameState(
-            player=PlayerState(row=3, col=5, hp=3),
-            enemies=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=3, col=5, hp=3), enemies=[], stage=1)
         env.set_state(state)
 
         valid_actions = env.get_valid_actions()
-        assert ACTION_MOVE_RIGHT not in valid_actions, \
-            f"Move right should be blocked at right edge, but found in {valid_actions}"
+        assert (
+            ACTION_MOVE_RIGHT not in valid_actions
+        ), f"Move right should be blocked at right edge, but found in {valid_actions}"
 
 
 # MARK: - Test 2.3: Move Blocked by Block
+
 
 class TestMoveBlockedByBlock:
     """Test 2.3: Movement blocked by blocks."""
@@ -225,16 +204,18 @@ class TestMoveBlockedByBlock:
             player=PlayerState(row=3, col=3, hp=3),
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         valid_actions = env.get_valid_actions()
-        assert ACTION_MOVE_UP not in valid_actions, \
-            f"Move up should be blocked by block, but found in {valid_actions}"
+        assert (
+            ACTION_MOVE_UP not in valid_actions
+        ), f"Move up should be blocked by block, but found in {valid_actions}"
 
 
 # MARK: - Test 2.4: Move Onto Cell with Data Siphon
+
 
 class TestMoveCollectsDataSiphon:
     """Test 2.4: Moving onto data siphon cell collects it."""
@@ -243,11 +224,12 @@ class TestMoveCollectsDataSiphon:
     def test_move_collects_data_siphon(self, env):
         """Walking onto a data siphon cell should collect it."""
         state = GameState(
-            player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0,
-                             dataSiphons=0, attackDamage=1, score=0),
+            player=PlayerState(
+                row=3, col=3, hp=3, credits=0, energy=0, dataSiphons=0, attackDamage=1, score=0
+            ),
             resources=[Resource(row=4, col=3, dataSiphon=True, credits=0, energy=0)],
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -265,10 +247,13 @@ class TestMoveCollectsDataSiphon:
         assert siphons_after == 1, f"Should have 1 siphon after collecting, got {siphons_after}"
 
         # Data siphon collection gives reward
-        assert result.reward >= 0.5, f"Expected positive reward for collecting siphon, got {result.reward}"
+        assert (
+            result.reward >= 0.5
+        ), f"Expected positive reward for collecting siphon, got {result.reward}"
 
 
 # MARK: - Test 2.5: Line-of-Sight Attack on Distant Enemy
+
 
 class TestLineOfSightAttack:
     """Test 2.5: Line-of-sight attacks on distant enemies."""
@@ -277,10 +262,13 @@ class TestLineOfSightAttack:
     def test_line_of_sight_attack_distant_enemy(self, env):
         """Moving toward a distant enemy in line of sight should attack, not move."""
         state = GameState(
-            player=PlayerState(row=0, col=3, hp=3, credits=0, energy=0,
-                             dataSiphons=0, attackDamage=1, score=0),
-            enemies=[Enemy(type="virus", row=5, col=3, hp=1, stunned=False)],  # 5 cells away, same column
-            stage=1
+            player=PlayerState(
+                row=0, col=3, hp=3, credits=0, energy=0, dataSiphons=0, attackDamage=1, score=0
+            ),
+            enemies=[
+                Enemy(type="virus", row=5, col=3, hp=1, stunned=False)
+            ],  # 5 cells away, same column
+            stage=1,
         )
         env.set_state(state)
 
@@ -300,6 +288,7 @@ class TestLineOfSightAttack:
 
 # MARK: - Test 2.6: Line-of-Sight Attack on Enemy on Block
 
+
 class TestLineOfSightAttackOnBlock:
     """Test 2.6: Line-of-sight attack on enemy standing on a block."""
 
@@ -310,7 +299,7 @@ class TestLineOfSightAttackOnBlock:
             player=PlayerState(row=0, col=3, hp=3, attackDamage=1),
             enemies=[Enemy(type="glitch", row=4, col=3, hp=1, stunned=False)],
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -327,6 +316,7 @@ class TestLineOfSightAttackOnBlock:
 
 # MARK: - Test 2.7: Attack and Kill Adjacent Enemy
 
+
 class TestAttackKillsEnemy:
     """Test 2.7: Moving into adjacent enemy kills it."""
 
@@ -336,7 +326,7 @@ class TestAttackKillsEnemy:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, attackDamage=1),
             enemies=[Enemy(type="virus", row=4, col=3, hp=1, stunned=False)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -356,6 +346,7 @@ class TestAttackKillsEnemy:
 
 # MARK: - Test 2.8: Attack Enemy That Survives
 
+
 class TestAttackEnemySurvives:
     """Test 2.8: Attacking enemy that survives."""
 
@@ -365,7 +356,7 @@ class TestAttackEnemySurvives:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, attackDamage=1),
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -383,6 +374,7 @@ class TestAttackEnemySurvives:
 
 # MARK: - Test 2.9: Attack Transmission
 
+
 class TestAttackTransmission:
     """Test 2.9: Moving into transmission destroys it."""
 
@@ -393,7 +385,7 @@ class TestAttackTransmission:
             player=PlayerState(row=3, col=3, hp=3),
             transmissions=[Transmission(row=4, col=3, turnsRemaining=3, enemyType="virus")],
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 

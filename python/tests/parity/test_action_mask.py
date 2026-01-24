@@ -14,30 +14,28 @@ These tests verify that the Swift environment correctly implements action maskin
 """
 
 import pytest
-import numpy as np
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Observation,
-    ACTION_MOVE_UP,
     ACTION_MOVE_DOWN,
     ACTION_MOVE_LEFT,
     ACTION_MOVE_RIGHT,
+    ACTION_MOVE_UP,
     ACTION_SIPHON,
-    PROGRAM_PUSH,
+    PROGRAM_ANTI_V,
     PROGRAM_CRASH,
     PROGRAM_D_BOM,
-    PROGRAM_ANTI_V,
-    PROGRAM_SHOW,
+    PROGRAM_PUSH,
     PROGRAM_RESET,
+    PROGRAM_SHOW,
     PROGRAM_UNDO,
+    Block,
+    Enemy,
+    GameState,
+    PlayerState,
 )
 
-
 # MARK: - Test 2.56: Movement Masked by Edges
+
 
 class TestMovementMaskedByEdges:
     """Test 2.56: Movement is masked at grid edges."""
@@ -45,10 +43,7 @@ class TestMovementMaskedByEdges:
     @pytest.mark.requires_set_state
     def test_movement_masked_at_bottom_left(self, env):
         """At (0,0), down and left should be masked."""
-        state = GameState(
-            player=PlayerState(row=0, col=0, hp=3),
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=0, col=0, hp=3), stage=1)
         env.set_state(state)
 
         valid = env.get_valid_actions()
@@ -60,10 +55,7 @@ class TestMovementMaskedByEdges:
     @pytest.mark.requires_set_state
     def test_movement_masked_at_top_right(self, env):
         """At (5,5), up and right should be masked."""
-        state = GameState(
-            player=PlayerState(row=5, col=5, hp=3),
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=5, col=5, hp=3), stage=1)
         env.set_state(state)
 
         valid = env.get_valid_actions()
@@ -75,6 +67,7 @@ class TestMovementMaskedByEdges:
 
 # MARK: - Test 2.57: Movement Masked by Blocks
 
+
 class TestMovementMaskedByBlocks:
     """Test 2.57: Movement is masked by blocks."""
 
@@ -84,7 +77,7 @@ class TestMovementMaskedByBlocks:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -97,16 +90,14 @@ class TestMovementMaskedByBlocks:
 
 # MARK: - Test 2.58: Siphon Validity
 
+
 class TestSiphonValidity:
     """Test 2.58: Siphon validity based on data siphons."""
 
     @pytest.mark.requires_set_state
     def test_siphon_valid_with_siphons(self, env):
         """Siphon should be valid when player has data siphons."""
-        state = GameState(
-            player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=3, col=3, hp=3, dataSiphons=1), stage=1)
         env.set_state(state)
 
         valid = env.get_valid_actions()
@@ -115,10 +106,7 @@ class TestSiphonValidity:
     @pytest.mark.requires_set_state
     def test_siphon_invalid_without_siphons(self, env):
         """Siphon should be invalid without data siphons."""
-        state = GameState(
-            player=PlayerState(row=3, col=3, hp=3, dataSiphons=0),
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=3, col=3, hp=3, dataSiphons=0), stage=1)
         env.set_state(state)
 
         valid = env.get_valid_actions()
@@ -126,6 +114,7 @@ class TestSiphonValidity:
 
 
 # MARK: - Test 2.59: Programs Masked When Not Owned
+
 
 class TestProgramsMaskedWhenNotOwned:
     """Test 2.59: Programs are masked when not owned."""
@@ -137,7 +126,7 @@ class TestProgramsMaskedWhenNotOwned:
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
             owned_programs=[],  # No programs owned
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -147,6 +136,7 @@ class TestProgramsMaskedWhenNotOwned:
 
 
 # MARK: - Test 2.60: Programs Masked When Insufficient Credits
+
 
 class TestProgramsMaskedInsufficientCredits:
     """Test 2.60: Programs are masked when insufficient credits."""
@@ -158,15 +148,18 @@ class TestProgramsMaskedInsufficientCredits:
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=10),
             enemies=[Enemy(type="virus", row=4, col=3, hp=2)],  # Adjacent for applicability
             owned_programs=[PROGRAM_CRASH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         valid = env.get_valid_actions()
-        assert PROGRAM_CRASH not in valid, f"CRASH should be masked (0 credits, needs 3), got {valid}"
+        assert (
+            PROGRAM_CRASH not in valid
+        ), f"CRASH should be masked (0 credits, needs 3), got {valid}"
 
 
 # MARK: - Test 2.61: Programs Masked When Insufficient Energy
+
 
 class TestProgramsMaskedInsufficientEnergy:
     """Test 2.61: Programs are masked when insufficient energy."""
@@ -178,7 +171,7 @@ class TestProgramsMaskedInsufficientEnergy:
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=0),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],
             owned_programs=[PROGRAM_PUSH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -187,6 +180,7 @@ class TestProgramsMaskedInsufficientEnergy:
 
 
 # MARK: - Test 2.62: Programs Masked by Applicability Conditions
+
 
 class TestProgramsMaskedByApplicability:
     """Test 2.62: Programs are masked when conditions not met."""
@@ -198,7 +192,7 @@ class TestProgramsMaskedByApplicability:
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
             enemies=[],  # No enemies
             owned_programs=[PROGRAM_PUSH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -212,7 +206,7 @@ class TestProgramsMaskedByApplicability:
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],  # Not a daemon
             owned_programs=[PROGRAM_D_BOM],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -226,7 +220,7 @@ class TestProgramsMaskedByApplicability:
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             enemies=[Enemy(type="daemon", row=5, col=5, hp=3)],  # Not a virus
             owned_programs=[PROGRAM_ANTI_V],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -240,7 +234,7 @@ class TestProgramsMaskedByApplicability:
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             showActivated=True,
             owned_programs=[PROGRAM_SHOW],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -253,7 +247,7 @@ class TestProgramsMaskedByApplicability:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=10),  # Full HP
             owned_programs=[PROGRAM_RESET],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -269,7 +263,7 @@ class TestProgramsMaskedByApplicability:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             owned_programs=[PROGRAM_UNDO],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -278,6 +272,7 @@ class TestProgramsMaskedByApplicability:
 
 
 # MARK: - Test 2.63: Mask Updates After State Changes
+
 
 class TestMaskUpdatesAfterChanges:
     """Test 2.63: Mask updates correctly after state changes."""
@@ -290,7 +285,7 @@ class TestMaskUpdatesAfterChanges:
             player=PlayerState(row=3, col=3, hp=3, energy=10),
             enemies=[],
             owned_programs=[PROGRAM_PUSH],
-            stage=1
+            stage=1,
         )
         env.set_state(state1)
         valid1 = env.get_valid_actions()
@@ -301,7 +296,7 @@ class TestMaskUpdatesAfterChanges:
             player=PlayerState(row=3, col=3, hp=3, energy=10),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],
             owned_programs=[PROGRAM_PUSH],
-            stage=1
+            stage=1,
         )
         env.set_state(state2)
         valid2 = env.get_valid_actions()
@@ -314,7 +309,7 @@ class TestMaskUpdatesAfterChanges:
         state1 = GameState(
             player=PlayerState(row=3, col=3, hp=3, energy=10),
             owned_programs=[PROGRAM_RESET],
-            stage=1
+            stage=1,
         )
         env.set_state(state1)
         valid1 = env.get_valid_actions()
@@ -324,7 +319,7 @@ class TestMaskUpdatesAfterChanges:
         state2 = GameState(
             player=PlayerState(row=3, col=3, hp=1, energy=10),
             owned_programs=[PROGRAM_RESET],
-            stage=1
+            stage=1,
         )
         env.set_state(state2)
         valid2 = env.get_valid_actions()

@@ -8,27 +8,27 @@ This module provides the main training function that:
 - Tracks training metrics
 """
 
+from typing import NamedTuple
+
 import jax
 import jax.numpy as jnp
 import optax
-from flax import struct
 from flax.training.train_state import TrainState
-from typing import Tuple, Any, NamedTuple
 
-from .env_wrapper import HackMatrixGymnax, GymnaxEnvState, OBS_SIZE
-from .masked_ppo import (
-    ActorCritic,
-    Transition,
-    masked_categorical,
-    compute_gae,
-    ppo_loss,
-    init_network,
-)
 from .config import TrainConfig
+from .env_wrapper import OBS_SIZE, GymnaxEnvState, HackMatrixGymnax
+from .masked_ppo import (
+    Transition,
+    compute_gae,
+    init_network,
+    masked_categorical,
+    ppo_loss,
+)
 
 
 class RunnerState(NamedTuple):
     """State carried through training loop."""
+
     train_state: TrainState
     env_state: GymnaxEnvState
     obs: jax.Array
@@ -50,7 +50,7 @@ def make_train(config: TrainConfig, env: HackMatrixGymnax = None):
     if env is None:
         env = HackMatrixGymnax()
 
-    def train(key: jax.Array) -> Tuple[RunnerState, dict]:
+    def train(key: jax.Array) -> tuple[RunnerState, dict]:
         """Run complete training loop.
 
         Args:
@@ -99,7 +99,7 @@ def make_train(config: TrainConfig, env: HackMatrixGymnax = None):
         )
 
         # Training loop
-        def _update_step(runner_state: RunnerState, _) -> Tuple[RunnerState, dict]:
+        def _update_step(runner_state: RunnerState, _) -> tuple[RunnerState, dict]:
             """Single PPO update step."""
             train_state, env_state, obs, key, update_step = runner_state
 
@@ -127,15 +127,11 @@ def make_train(config: TrainConfig, env: HackMatrixGymnax = None):
                     return action, log_prob
 
                 action_keys = jax.random.split(action_key, config.num_envs)
-                actions, log_probs = jax.vmap(sample_action)(
-                    logits, action_masks, action_keys
-                )
+                actions, log_probs = jax.vmap(sample_action)(logits, action_masks, action_keys)
 
                 # Step environments
                 step_keys = jax.random.split(step_key, config.num_envs)
-                step_fn = jax.vmap(
-                    lambda k, s, a: env.step(k, s, a, env.default_params)
-                )
+                step_fn = jax.vmap(lambda k, s, a: env.step(k, s, a, env.default_params))
                 next_obs, next_env_state, rewards, dones, infos = step_fn(
                     step_keys, env_state, actions
                 )
@@ -150,9 +146,7 @@ def make_train(config: TrainConfig, env: HackMatrixGymnax = None):
                     )
 
                 reset_keys = jax.random.split(step_key, config.num_envs)
-                env_state, obs = jax.vmap(handle_reset)(
-                    dones, next_env_state, next_obs, reset_keys
-                )
+                env_state, obs = jax.vmap(handle_reset)(dones, next_env_state, next_obs, reset_keys)
 
                 transition = Transition(
                     obs=obs,
@@ -281,9 +275,7 @@ def make_train(config: TrainConfig, env: HackMatrixGymnax = None):
             # Add rollout info
             metrics["mean_reward"] = transitions.reward.mean()
             done_count = transitions.done.sum()
-            metrics["mean_episode_length"] = (~transitions.done).sum() / jnp.maximum(
-                done_count, 1
-            )
+            metrics["mean_episode_length"] = (~transitions.done).sum() / jnp.maximum(done_count, 1)
 
             new_runner_state = RunnerState(
                 train_state=train_state,
@@ -359,9 +351,7 @@ def evaluate(
 
         max_steps = 1000
         init_carry = (env_state, obs, key, 0.0, False)
-        (_, _, _, total_reward, _), _ = jax.lax.scan(
-            _step, init_carry, None, length=max_steps
-        )
+        (_, _, _, total_reward, _), _ = jax.lax.scan(_step, init_carry, None, length=max_steps)
 
         return total_reward
 

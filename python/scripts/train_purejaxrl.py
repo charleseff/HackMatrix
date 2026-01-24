@@ -27,7 +27,6 @@ if "JAX_COMPILATION_CACHE_DIR" not in os.environ:
     os.environ["JAX_COMPILATION_CACHE_DIR"] = cache_dir
 
 import jax
-import jax.numpy as jnp
 
 # Add python directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -35,18 +34,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hackmatrix.purejaxrl import (
     HackMatrixGymnax,
     TrainConfig,
-    make_train,
     get_device_config,
+    make_train,
 )
+from hackmatrix.purejaxrl.checkpointing import save_params_npz
 from hackmatrix.purejaxrl.config import auto_tune_for_device
 from hackmatrix.purejaxrl.logging import TrainingLogger, print_config
-from hackmatrix.purejaxrl.checkpointing import save_checkpoint, save_params_npz
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Train HackMatrix agent with PureJaxRL"
-    )
+    parser = argparse.ArgumentParser(description="Train HackMatrix agent with PureJaxRL")
 
     # Environment
     parser.add_argument(
@@ -74,31 +71,21 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=2.5e-4, help="Learning rate")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
     parser.add_argument("--gae-lambda", type=float, default=0.95, help="GAE lambda")
-    parser.add_argument(
-        "--num-minibatches", type=int, default=4, help="Number of minibatches"
-    )
-    parser.add_argument(
-        "--update-epochs", type=int, default=4, help="PPO update epochs"
-    )
+    parser.add_argument("--num-minibatches", type=int, default=4, help="Number of minibatches")
+    parser.add_argument("--update-epochs", type=int, default=4, help="PPO update epochs")
     parser.add_argument("--clip-eps", type=float, default=0.2, help="PPO clip epsilon")
     parser.add_argument("--vf-coef", type=float, default=0.5, help="Value loss coef")
-    parser.add_argument("--ent-coef", type=float, default=0.1, help="Entropy coef (0.1+ recommended)")
     parser.add_argument(
-        "--max-grad-norm", type=float, default=0.5, help="Max gradient norm"
+        "--ent-coef", type=float, default=0.1, help="Entropy coef (0.1+ recommended)"
     )
+    parser.add_argument("--max-grad-norm", type=float, default=0.5, help="Max gradient norm")
 
     # Network
-    parser.add_argument(
-        "--hidden-dim", type=int, default=256, help="Hidden layer dimension"
-    )
-    parser.add_argument(
-        "--num-layers", type=int, default=2, help="Number of hidden layers"
-    )
+    parser.add_argument("--hidden-dim", type=int, default=256, help="Hidden layer dimension")
+    parser.add_argument("--num-layers", type=int, default=2, help="Number of hidden layers")
 
     # Logging
-    parser.add_argument(
-        "--log-interval", type=int, default=10, help="Log every N updates"
-    )
+    parser.add_argument("--log-interval", type=int, default=10, help="Log every N updates")
     parser.add_argument("--wandb", action="store_true", help="Enable WandB logging")
     parser.add_argument(
         "--project", type=str, default="hackmatrix-purejaxrl", help="WandB project name"
@@ -106,18 +93,14 @@ def parse_args():
     parser.add_argument("--run-name", type=str, default=None, help="WandB run name")
 
     # Checkpointing
-    parser.add_argument(
-        "--save-interval", type=int, default=1000, help="Save every N updates"
-    )
+    parser.add_argument("--save-interval", type=int, default=1000, help="Save every N updates")
     parser.add_argument(
         "--checkpoint-dir", type=str, default="checkpoints", help="Checkpoint directory"
     )
 
     # Misc
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
-    parser.add_argument(
-        "--auto-tune", action="store_true", help="Auto-tune config for device"
-    )
+    parser.add_argument("--auto-tune", action="store_true", help="Auto-tune config for device")
 
     return parser.parse_args()
 
@@ -166,9 +149,7 @@ def main():
         print(f"\n⚠️  Warning: total_timesteps ({config.total_timesteps:,}) is very small")
         print(f"   batch_size = {config.batch_size:,} (num_envs × num_steps)")
         print(f"   Increasing to {min_timesteps:,} for at least {min_updates} updates")
-        config = TrainConfig(
-            **{**config.__dict__, "total_timesteps": min_timesteps}
-        )
+        config = TrainConfig(**{**config.__dict__, "total_timesteps": min_timesteps})
 
     print_config(config)
 

@@ -10,13 +10,13 @@ import os
 import subprocess
 import sys
 from collections import Counter, defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from .observation_utils import denormalize_player, parse_observation
+from .observation_utils import parse_observation
 
 # MARK: Constants
 
@@ -25,14 +25,27 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # SPM build - headless CLI only (for training)
 # Check HACKMATRIX_BINARY env var first (for Docker), then fall back to relative path
 _DEFAULT_APP_PATH = os.environ.get(
-    "HACKMATRIX_BINARY",
-    os.path.join(_SCRIPT_DIR, "..", "..", ".build", "debug", "HackMatrix")
+    "HACKMATRIX_BINARY", os.path.join(_SCRIPT_DIR, "..", "..", ".build", "debug", "HackMatrix")
 )
 # Xcode build - full GUI app (for visual mode)
-_XCODE_APP_PATH = os.path.join(_SCRIPT_DIR, "..", "..", "DerivedData", "HackMatrix", "Build", "Products", "Debug", "HackMatrix.app", "Contents", "MacOS", "HackMatrix")
+_XCODE_APP_PATH = os.path.join(
+    _SCRIPT_DIR,
+    "..",
+    "..",
+    "DerivedData",
+    "HackMatrix",
+    "Build",
+    "Products",
+    "Debug",
+    "HackMatrix.app",
+    "Contents",
+    "MacOS",
+    "HackMatrix",
+)
 
 
 # MARK: HackEnv Class
+
 
 class HackEnv(gym.Env):
     """HackMatrix Gymnasium environment."""
@@ -41,7 +54,14 @@ class HackEnv(gym.Env):
 
     # MARK: Initialization
 
-    def __init__(self, app_path: str = None, visual: bool = False, debug_scenario: bool = False, debug: bool = False, info: bool = False):
+    def __init__(
+        self,
+        app_path: str = None,
+        visual: bool = False,
+        debug_scenario: bool = False,
+        debug: bool = False,
+        info: bool = False,
+    ):
         """
         Initialize the environment.
 
@@ -68,7 +88,7 @@ class HackEnv(gym.Env):
         self.debug_scenario = debug_scenario
         self.debug = debug
         self.info = info
-        self.process: Optional[subprocess.Popen] = None
+        self.process: subprocess.Popen | None = None
         self.stderr_log = None  # Track file handle for cleanup
 
         # Action space: 28 discrete actions (4 moves + 1 siphon + 23 programs)
@@ -76,38 +96,23 @@ class HackEnv(gym.Env):
 
         # Observation space: Multi-part observation
         # We'll use a Dict space with the main components
-        self.observation_space = spaces.Dict({
-            # Player state (10 values, normalized to [0, 1])
-            # [row, col, hp, credits, energy, stage, siphons, attack, showActivated, scheduledTasksDisabled]
-            "player": spaces.Box(
-                low=0.0,
-                high=1.0,
-                shape=(10,),
-                dtype=np.float32
-            ),
-
-            # Program inventory (23 values, binary vector)
-            # Indices 0-22 correspond to program action indices 5-27
-            "programs": spaces.Box(
-                low=0,
-                high=1,
-                shape=(23,),
-                dtype=np.int32
-            ),
-
-            # Grid state: 6x6x40 (40 features per cell, normalized to [0, 1])
-            # Enemy: one-hot types (4) + hp + stunned = 6
-            # Block: one-hot types (3) + points + siphoned = 5
-            # Program: one-hot (23) + transmission_spawncount + transmission_turns = 25
-            # Resources: credits + energy = 2
-            # Special: is_data_siphon + is_exit + siphon_center = 3
-            "grid": spaces.Box(
-                low=0.0,
-                high=1.0,
-                shape=(6, 6, 42),
-                dtype=np.float32
-            )
-        })
+        self.observation_space = spaces.Dict(
+            {
+                # Player state (10 values, normalized to [0, 1])
+                # [row, col, hp, credits, energy, stage, siphons, attack, showActivated, scheduledTasksDisabled]
+                "player": spaces.Box(low=0.0, high=1.0, shape=(10,), dtype=np.float32),
+                # Program inventory (23 values, binary vector)
+                # Indices 0-22 correspond to program action indices 5-27
+                "programs": spaces.Box(low=0, high=1, shape=(23,), dtype=np.int32),
+                # Grid state: 6x6x40 (40 features per cell, normalized to [0, 1])
+                # Enemy: one-hot types (4) + hp + stunned = 6
+                # Block: one-hot types (3) + points + siphoned = 5
+                # Program: one-hot (23) + transmission_spawncount + transmission_turns = 25
+                # Resources: credits + energy = 2
+                # Special: is_data_siphon + is_exit + siphon_center = 3
+                "grid": spaces.Box(low=0.0, high=1.0, shape=(6, 6, 42), dtype=np.float32),
+            }
+        )
 
         self._start_process()
         self._reset_episode_stats()
@@ -157,15 +162,16 @@ class HackEnv(gym.Env):
             stdout=subprocess.PIPE,
             stderr=self.stderr_log,  # Write Swift debug output to log file
             text=True,
-            bufsize=1
+            bufsize=1,
         )
 
         # Give GUI time to initialize if in visual mode
         if self.visual:
             import time
+
             time.sleep(2.0)
 
-    def _send_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
+    def _send_command(self, command: dict[str, Any]) -> dict[str, Any]:
         """Send a command to the Swift process and get response."""
         if self.process is None or self.process.poll() is not None:
             raise RuntimeError("Swift process not running")
@@ -189,7 +195,7 @@ class HackEnv(gym.Env):
 
     # MARK: Observation Conversion
 
-    def _observation_to_array(self, obs_dict: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    def _observation_to_array(self, obs_dict: dict[str, Any]) -> dict[str, np.ndarray]:
         """
         Convert JSON observation to numpy arrays.
 
@@ -200,7 +206,9 @@ class HackEnv(gym.Env):
 
     # MARK: Environment Interface
 
-    def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[Dict[str, np.ndarray], Dict]:
+    def reset(
+        self, seed: int | None = None, options: dict | None = None
+    ) -> tuple[dict[str, np.ndarray], dict]:
         """Reset the environment."""
         super().reset(seed=seed)
         self._reset_episode_stats()
@@ -210,12 +218,9 @@ class HackEnv(gym.Env):
 
         return observation, {"action_mask": self._get_action_mask()}
 
-    def step(self, action: int) -> Tuple[Dict[str, np.ndarray], float, bool, bool, Dict]:
+    def step(self, action: int) -> tuple[dict[str, np.ndarray], float, bool, bool, dict]:
         """Execute one step."""
-        response = self._send_command({
-            "action": "step",
-            "actionIndex": int(action)
-        })
+        response = self._send_command({"action": "step", "actionIndex": int(action)})
 
         observation = self._observation_to_array(response["observation"])
         reward = float(response["reward"])
@@ -260,18 +265,26 @@ class HackEnv(gym.Env):
 
         # Visual CLI mode: Print action, reward, and key observation values
         if self.visual:
-            action_names = ["Up", "Down", "Left", "Right", "Siphon"] + [f"Prog{i}" for i in range(5, 28)]
-            action_name = action_names[action] if action < len(action_names) else f"Unknown({action})"
+            action_names = ["Up", "Down", "Left", "Right", "Siphon"] + [
+                f"Prog{i}" for i in range(5, 28)
+            ]
+            action_name = (
+                action_names[action] if action < len(action_names) else f"Unknown({action})"
+            )
 
             # Decode player state for display
             player = observation["player"]
             print(f"\n{'='*60}")
             print(f"ACTION: {action_name} (index={action})")
             print(f"REWARD: {reward:+.3f}")
-            print(f"Player: row={player[0]:.2f} col={player[1]:.2f} hp={player[2]:.2f} "
-                  f"credits={player[3]:.2f} energy={player[4]:.2f} stage={player[5]:.2f}")
-            print(f"Status: siphons={player[6]:.2f} attack={player[7]:.2f} "
-                  f"show={int(player[8])} calm={int(player[9])}")
+            print(
+                f"Player: row={player[0]:.2f} col={player[1]:.2f} hp={player[2]:.2f} "
+                f"credits={player[3]:.2f} energy={player[4]:.2f} stage={player[5]:.2f}"
+            )
+            print(
+                f"Status: siphons={player[6]:.2f} attack={player[7]:.2f} "
+                f"show={int(player[8])} calm={int(player[9])}"
+            )
             owned_programs = np.where(observation["programs"] == 1)[0] + 5
             print(f"Owned Programs: {list(owned_programs)}")
             if terminated:
@@ -283,7 +296,7 @@ class HackEnv(gym.Env):
 
     # MARK: Action Mask
 
-    def get_valid_actions(self) -> List[int]:
+    def get_valid_actions(self) -> list[int]:
         """Get list of valid action indices."""
         response = self._send_command({"action": "getValidActions"})
         return response["validActions"]

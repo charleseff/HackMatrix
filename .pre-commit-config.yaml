@@ -1,0 +1,30 @@
+repos:
+  # Ruff - Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^python/
+      - id: ruff-format
+        files: ^python/
+
+  # Local hooks for Swift and tests
+  - repo: local
+    hooks:
+      # Swift build (catches compile errors)
+      - id: swift-build
+        name: Swift Build
+        entry: swift build
+        language: system
+        pass_filenames: false
+        files: \.(swift)$
+
+      # Python tests (parallel)
+      - id: pytest
+        name: Python Tests
+        entry: bash -c 'cd python && source venv/bin/activate 2>/dev/null || source venv-arm64/bin/activate && pytest tests/ -n auto -q --tb=short'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

@@ -12,22 +12,20 @@ These tests verify that the Swift environment correctly implements siphon mechan
 as documented in specs/game-mechanics.md.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Resource,
-    Observation,
     ACTION_SIPHON,
-    ACTION_MOVE_UP,
+    Block,
+    GameState,
+    Observation,
+    PlayerState,
+    Resource,
 )
 
-
 # MARK: - Helper Functions
+
 
 def get_player_siphons(obs: Observation) -> int:
     """Extract player data siphons from observation."""
@@ -67,6 +65,7 @@ def get_owned_programs(obs: Observation) -> list[int]:
 
 # MARK: - Test 2.10: Siphon Adjacent Block
 
+
 class TestSiphonDataBlock:
     """Test 2.10: Siphon adjacent data block."""
 
@@ -74,11 +73,12 @@ class TestSiphonDataBlock:
     def test_siphon_data_block(self, env):
         """Siphoning adjacent data block should award score and consume siphon."""
         state = GameState(
-            player=PlayerState(row=3, col=3, hp=3, credits=0, energy=0,
-                             dataSiphons=1, attackDamage=1, score=0),
+            player=PlayerState(
+                row=3, col=3, hp=3, credits=0, energy=0, dataSiphons=1, attackDamage=1, score=0
+            ),
             blocks=[Block(row=4, col=3, type="data", points=9, spawnCount=9, siphoned=False)],
             enemies=[],
-            stage=1
+            stage=1,
         )
         obs_before = env.set_state(state)
         siphons_before = get_player_siphons(obs_before)
@@ -101,6 +101,7 @@ class TestSiphonDataBlock:
 
 # MARK: - Test 2.11: Siphon Always Valid with Data Siphons
 
+
 class TestSiphonValidWithSiphons:
     """Test 2.11: Siphon is valid when player has data siphons."""
 
@@ -111,16 +112,18 @@ class TestSiphonValidWithSiphons:
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
             blocks=[],  # No blocks anywhere
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         valid_actions = env.get_valid_actions()
-        assert ACTION_SIPHON in valid_actions, \
-            f"Siphon should be valid when player has siphons, got {valid_actions}"
+        assert (
+            ACTION_SIPHON in valid_actions
+        ), f"Siphon should be valid when player has siphons, got {valid_actions}"
 
 
 # MARK: - Test 2.12: Siphon Invalid Without Data Siphons
+
 
 class TestSiphonInvalidWithoutSiphons:
     """Test 2.12: Siphon is invalid without data siphons."""
@@ -132,16 +135,18 @@ class TestSiphonInvalidWithoutSiphons:
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=0),
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         valid_actions = env.get_valid_actions()
-        assert ACTION_SIPHON not in valid_actions, \
-            f"Siphon should be invalid without siphons, got {valid_actions}"
+        assert (
+            ACTION_SIPHON not in valid_actions
+        ), f"Siphon should be invalid without siphons, got {valid_actions}"
 
 
 # MARK: - Test 2.13: Siphon Spawns Transmissions
+
 
 class TestSiphonSpawnsTransmissions:
     """Test 2.13: Siphoning block spawns transmissions."""
@@ -154,7 +159,7 @@ class TestSiphonSpawnsTransmissions:
             blocks=[Block(row=4, col=3, type="data", points=3, spawnCount=3, siphoned=False)],
             transmissions=[],
             enemies=[],
-            stage=1
+            stage=1,
         )
         obs_before = env.set_state(state)
         trans_before = count_transmissions(obs_before)
@@ -170,6 +175,7 @@ class TestSiphonSpawnsTransmissions:
 
 # MARK: - Test 2.14: Siphon Does NOT Reveal Resources
 
+
 class TestSiphonDoesNotRevealResources:
     """Test 2.14: Siphoning doesn't destroy block or reveal resources."""
 
@@ -181,7 +187,7 @@ class TestSiphonDoesNotRevealResources:
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
             resources=[Resource(row=4, col=3, credits=5, energy=0)],  # Hidden under block
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -198,6 +204,7 @@ class TestSiphonDoesNotRevealResources:
 
 # MARK: - Test 2.15: Siphon Program Block
 
+
 class TestSiphonProgramBlock:
     """Test 2.15: Siphoning program block acquires the program."""
 
@@ -206,11 +213,20 @@ class TestSiphonProgramBlock:
         """Siphoning a program block should add program to inventory."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
-            blocks=[Block(row=4, col=3, type="program", programType="push",
-                        programActionIndex=5, spawnCount=2, siphoned=False)],
+            blocks=[
+                Block(
+                    row=4,
+                    col=3,
+                    type="program",
+                    programType="push",
+                    programActionIndex=5,
+                    spawnCount=2,
+                    siphoned=False,
+                )
+            ],
             owned_programs=[],
             enemies=[],
-            stage=1
+            stage=1,
         )
         obs_before = env.set_state(state)
         programs_before = get_owned_programs(obs_before)

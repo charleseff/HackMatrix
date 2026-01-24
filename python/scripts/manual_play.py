@@ -21,9 +21,9 @@ from hackmatrix.observation_utils import parse_observation, print_observation_de
 def monitor_gameplay(app_path: str, debug_scenario: bool = False):
     """Launch game and monitor observations from manual play."""
 
-    print("="*80)
+    print("=" * 80)
     print("MANUAL PLAY MONITOR - Observation & Action Space Validator")
-    print("="*80)
+    print("=" * 80)
     print("\nLaunching game in visual-cli mode...")
     print("🎮 Play with keyboard/mouse in the GUI window")
     print("📊 Observations will appear here in real-time\n")
@@ -31,7 +31,7 @@ def monitor_gameplay(app_path: str, debug_scenario: bool = False):
     if debug_scenario:
         print("🔬 Debug scenario enabled - predictable starting state\n")
 
-    print("="*80)
+    print("=" * 80)
 
     # Build command
     cmd = [app_path, "--visual-cli"]
@@ -45,7 +45,7 @@ def monitor_gameplay(app_path: str, debug_scenario: bool = False):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        bufsize=1
+        bufsize=1,
     )
 
     step = 0
@@ -70,7 +70,7 @@ def monitor_gameplay(app_path: str, debug_scenario: bool = False):
             print(f"[DEBUG] Received line: {line[:100]}", file=sys.stderr)
 
             # Skip non-JSON lines (debug messages, go to stderr output)
-            if not line.startswith('{'):
+            if not line.startswith("{"):
                 # Print Swift debug output
                 if line:
                     print(f"[Swift] {line}", file=sys.stderr)
@@ -113,7 +113,9 @@ def monitor_gameplay(app_path: str, debug_scenario: bool = False):
                         for key, value in breakdown.items():
                             cumulative_breakdown[key] = cumulative_breakdown.get(key, 0) + value
 
-                        print_observation(obs_data, obs_step, valid_actions, total_reward, cumulative_breakdown)
+                        print_observation(
+                            obs_data, obs_step, valid_actions, total_reward, cumulative_breakdown
+                        )
                         pending_observation = None
 
                 elif "error" in data:
@@ -124,6 +126,7 @@ def monitor_gameplay(app_path: str, debug_scenario: bool = False):
             except Exception as e:
                 print(f"[ERROR] {e}", file=sys.stderr)
                 import traceback
+
                 traceback.print_exc()
 
     except KeyboardInterrupt:
@@ -143,8 +146,13 @@ def request_valid_actions(process):
         pass  # Process terminated
 
 
-def print_observation(data: dict, step: int, valid_actions: list = None,
-                       total_reward: float = 0.0, cumulative_breakdown: dict = None):
+def print_observation(
+    data: dict,
+    step: int,
+    valid_actions: list = None,
+    total_reward: float = 0.0,
+    cumulative_breakdown: dict = None,
+):
     """Pretty-print observation data using robust observation_utils."""
 
     try:
@@ -163,7 +171,7 @@ def print_observation(data: dict, step: int, valid_actions: list = None,
             reward=reward,
             done=done,
             info=info,
-            valid_actions=valid_actions
+            valid_actions=valid_actions,
         )
 
         # Print cumulative rewards
@@ -178,13 +186,14 @@ def print_observation(data: dict, step: int, valid_actions: list = None,
                     print(f"    {k:20s}: {sign}{v:.4f}")
                 if len(sorted_items) > 8:
                     print(f"    ... and {len(sorted_items) - 8} more")
-        print("="*80)
+        print("=" * 80)
 
         sys.stdout.flush()
 
     except Exception as e:
         print(f"[ERROR in print_observation] {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
 
 
@@ -195,14 +204,23 @@ if __name__ == "__main__":
         description="Monitor manual gameplay and validate observation/action space"
     )
     parser.add_argument(
-        "--debug-scenario",
-        action="store_true",
-        help="Use debug scenario starting state"
+        "--debug-scenario", action="store_true", help="Use debug scenario starting state"
     )
     args = parser.parse_args()
 
     # Path to Xcode-built app (GUI mode requires proper .app bundle)
-    binary_path = Path(__file__).parent.parent.parent / "DerivedData" / "HackMatrix" / "Build" / "Products" / "Debug" / "HackMatrix.app" / "Contents" / "MacOS" / "HackMatrix"
+    binary_path = (
+        Path(__file__).parent.parent.parent
+        / "DerivedData"
+        / "HackMatrix"
+        / "Build"
+        / "Products"
+        / "Debug"
+        / "HackMatrix.app"
+        / "Contents"
+        / "MacOS"
+        / "HackMatrix"
+    )
 
     if not binary_path.exists():
         print(f"❌ Binary not found: {binary_path}")

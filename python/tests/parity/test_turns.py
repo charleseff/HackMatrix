@@ -11,26 +11,25 @@ Tests for turn mechanics including:
 These tests verify that the Swift environment correctly implements turn mechanics.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Observation,
     ACTION_MOVE_UP,
-    ACTION_MOVE_DOWN,
     ACTION_SIPHON,
-    PROGRAM_PUSH,
     PROGRAM_PULL,
-    PROGRAM_WAIT,
+    PROGRAM_PUSH,
     PROGRAM_SIPH_PLUS,
+    PROGRAM_WAIT,
+    Block,
+    Enemy,
+    GameState,
+    Observation,
+    PlayerState,
 )
 
-
 # MARK: - Helper Functions
+
 
 def get_enemy_at(obs: Observation, row: int, col: int) -> dict | None:
     """Get enemy info at position."""
@@ -70,6 +69,7 @@ def get_player_energy(obs: Observation) -> int:
 
 # MARK: - Test 2.47: Move Ends Turn
 
+
 class TestMoveEndsTurn:
     """Test 2.47: Movement ends player turn."""
 
@@ -79,7 +79,7 @@ class TestMoveEndsTurn:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[Enemy(type="daemon", row=5, col=5, hp=3, stunned=False)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -94,11 +94,13 @@ class TestMoveEndsTurn:
         assert len(enemies) == 1, "Should have 1 enemy"
         # Daemon was at (5,5), should move diagonally toward player (4,3)
         # Could be (4,4) or (4,5) or (5,4) depending on pathfinding
-        assert enemies[0]["row"] <= 5 or enemies[0]["col"] <= 5, \
-            f"Daemon should move closer, got ({enemies[0]['row']}, {enemies[0]['col']})"
+        assert (
+            enemies[0]["row"] <= 5 or enemies[0]["col"] <= 5
+        ), f"Daemon should move closer, got ({enemies[0]['row']}, {enemies[0]['col']})"
 
 
 # MARK: - Test 2.48: Programs Don't End Turn
+
 
 class TestProgramsDoNotEndTurn:
     """Test 2.48: Programs (except WAIT) don't end turn."""
@@ -110,7 +112,7 @@ class TestProgramsDoNotEndTurn:
             player=PlayerState(row=3, col=3, hp=3, energy=2),
             enemies=[Enemy(type="daemon", row=5, col=3, hp=3, stunned=False)],
             owned_programs=[PROGRAM_PUSH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -130,6 +132,7 @@ class TestProgramsDoNotEndTurn:
 
 # MARK: - Test 2.49: WAIT Ends Turn
 
+
 class TestWaitEndsTurn:
     """Test 2.49: WAIT program ends turn."""
 
@@ -140,7 +143,7 @@ class TestWaitEndsTurn:
             player=PlayerState(row=3, col=3, hp=3, energy=1),
             enemies=[Enemy(type="daemon", row=5, col=3, hp=3, stunned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -154,6 +157,7 @@ class TestWaitEndsTurn:
 
 # MARK: - Test 2.50: Attack Ends Turn
 
+
 class TestAttackEndsTurn:
     """Test 2.50: Attacking ends player turn."""
 
@@ -163,10 +167,12 @@ class TestAttackEndsTurn:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[
-                Enemy(type="virus", row=4, col=3, hp=2, stunned=False),  # Adjacent, will be attacked
+                Enemy(
+                    type="virus", row=4, col=3, hp=2, stunned=False
+                ),  # Adjacent, will be attacked
                 Enemy(type="daemon", row=5, col=5, hp=3, stunned=False),  # Will move after turn
             ],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -185,11 +191,13 @@ class TestAttackEndsTurn:
         daemon = [e for e in find_enemies(result.observation) if e["type"] == "daemon"]
         if daemon:
             # Should have moved closer to player
-            assert daemon[0]["row"] < 5 or daemon[0]["col"] < 5, \
-                f"Daemon should move closer, got ({daemon[0]['row']}, {daemon[0]['col']})"
+            assert (
+                daemon[0]["row"] < 5 or daemon[0]["col"] < 5
+            ), f"Daemon should move closer, got ({daemon[0]['row']}, {daemon[0]['col']})"
 
 
 # MARK: - Test 2.51: Siphon Ends Turn
+
 
 class TestSiphonEndsTurn:
     """Test 2.51: Siphoning ends player turn."""
@@ -201,7 +209,7 @@ class TestSiphonEndsTurn:
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1),
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
             enemies=[Enemy(type="daemon", row=5, col=5, hp=3, stunned=False)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -211,11 +219,13 @@ class TestSiphonEndsTurn:
         enemies = find_enemies(result.observation)
         daemon = [e for e in enemies if e["type"] == "daemon"]
         if daemon:
-            assert daemon[0]["row"] < 5 or daemon[0]["col"] < 5, \
-                f"Daemon should move after siphon, got ({daemon[0]['row']}, {daemon[0]['col']})"
+            assert (
+                daemon[0]["row"] < 5 or daemon[0]["col"] < 5
+            ), f"Daemon should move after siphon, got ({daemon[0]['row']}, {daemon[0]['col']})"
 
 
 # MARK: - Test 2.52: Program Chaining
+
 
 class TestProgramChaining:
     """Test 2.52: Multiple programs can be used before turn ends."""
@@ -227,14 +237,15 @@ class TestProgramChaining:
             player=PlayerState(row=3, col=3, hp=3, energy=4),  # Enough for PUSH + PULL
             enemies=[Enemy(type="daemon", row=5, col=3, hp=3, stunned=False)],
             owned_programs=[PROGRAM_PUSH, PROGRAM_PULL],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         # Use PUSH
         result1 = env.step(PROGRAM_PUSH)
-        enemies1 = find_enemies(result1.observation)
         # PUSH moves enemy away - daemon stays at (5,3) since it's at edge
+        # (enemies1 result checked implicitly via get_valid_actions below)
+        _ = find_enemies(result1.observation)
 
         # Movement should still be valid
         valid = env.get_valid_actions()
@@ -242,8 +253,8 @@ class TestProgramChaining:
 
         # Use PULL
         result2 = env.step(PROGRAM_PULL)
-        enemies2 = find_enemies(result2.observation)
-        # PULL moves enemy closer
+        # PULL moves enemy closer (enemies2 result checked implicitly via next assertion)
+        _ = find_enemies(result2.observation)
 
         # Movement should still be valid
         valid = env.get_valid_actions()
@@ -268,7 +279,7 @@ class TestProgramChaining:
             # Place enemy in different column to avoid line-of-sight attack
             enemies=[Enemy(type="daemon", row=5, col=4, hp=3, stunned=False)],
             owned_programs=[PROGRAM_SIPH_PLUS],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -277,7 +288,9 @@ class TestProgramChaining:
 
         # Enemy should NOT have moved
         enemies = find_enemies(result1.observation)
-        assert enemies[0]["row"] == 5, f"Enemy should not move after SIPH+, got row {enemies[0]['row']}"
+        assert (
+            enemies[0]["row"] == 5
+        ), f"Enemy should not move after SIPH+, got row {enemies[0]['row']}"
 
         # Movement should be valid
         valid = env.get_valid_actions()
@@ -289,4 +302,6 @@ class TestProgramChaining:
         # Enemy should have moved now (turn ended)
         # Daemon was at (5,4), player now at (4,3), daemon moves diagonally toward player
         enemies = find_enemies(result2.observation)
-        assert enemies[0]["row"] == 4, f"Enemy should move after player move, got row {enemies[0]['row']}"
+        assert (
+            enemies[0]["row"] == 4
+        ), f"Enemy should move after player move, got row {enemies[0]['row']}"

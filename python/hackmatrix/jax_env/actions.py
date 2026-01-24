@@ -6,17 +6,16 @@ Movement, siphon, and combat actions.
 import jax
 import jax.numpy as jnp
 
+from .programs import execute_program
 from .state import (
-    EnvState,
-    GRID_SIZE,
-    BLOCK_EMPTY,
     BLOCK_DATA,
+    BLOCK_EMPTY,
     BLOCK_PROGRAM,
     DIRECTION_OFFSETS,
+    GRID_SIZE,
     SIPHON_DELAY_TURNS,
-    ENEMY_VIRUS,
+    EnvState,
 )
-from .programs import execute_program, is_program_valid
 
 
 def execute_action(
@@ -263,9 +262,17 @@ def execute_siphon(state: EnvState, key: jax.Array) -> tuple[EnvState, jnp.bool_
             key, subkey = jax.random.split(key)
             enemy_type = jax.random.randint(subkey, (), 0, 4)
 
-            trans_data = jnp.array([
-                trans_row, trans_col, 3, enemy_type, 1, 0  # 3 turns, spawned_from_siphon=True
-            ], dtype=jnp.int32)
+            trans_data = jnp.array(
+                [
+                    trans_row,
+                    trans_col,
+                    3,
+                    enemy_type,
+                    1,
+                    0,  # 3 turns, spawned_from_siphon=True
+                ],
+                dtype=jnp.int32,
+            )
 
             new_trans = jax.lax.cond(
                 should_spawn & has_space,
@@ -292,9 +299,7 @@ def execute_siphon(state: EnvState, key: jax.Array) -> tuple[EnvState, jnp.bool_
     state = jax.lax.cond(
         has_target,
         apply_siphon,
-        lambda s: s.replace(
-            player=s.player.replace(data_siphons=s.player.data_siphons - 1)
-        ),
+        lambda s: s.replace(player=s.player.replace(data_siphons=s.player.data_siphons - 1)),
         state,
     )
 
@@ -317,15 +322,14 @@ def is_move_valid(state: EnvState, direction: jnp.int32) -> jnp.bool_:
 
     # Check bounds
     in_bounds = (
-        (target_row >= 0) & (target_row < GRID_SIZE) &
-        (target_col >= 0) & (target_col < GRID_SIZE)
+        (target_row >= 0) & (target_row < GRID_SIZE) & (target_col >= 0) & (target_col < GRID_SIZE)
     )
 
     # Check for blocking block at target
     has_blocking_block = jax.lax.cond(
         in_bounds,
-        lambda: (state.grid_block_type[target_row, target_col] != BLOCK_EMPTY) &
-                (~state.grid_block_siphoned[target_row, target_col]),
+        lambda: (state.grid_block_type[target_row, target_col] != BLOCK_EMPTY)
+        & (~state.grid_block_siphoned[target_row, target_col]),
         lambda: jnp.bool_(False),
     )
 
@@ -362,9 +366,7 @@ def find_enemy_in_los(
         def check_enemies_at_cell(carry, i):
             enemy_found, enemy_idx, row, col, state = carry
             is_at_cell = (
-                state.enemy_mask[i] &
-                (state.enemies[i, 1] == row) &
-                (state.enemies[i, 2] == col)
+                state.enemy_mask[i] & (state.enemies[i, 1] == row) & (state.enemies[i, 2] == col)
             )
             new_found = enemy_found | is_at_cell
             new_idx = jax.lax.cond(
@@ -388,9 +390,9 @@ def find_enemy_in_los(
         def check_trans_at_cell(carry, i):
             trans_found, trans_idx, row, col, state = carry
             is_at_cell = (
-                state.trans_mask[i] &
-                (state.transmissions[i, 0] == row) &
-                (state.transmissions[i, 1] == col)
+                state.trans_mask[i]
+                & (state.transmissions[i, 0] == row)
+                & (state.transmissions[i, 1] == col)
             )
             new_found = trans_found | is_at_cell
             new_idx = jax.lax.cond(
@@ -446,8 +448,7 @@ def move_player(state: EnvState, target_row: jnp.int32, target_col: jnp.int32) -
     """Move player to target cell and collect pickups."""
     # Check bounds
     in_bounds = (
-        (target_row >= 0) & (target_row < GRID_SIZE) &
-        (target_col >= 0) & (target_col < GRID_SIZE)
+        (target_row >= 0) & (target_row < GRID_SIZE) & (target_col >= 0) & (target_col < GRID_SIZE)
     )
 
     new_row = jax.lax.cond(in_bounds, lambda: target_row, lambda: state.player.row)

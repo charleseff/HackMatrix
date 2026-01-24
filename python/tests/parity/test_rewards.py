@@ -17,27 +17,24 @@ These tests verify that the Swift environment correctly calculates rewards.
 """
 
 import pytest
-import numpy as np
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Resource,
-    Transmission,
-    Observation,
-    ACTION_MOVE_UP,
-    ACTION_MOVE_DOWN,
     ACTION_MOVE_RIGHT,
+    ACTION_MOVE_UP,
     ACTION_SIPHON,
-    PROGRAM_WAIT,
     PROGRAM_RESET,
     PROGRAM_SIPH_PLUS,
+    PROGRAM_WAIT,
+    Block,
+    Enemy,
+    GameState,
+    Observation,
+    PlayerState,
+    Resource,
 )
 
-
 # MARK: - Helper Functions
+
 
 def get_player_hp(obs: Observation) -> int:
     """Extract player HP from observation."""
@@ -56,24 +53,22 @@ def get_player_siphons(obs: Observation) -> int:
 
 # MARK: - Test 2.66: Stage Completion Rewards
 
+
 class TestStageCompletionRewards:
     """Test 2.66: Stage completion rewards are exponential."""
 
     @pytest.mark.requires_set_state
     def test_stage_1_completion_reward(self, env):
         """Stage 1 completion should give base reward (multiplier 1)."""
-        state = GameState(
-            player=PlayerState(row=5, col=4, hp=3),
-            enemies=[],
-            blocks=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=5, col=4, hp=3), enemies=[], blocks=[], stage=1)
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_RIGHT)
 
         # Stage 1 reward multiplier is 1.0
-        assert result.reward > 0, f"Stage completion should give positive reward, got {result.reward}"
+        assert (
+            result.reward > 0
+        ), f"Stage completion should give positive reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
     def test_later_stages_give_more_reward(self, env):
@@ -82,10 +77,7 @@ class TestStageCompletionRewards:
 
         for stage in [1, 2, 3]:
             state = GameState(
-                player=PlayerState(row=5, col=4, hp=3),
-                enemies=[],
-                blocks=[],
-                stage=stage
+                player=PlayerState(row=5, col=4, hp=3), enemies=[], blocks=[], stage=stage
             )
             env.set_state(state)
             result = env.step(ACTION_MOVE_RIGHT)
@@ -93,13 +85,16 @@ class TestStageCompletionRewards:
 
         # Each stage should give more than the previous
         # Multipliers: [1, 2, 4, ...]
-        assert rewards[1] > rewards[0], \
-            f"Stage 2 reward ({rewards[1]}) should be > stage 1 ({rewards[0]})"
-        assert rewards[2] > rewards[1], \
-            f"Stage 3 reward ({rewards[2]}) should be > stage 2 ({rewards[1]})"
+        assert (
+            rewards[1] > rewards[0]
+        ), f"Stage 2 reward ({rewards[1]}) should be > stage 1 ({rewards[0]})"
+        assert (
+            rewards[2] > rewards[1]
+        ), f"Stage 3 reward ({rewards[2]}) should be > stage 2 ({rewards[1]})"
 
 
 # MARK: - Test 2.67: Score Gain Reward
+
 
 class TestScoreGainReward:
     """Test 2.67: Score gain gives 0.5x reward per point."""
@@ -111,7 +106,7 @@ class TestScoreGainReward:
             player=PlayerState(row=3, col=3, hp=3, dataSiphons=1, score=0),
             blocks=[Block(row=4, col=3, type="data", points=10, spawnCount=10, siphoned=False)],
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -119,11 +114,13 @@ class TestScoreGainReward:
 
         # Score gain: 10 points * 0.5 = 5.0 (base component)
         # May also include distance shaping and other components
-        assert result.reward >= 4.0, \
-            f"10-point siphon should give at least 4.0 reward (score component), got {result.reward}"
+        assert (
+            result.reward >= 4.0
+        ), f"10-point siphon should give at least 4.0 reward (score component), got {result.reward}"
 
 
 # MARK: - Test 2.68: Kill Reward
+
 
 class TestKillReward:
     """Test 2.68: Killing enemies gives 0.3x reward per kill."""
@@ -135,15 +132,14 @@ class TestKillReward:
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[Enemy(type="virus", row=4, col=3, hp=1, stunned=False)],  # 1 HP, will die
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_UP)
 
         # Kill reward: 0.3 per enemy
-        assert result.reward >= 0.2, \
-            f"Kill should give positive reward, got {result.reward}"
+        assert result.reward >= 0.2, f"Kill should give positive reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
     def test_kill_multiple_enemies_reward(self, env):
@@ -153,7 +149,7 @@ class TestKillReward:
             player=PlayerState(row=3, col=3, hp=3),
             enemies=[Enemy(type="virus", row=4, col=3, hp=1, stunned=False)],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state1)
         result1 = env.step(ACTION_MOVE_UP)
@@ -164,6 +160,7 @@ class TestKillReward:
 
 
 # MARK: - Test 2.69: Data Siphon Collection Reward
+
 
 class TestDataSiphonCollectionReward:
     """Test 2.69: Collecting data siphons gives 1.0 reward."""
@@ -176,15 +173,16 @@ class TestDataSiphonCollectionReward:
             resources=[Resource(row=4, col=3, dataSiphon=True, credits=0, energy=0)],
             enemies=[],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_UP)
 
         # Data siphon collection: 1.0 flat reward
-        assert result.reward >= 0.9, \
-            f"Data siphon collection should give ~1.0 reward, got {result.reward}"
+        assert (
+            result.reward >= 0.9
+        ), f"Data siphon collection should give ~1.0 reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
     def test_siph_plus_gives_reward(self, env):
@@ -199,7 +197,7 @@ class TestDataSiphonCollectionReward:
             owned_programs=[PROGRAM_SIPH_PLUS],
             enemies=[],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -215,6 +213,7 @@ class TestDataSiphonCollectionReward:
 
 # MARK: - Test 2.70: Distance Shaping
 
+
 class TestDistanceShaping:
     """Test 2.70: Moving closer to exit gives small positive reward."""
 
@@ -222,23 +221,20 @@ class TestDistanceShaping:
     def test_move_closer_to_exit_positive_reward(self, env):
         """Moving toward exit should give positive distance reward."""
         # Player at (0,0), exit at (5,5) - move up to get closer
-        state = GameState(
-            player=PlayerState(row=0, col=0, hp=3),
-            enemies=[],
-            blocks=[],
-            stage=1
-        )
+        state = GameState(player=PlayerState(row=0, col=0, hp=3), enemies=[], blocks=[], stage=1)
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_UP)
 
         # Distance shaping: 0.05 per cell closer
         # Moving up brings us closer to (5,5)
-        assert result.reward >= 0.0, \
-            f"Moving closer to exit should give non-negative reward, got {result.reward}"
+        assert (
+            result.reward >= 0.0
+        ), f"Moving closer to exit should give non-negative reward, got {result.reward}"
 
 
 # MARK: - Test 2.71: Victory Bonus
+
 
 class TestVictoryBonus:
     """Test 2.71: Winning the game gives 500 + score * 100."""
@@ -250,7 +246,7 @@ class TestVictoryBonus:
             player=PlayerState(row=5, col=4, hp=3, score=10),
             enemies=[],
             blocks=[],
-            stage=8  # Final stage
+            stage=8,  # Final stage
         )
         env.set_state(state)
 
@@ -258,11 +254,11 @@ class TestVictoryBonus:
 
         # Victory bonus: 500 + 10 * 100 = 1500
         # Plus stage completion reward
-        assert result.reward >= 500, \
-            f"Victory should give at least 500 reward, got {result.reward}"
+        assert result.reward >= 500, f"Victory should give at least 500 reward, got {result.reward}"
 
 
 # MARK: - Test 2.72: Death Penalty
+
 
 class TestDeathPenalty:
     """Test 2.72: Dying gives negative reward based on progress."""
@@ -274,7 +270,7 @@ class TestDeathPenalty:
             player=PlayerState(row=3, col=3, hp=1, energy=1),
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -286,6 +282,7 @@ class TestDeathPenalty:
 
 
 # MARK: - Test 2.73: Resource Gain Reward
+
 
 class TestResourceGainReward:
     """Test 2.73: Gaining resources gives 0.05x reward per unit."""
@@ -300,7 +297,7 @@ class TestResourceGainReward:
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
             # Resources revealed after block destroyed (by CRASH) - not by siphon
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -313,6 +310,7 @@ class TestResourceGainReward:
 
 # MARK: - Test 2.75: Damage Penalty
 
+
 class TestDamagePenalty:
     """Test 2.75: Taking damage gives -1.0 per HP lost."""
 
@@ -323,7 +321,7 @@ class TestDamagePenalty:
             player=PlayerState(row=3, col=3, hp=3, energy=1),
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -334,10 +332,13 @@ class TestDamagePenalty:
 
         # Damage penalty: -1.0 per HP
         # Wait itself has no reward, damage gives -1.0
-        assert result.reward <= 0, f"Taking damage should give negative or zero reward, got {result.reward}"
+        assert (
+            result.reward <= 0
+        ), f"Taking damage should give negative or zero reward, got {result.reward}"
 
 
 # MARK: - Test 2.76: HP Recovery Reward
+
 
 class TestHPRecoveryReward:
     """Test 2.76: Recovering HP gives 1.0 per HP gained."""
@@ -350,7 +351,7 @@ class TestHPRecoveryReward:
             owned_programs=[PROGRAM_RESET],
             enemies=[],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -360,11 +361,13 @@ class TestHPRecoveryReward:
         assert hp_after == 3, "RESET should restore HP to 3"
 
         # HP recovery: 2 HP * 1.0 = 2.0
-        assert result.reward >= 1.5, \
-            f"Recovering 2 HP should give significant positive reward, got {result.reward}"
+        assert (
+            result.reward >= 1.5
+        ), f"Recovering 2 HP should give significant positive reward, got {result.reward}"
 
 
 # MARK: - Test 2.77: Program Waste Penalty
+
 
 class TestProgramWastePenalty:
     """Test 2.77: Using RESET at 2 HP gives waste penalty."""
@@ -378,7 +381,7 @@ class TestProgramWastePenalty:
             owned_programs=[PROGRAM_RESET],
             enemies=[],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state1)
         result1 = env.step(PROGRAM_RESET)
@@ -390,7 +393,7 @@ class TestProgramWastePenalty:
             owned_programs=[PROGRAM_RESET],
             enemies=[],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state2)
         result2 = env.step(PROGRAM_RESET)
@@ -399,11 +402,13 @@ class TestProgramWastePenalty:
         # RESET at 2 HP should have lower reward due to:
         # - Less HP recovery (1 vs 2)
         # - Waste penalty (-0.3)
-        assert reward_at_2hp < reward_at_1hp, \
-            f"RESET at 2 HP ({reward_at_2hp}) should give less reward than at 1 HP ({reward_at_1hp})"
+        assert (
+            reward_at_2hp < reward_at_1hp
+        ), f"RESET at 2 HP ({reward_at_2hp}) should give less reward than at 1 HP ({reward_at_1hp})"
 
 
 # MARK: - Test 2.78: Siphon-Caused Death Penalty
+
 
 class TestSiphonCausedDeathPenalty:
     """Test 2.78: Dying to siphon-spawned enemies gives extra penalty."""
@@ -421,7 +426,7 @@ class TestSiphonCausedDeathPenalty:
             player=PlayerState(row=3, col=3, hp=1, dataSiphons=1),
             blocks=[Block(row=4, col=3, type="data", points=10, spawnCount=10, siphoned=False)],
             enemies=[],  # Siphon will spawn transmissions that become enemies
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 

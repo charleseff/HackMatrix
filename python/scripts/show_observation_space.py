@@ -54,7 +54,7 @@ print("SAMPLE GRID FEATURES (NEW ONE-HOT ENCODING):")
 print("=" * 80)
 for row_idx in range(6):
     for col_idx in range(6):
-        cell_features = obs['grid'][row_idx, col_idx, :]
+        cell_features = obs["grid"][row_idx, col_idx, :]
 
         # Check if this cell has any interesting features
         has_enemy = np.any(cell_features[0:4] > 0)

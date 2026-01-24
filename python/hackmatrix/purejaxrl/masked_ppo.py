@@ -8,11 +8,10 @@ This module provides:
 - Transition dataclass for storing rollout data
 """
 
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
-import flax.linen as nn
 from flax import struct
-from typing import Tuple
 
 from hackmatrix.jax_env import NUM_ACTIONS
 
@@ -44,25 +43,14 @@ class MaskedCategorical:
     def log_prob(self, actions: jax.Array) -> jax.Array:
         """Compute log probability of actions."""
         # Handle both batched and unbatched cases
-        return jnp.take_along_axis(
-            self._log_probs,
-            actions[..., None],
-            axis=-1
-        ).squeeze(-1)
+        return jnp.take_along_axis(self._log_probs, actions[..., None], axis=-1).squeeze(-1)
 
     def entropy(self) -> jax.Array:
         """Compute entropy of the distribution."""
         # Entropy = -sum(p * log(p))
         # Only sum over actions with non-negligible probability
         # Using where to avoid 0 * -inf = nan
-        return -jnp.sum(
-            jnp.where(
-                self._probs > 1e-8,
-                self._probs * self._log_probs,
-                0.0
-            ),
-            axis=-1
-        )
+        return -jnp.sum(jnp.where(self._probs > 1e-8, self._probs * self._log_probs, 0.0), axis=-1)
 
 
 @struct.dataclass
@@ -78,6 +66,7 @@ class Transition:
     - value: Value estimate at time t
     - action_mask: Valid action mask at time t (for consistent log_prob computation)
     """
+
     obs: jax.Array
     action: jax.Array
     reward: jax.Array
@@ -114,12 +103,13 @@ class ActorCritic(nn.Module):
         Input -> [Dense -> ReLU] x num_layers -> actor_head -> logits
                                                -> critic_head -> value
     """
+
     action_dim: int = NUM_ACTIONS
     hidden_dim: int = 256
     num_layers: int = 2
 
     @nn.compact
-    def __call__(self, x: jax.Array) -> Tuple[jax.Array, jax.Array]:
+    def __call__(self, x: jax.Array) -> tuple[jax.Array, jax.Array]:
         """Forward pass.
 
         Args:
@@ -150,7 +140,7 @@ def compute_gae(
     dones: jax.Array,
     gamma: float,
     gae_lambda: float,
-) -> Tuple[jax.Array, jax.Array]:
+) -> tuple[jax.Array, jax.Array]:
     """Compute Generalized Advantage Estimation (GAE).
 
     Args:
@@ -165,6 +155,7 @@ def compute_gae(
         advantages: GAE advantages, shape (num_steps, num_envs)
         returns: Returns (advantages + values[:-1]), shape (num_steps, num_envs)
     """
+
     def _compute_gae_step(carry, inp):
         gae, next_value = carry
         reward, value, done = inp
@@ -206,7 +197,7 @@ def ppo_loss(
     clip_eps: float,
     vf_coef: float,
     ent_coef: float,
-) -> Tuple[jax.Array, dict]:
+) -> tuple[jax.Array, dict]:
     """Compute PPO loss with action masking.
 
     Args:
@@ -273,10 +264,10 @@ def ppo_loss(
 
 def init_network(
     key: jax.Array,
-    obs_shape: Tuple[int, ...],
+    obs_shape: tuple[int, ...],
     hidden_dim: int = 256,
     num_layers: int = 2,
-) -> Tuple[ActorCritic, dict]:
+) -> tuple[ActorCritic, dict]:
     """Initialize actor-critic network.
 
     Args:

@@ -9,29 +9,27 @@ Game logic is implemented in separate modules for maintainability.
 import jax
 import jax.numpy as jnp
 
+from .actions import execute_action, is_move_valid
+from .enemy import process_enemy_turn
+from .observation import Observation, get_observation
+from .programs import is_program_valid
+from .rewards import calculate_reward
+from .stage import advance_stage, save_previous_state
 from .state import (
-    EnvState,
-    Player,
-    create_empty_state,
-    GRID_SIZE,
-    NUM_ACTIONS,
-    NUM_PROGRAMS,
-    PLAYER_MAX_HP,
-    ACTION_MOVE_UP,
     ACTION_MOVE_DOWN,
     ACTION_MOVE_LEFT,
     ACTION_MOVE_RIGHT,
-    ACTION_SIPHON,
+    ACTION_MOVE_UP,
     ACTION_PROGRAM_START,
+    ACTION_SIPHON,
+    NUM_ACTIONS,
+    NUM_PROGRAMS,
+    PLAYER_MAX_HP,
     PROGRAM_WARP,
+    EnvState,
+    Player,
+    create_empty_state,
 )
-from .observation import Observation, get_observation
-from .actions import execute_action, is_move_valid
-from .programs import is_program_valid
-from .enemy import process_enemy_turn
-from .stage import save_previous_state, advance_stage
-from .rewards import calculate_reward
-
 
 # =============================================================================
 # Core Environment Functions

@@ -15,9 +15,9 @@ from hackmatrix.training_utils import make_env
 
 def profile_environment(num_steps=1000):
     """Profile environment performance."""
-    print("="*70)
+    print("=" * 70)
     print("PROFILING ENVIRONMENT")
-    print("="*70)
+    print("=" * 70)
 
     env = HackEnv()
     env.reset()
@@ -57,17 +57,14 @@ def profile_environment(num_steps=1000):
     print(f"Steps per second: {steps_per_sec:.1f}")
     print(f"\nProjected training time for 1M steps: {(1_000_000 / steps_per_sec / 3600):.1f} hours")
 
-    return {
-        'avg_step_time_ms': avg_step_time,
-        'steps_per_sec': steps_per_sec
-    }
+    return {"avg_step_time_ms": avg_step_time, "steps_per_sec": steps_per_sec}
 
 
 def profile_training_loop(num_steps=10000):
     """Profile full training loop with NN updates."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PROFILING TRAINING LOOP (with NN updates)")
-    print("="*70)
+    print("=" * 70)
 
     from sb3_contrib import MaskablePPO
     from stable_baselines3.common.vec_env import DummyVecEnv
@@ -79,7 +76,7 @@ def profile_training_loop(num_steps=10000):
         "MultiInputPolicy",
         env,
         verbose=0,
-        **FAST_MODEL_CONFIG  # Use shared fast config for profiling
+        **FAST_MODEL_CONFIG,  # Use shared fast config for profiling
     )
 
     print(f"Training for {num_steps} steps...\n")
@@ -96,10 +93,7 @@ def profile_training_loop(num_steps=10000):
 
     env.close()
 
-    return {
-        'steps_per_sec': steps_per_sec,
-        'total_time': total_time
-    }
+    return {"steps_per_sec": steps_per_sec, "total_time": total_time}
 
 
 if __name__ == "__main__":
@@ -112,12 +106,12 @@ if __name__ == "__main__":
     train_stats = profile_training_loop(num_steps=10000)
 
     # Analysis
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("ANALYSIS")
-    print("="*70)
+    print("=" * 70)
 
-    env_sps = env_stats['steps_per_sec']
-    train_sps = train_stats['steps_per_sec']
+    env_sps = env_stats["steps_per_sec"]
+    train_sps = train_stats["steps_per_sec"]
     overhead = (env_sps - train_sps) / env_sps * 100
 
     print(f"\nEnvironment only: {env_sps:.1f} steps/sec")

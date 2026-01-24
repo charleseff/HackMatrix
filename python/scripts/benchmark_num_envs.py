@@ -6,15 +6,11 @@ import os
 import sys
 import time
 
-import numpy as np
 from sb3_contrib import MaskablePPO
-from sb3_contrib.common.wrappers import ActionMasker
-from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 # Add parent to path for hackmatrix import
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from hackmatrix import HackEnv
 from hackmatrix.training_config import FAST_MODEL_CONFIG
 from hackmatrix.training_utils import make_env
 
@@ -39,7 +35,7 @@ def benchmark_num_envs(num_envs: int, timesteps: int = 10_000) -> float:
         "MultiInputPolicy",
         env,
         verbose=0,  # Quiet mode
-        **FAST_MODEL_CONFIG  # Use shared fast config for benchmarking
+        **FAST_MODEL_CONFIG,  # Use shared fast config for benchmarking
     )
 
     # Warmup - let environments initialize
@@ -63,11 +59,17 @@ def benchmark_num_envs(num_envs: int, timesteps: int = 10_000) -> float:
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Benchmark --num-envs values")
-    parser.add_argument("--timesteps", type=int, default=10_000,
-                        help="Timesteps per benchmark (default: 10,000)")
-    parser.add_argument("--env-values", type=str, default="1,2,4,6,8,10,12,14",
-                        help="Comma-separated list of num_envs values to test")
+    parser.add_argument(
+        "--timesteps", type=int, default=10_000, help="Timesteps per benchmark (default: 10,000)"
+    )
+    parser.add_argument(
+        "--env-values",
+        type=str,
+        default="1,2,4,6,8,10,12,14",
+        help="Comma-separated list of num_envs values to test",
+    )
     args = parser.parse_args()
 
     env_values = [int(x) for x in args.env_values.split(",")]
@@ -85,11 +87,11 @@ def main():
             results[num_envs] = 0
 
     # Summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("BENCHMARK RESULTS")
-    print("="*60)
+    print("=" * 60)
     print(f"{'num_envs':>10} | {'steps/sec':>12} | {'relative':>10}")
-    print("-"*40)
+    print("-" * 40)
 
     baseline = results.get(1, 1)
     best_envs = max(results, key=results.get)
@@ -100,7 +102,7 @@ def main():
         marker = " <-- BEST" if num_envs == best_envs else ""
         print(f"{num_envs:>10} | {sps:>12.1f} | {relative:>9.2f}x{marker}")
 
-    print("="*60)
+    print("=" * 60)
     print(f"\nOptimal: --num-envs {best_envs} ({results[best_envs]:.1f} steps/sec)")
     print(f"Speedup vs single env: {results[best_envs]/baseline:.2f}x")
 

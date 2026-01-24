@@ -9,21 +9,19 @@ These tests verify that the Swift environment correctly handles game-ending cond
 """
 
 import pytest
-import numpy as np
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Observation,
-    ACTION_MOVE_UP,
     ACTION_MOVE_RIGHT,
     PROGRAM_WAIT,
+    Block,
+    Enemy,
+    GameState,
+    Observation,
+    PlayerState,
 )
 
-
 # MARK: - Helper Functions
+
 
 def get_player_hp(obs: Observation) -> int:
     """Extract player HP from observation."""
@@ -37,6 +35,7 @@ def get_player_stage(obs: Observation) -> int:
 
 # MARK: - Test 2.64: Player Death
 
+
 class TestPlayerDeath:
     """Test 2.64: Game ends when player HP reaches 0."""
 
@@ -47,7 +46,7 @@ class TestPlayerDeath:
             player=PlayerState(row=3, col=3, hp=1, energy=1),  # 1 HP
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],  # Adjacent
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -74,7 +73,7 @@ class TestPlayerDeath:
                 Enemy(type="virus", row=2, col=3, hp=2, stunned=False),  # Also adjacent
             ],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -87,6 +86,7 @@ class TestPlayerDeath:
 
 # MARK: - Test 2.65: Win Condition
 
+
 class TestWinCondition:
     """Test 2.65: Game is won when completing stage 8."""
 
@@ -97,7 +97,7 @@ class TestWinCondition:
             player=PlayerState(row=5, col=4, hp=3, score=50),  # Adjacent to exit
             enemies=[],
             blocks=[],
-            stage=8  # Final stage
+            stage=8,  # Final stage
         )
         env.set_state(state)
 
@@ -109,17 +109,14 @@ class TestWinCondition:
 
         # Reward should include victory bonus (500 + score * 100)
         # Victory bonus for score=50 should be 500 + 50*100 = 5500
-        assert result.reward > 100, f"Victory should give large positive reward, got {result.reward}"
+        assert (
+            result.reward > 100
+        ), f"Victory should give large positive reward, got {result.reward}"
 
     @pytest.mark.requires_set_state
     def test_win_marked_by_stage_9(self, env):
         """Victory is indicated by stage advancing to 9."""
-        state = GameState(
-            player=PlayerState(row=5, col=4, hp=3),
-            enemies=[],
-            blocks=[],
-            stage=8
-        )
+        state = GameState(player=PlayerState(row=5, col=4, hp=3), enemies=[], blocks=[], stage=8)
         env.set_state(state)
 
         result = env.step(ACTION_MOVE_RIGHT)
@@ -133,6 +130,7 @@ class TestWinCondition:
 
 # MARK: - Additional Edge Cases
 
+
 class TestDeathDuringAction:
     """Additional edge cases related to death timing."""
 
@@ -142,10 +140,12 @@ class TestDeathDuringAction:
         # Set up state where siphoning will spawn enemies that immediately kill player
         state = GameState(
             player=PlayerState(row=3, col=3, hp=1, dataSiphons=1, energy=1),  # 1 HP
-            enemies=[Enemy(type="virus", row=4, col=4, hp=2, stunned=False)],  # Will attack after siphon
+            enemies=[
+                Enemy(type="virus", row=4, col=4, hp=2, stunned=False)
+            ],  # Will attack after siphon
             blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -167,7 +167,7 @@ class TestNotDoneWhenAlive:
             player=PlayerState(row=3, col=3, hp=3, energy=1),  # Full HP
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 

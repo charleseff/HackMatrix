@@ -10,45 +10,44 @@ Tests for program mechanics. Each program has:
 These tests verify that the Swift environment correctly implements program mechanics.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Enemy,
-    Block,
-    Transmission,
-    Observation,
-    PROGRAM_PUSH,
-    PROGRAM_PULL,
-    PROGRAM_CRASH,
-    PROGRAM_WARP,
-    PROGRAM_POLY,
-    PROGRAM_WAIT,
-    PROGRAM_DEBUG,
-    PROGRAM_ROW,
-    PROGRAM_COL,
-    PROGRAM_UNDO,
-    PROGRAM_STEP,
-    PROGRAM_SIPH_PLUS,
-    PROGRAM_EXCH,
-    PROGRAM_SHOW,
-    PROGRAM_RESET,
-    PROGRAM_CALM,
-    PROGRAM_D_BOM,
-    PROGRAM_DELAY,
-    PROGRAM_ANTI_V,
-    PROGRAM_SCORE,
-    PROGRAM_REDUC,
-    PROGRAM_ATK_PLUS,
-    PROGRAM_HACK,
     ACTION_MOVE_UP,
-    ACTION_SIPHON,
+    PROGRAM_ANTI_V,
+    PROGRAM_ATK_PLUS,
+    PROGRAM_CALM,
+    PROGRAM_COL,
+    PROGRAM_CRASH,
+    PROGRAM_D_BOM,
+    PROGRAM_DEBUG,
+    PROGRAM_DELAY,
+    PROGRAM_EXCH,
+    PROGRAM_HACK,
+    PROGRAM_POLY,
+    PROGRAM_PULL,
+    PROGRAM_PUSH,
+    PROGRAM_REDUC,
+    PROGRAM_RESET,
+    PROGRAM_ROW,
+    PROGRAM_SCORE,
+    PROGRAM_SHOW,
+    PROGRAM_SIPH_PLUS,
+    PROGRAM_STEP,
+    PROGRAM_UNDO,
+    PROGRAM_WAIT,
+    PROGRAM_WARP,
+    Block,
+    Enemy,
+    GameState,
+    Observation,
+    PlayerState,
+    Transmission,
 )
 
-
 # MARK: - Helper Functions
+
 
 def get_player_energy(obs: Observation) -> int:
     """Extract player energy from observation."""
@@ -101,6 +100,7 @@ def count_enemies(obs: Observation) -> int:
 
 # MARK: - Test 2.16: PUSH Program
 
+
 class TestPushProgram:
     """Test 2.16: PUSH program pushes enemies away."""
 
@@ -111,7 +111,7 @@ class TestPushProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=0, energy=2, dataSiphons=0),
             enemies=[Enemy(type="virus", row=4, col=3, hp=2, stunned=False)],
             owned_programs=[PROGRAM_PUSH],
-            stage=1
+            stage=1,
         )
         obs = env.set_state(state)
         energy_before = get_player_energy(obs)
@@ -135,7 +135,7 @@ class TestPushProgram:
             player=PlayerState(row=3, col=3, hp=3, energy=10),
             enemies=[],  # No enemies
             owned_programs=[PROGRAM_PUSH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -144,6 +144,7 @@ class TestPushProgram:
 
 
 # MARK: - Test 2.17: PULL Program
+
 
 class TestPullProgram:
     """Test 2.17: PULL program pulls enemies toward player."""
@@ -155,7 +156,7 @@ class TestPullProgram:
             player=PlayerState(row=3, col=3, hp=3, energy=2),
             enemies=[Enemy(type="virus", row=5, col=3, hp=2, stunned=False)],
             owned_programs=[PROGRAM_PULL],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -168,6 +169,7 @@ class TestPullProgram:
 
 
 # MARK: - Test 2.20: POLY Program
+
 
 class TestPolyProgram:
     """Test 2.20: POLY program transforms enemies."""
@@ -185,7 +187,7 @@ class TestPolyProgram:
             # Place enemy in SAME ROW as player to ensure visibility after transformation
             enemies=[Enemy(type="virus", row=3, col=5, hp=2, stunned=False)],
             owned_programs=[PROGRAM_POLY],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -195,10 +197,13 @@ class TestPolyProgram:
         # Enemy stays visible because it's in same row as player
         enemies = find_enemies(result.observation)
         assert len(enemies) == 1, "Should have 1 enemy (visible because same row as player)"
-        assert enemies[0]["type"] != "virus", f"Enemy type should change, still {enemies[0]['type']}"
+        assert (
+            enemies[0]["type"] != "virus"
+        ), f"Enemy type should change, still {enemies[0]['type']}"
 
 
 # MARK: - Test 2.21: WAIT Program
+
 
 class TestWaitProgram:
     """Test 2.21: WAIT program ends turn."""
@@ -210,7 +215,7 @@ class TestWaitProgram:
             player=PlayerState(row=3, col=3, hp=3, energy=1),
             enemies=[Enemy(type="daemon", row=5, col=3, hp=3, stunned=False)],
             owned_programs=[PROGRAM_WAIT],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -225,6 +230,7 @@ class TestWaitProgram:
 
 # MARK: - Test 2.27: SIPH+ Program
 
+
 class TestSiphPlusProgram:
     """Test 2.27: SIPH+ program grants a data siphon."""
 
@@ -235,7 +241,7 @@ class TestSiphPlusProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=5, energy=0, dataSiphons=0),
             owned_programs=[PROGRAM_SIPH_PLUS],
             enemies=[],
-            stage=1
+            stage=1,
         )
         obs = env.set_state(state)
         siphons_before = get_player_siphons(obs)
@@ -253,6 +259,7 @@ class TestSiphPlusProgram:
 
 # MARK: - Test 2.30: RESET Program
 
+
 class TestResetProgram:
     """Test 2.30: RESET program restores HP."""
 
@@ -263,7 +270,7 @@ class TestResetProgram:
             player=PlayerState(row=3, col=3, hp=1, credits=0, energy=4),
             owned_programs=[PROGRAM_RESET],
             enemies=[],
-            stage=1
+            stage=1,
         )
         obs = env.set_state(state)
         hp_before = get_player_hp(obs)
@@ -281,7 +288,7 @@ class TestResetProgram:
             player=PlayerState(row=3, col=3, hp=3, energy=10),  # Full HP
             owned_programs=[PROGRAM_RESET],
             enemies=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -290,6 +297,7 @@ class TestResetProgram:
 
 
 # MARK: - Program Chaining Tests
+
 
 class TestProgramChaining:
     """Test that programs don't end turn (except WAIT)."""
@@ -301,7 +309,7 @@ class TestProgramChaining:
             player=PlayerState(row=3, col=3, hp=3, credits=5, energy=0, dataSiphons=0),
             owned_programs=[PROGRAM_SIPH_PLUS],
             enemies=[Enemy(type="daemon", row=5, col=3, hp=3, stunned=False)],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -319,6 +327,7 @@ class TestProgramChaining:
 
 # MARK: - Test 2.18: CRASH Program
 
+
 class TestCrashProgram:
     """Test 2.18: CRASH clears surrounding cells."""
 
@@ -332,7 +341,7 @@ class TestCrashProgram:
                 Enemy(type="virus", row=3, col=4, hp=1, stunned=False),  # Right
             ],
             owned_programs=[PROGRAM_CRASH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -356,7 +365,7 @@ class TestCrashProgram:
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],  # Not adjacent
             blocks=[],  # No blocks
             owned_programs=[PROGRAM_CRASH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -365,6 +374,7 @@ class TestCrashProgram:
 
 
 # MARK: - Test 2.19: WARP Program
+
 
 class TestWarpProgram:
     """Test 2.19: WARP teleports to and kills enemy."""
@@ -376,9 +386,9 @@ class TestWarpProgram:
             player=PlayerState(row=0, col=0, hp=3, credits=2, energy=2),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2, stunned=False)],
             owned_programs=[PROGRAM_WARP],
-            stage=1
+            stage=1,
         )
-        obs_before = env.set_state(state)
+        env.set_state(state)
 
         result = env.step(PROGRAM_WARP)
 
@@ -400,7 +410,7 @@ class TestWarpProgram:
             enemies=[],  # No enemies
             transmissions=[],  # No transmissions
             owned_programs=[PROGRAM_WARP],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -419,7 +429,7 @@ class TestWarpProgram:
             player=PlayerState(row=0, col=0, hp=3, credits=2, energy=2),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2, stunned=False)],
             owned_programs=[PROGRAM_WARP],
-            stage=1
+            stage=1,
         )
         obs_before = env.set_state(state)
 
@@ -434,11 +444,13 @@ class TestWarpProgram:
         stage_after = int(round(result.observation.player[5] * 7)) + 1
 
         assert (row, col) == (5, 5), f"Player should warp to (5,5), got ({row}, {col})"
-        assert stage_after == stage_before + 1, \
-            f"Stage should advance from {stage_before} to {stage_before + 1} when warping to exit, got {stage_after}"
+        assert (
+            stage_after == stage_before + 1
+        ), f"Stage should advance from {stage_before} to {stage_before + 1} when warping to exit, got {stage_after}"
 
 
 # MARK: - Test 2.22: DEBUG Program
+
 
 class TestDebugProgram:
     """Test 2.22: DEBUG damages enemies on blocks."""
@@ -450,13 +462,13 @@ class TestDebugProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=0),
             enemies=[
                 Enemy(type="glitch", row=4, col=4, hp=2, stunned=False),  # On block
-                Enemy(type="virus", row=5, col=5, hp=2, stunned=False),   # NOT on block
+                Enemy(type="virus", row=5, col=5, hp=2, stunned=False),  # NOT on block
             ],
             blocks=[
                 Block(row=4, col=4, type="data", points=5, spawnCount=5, siphoned=False),
             ],
             owned_programs=[PROGRAM_DEBUG],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -465,13 +477,17 @@ class TestDebugProgram:
         # Enemy on block should be damaged
         enemy_on_block = get_enemy_at(result.observation, 4, 4)
         if enemy_on_block:
-            assert enemy_on_block["hp"] == 1, f"Enemy on block should take damage, hp={enemy_on_block['hp']}"
+            assert (
+                enemy_on_block["hp"] == 1
+            ), f"Enemy on block should take damage, hp={enemy_on_block['hp']}"
             assert enemy_on_block["stunned"], "Enemy on block should be stunned"
 
         # Enemy not on block should be untouched
         enemy_off_block = get_enemy_at(result.observation, 5, 5)
         assert enemy_off_block is not None, "Enemy not on block should still exist"
-        assert enemy_off_block["hp"] == 2, f"Enemy not on block should be unhurt, hp={enemy_off_block['hp']}"
+        assert (
+            enemy_off_block["hp"] == 2
+        ), f"Enemy not on block should be unhurt, hp={enemy_off_block['hp']}"
 
     @pytest.mark.requires_set_state
     def test_debug_requires_enemies_on_blocks(self, env):
@@ -479,9 +495,11 @@ class TestDebugProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],  # Not on block
-            blocks=[Block(row=4, col=4, type="data", points=5, spawnCount=5)],  # Block without enemy
+            blocks=[
+                Block(row=4, col=4, type="data", points=5, spawnCount=5)
+            ],  # Block without enemy
             owned_programs=[PROGRAM_DEBUG],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -490,6 +508,7 @@ class TestDebugProgram:
 
 
 # MARK: - Test 2.23: ROW Program
+
 
 class TestRowProgram:
     """Test 2.23: ROW attacks all enemies in player's row."""
@@ -500,12 +519,12 @@ class TestRowProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=1),
             enemies=[
-                Enemy(type="virus", row=3, col=0, hp=1, stunned=False),   # Same row, will die
+                Enemy(type="virus", row=3, col=0, hp=1, stunned=False),  # Same row, will die
                 Enemy(type="daemon", row=3, col=5, hp=3, stunned=False),  # Same row, survives
-                Enemy(type="virus", row=4, col=3, hp=2, stunned=False),   # Different row
+                Enemy(type="virus", row=4, col=3, hp=2, stunned=False),  # Different row
             ],
             owned_programs=[PROGRAM_ROW],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -532,7 +551,7 @@ class TestRowProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],  # Different row
             owned_programs=[PROGRAM_ROW],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -541,6 +560,7 @@ class TestRowProgram:
 
 
 # MARK: - Test 2.24: COL Program
+
 
 class TestColProgram:
     """Test 2.24: COL attacks all enemies in player's column."""
@@ -551,12 +571,12 @@ class TestColProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=1),
             enemies=[
-                Enemy(type="virus", row=0, col=3, hp=1, stunned=False),   # Same col, will die
+                Enemy(type="virus", row=0, col=3, hp=1, stunned=False),  # Same col, will die
                 Enemy(type="daemon", row=5, col=3, hp=3, stunned=False),  # Same col, survives
-                Enemy(type="virus", row=3, col=4, hp=2, stunned=False),   # Different col
+                Enemy(type="virus", row=3, col=4, hp=2, stunned=False),  # Different col
             ],
             owned_programs=[PROGRAM_COL],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -583,7 +603,7 @@ class TestColProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],  # Different col
             owned_programs=[PROGRAM_COL],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -592,6 +612,7 @@ class TestColProgram:
 
 
 # MARK: - Test 2.28: EXCH Program
+
 
 class TestExchProgram:
     """Test 2.28: EXCH converts credits to energy."""
@@ -602,7 +623,7 @@ class TestExchProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=8, energy=0),
             owned_programs=[PROGRAM_EXCH],
-            stage=1
+            stage=1,
         )
         obs_before = env.set_state(state)
         credits_before = get_player_credits(obs_before)
@@ -616,7 +637,9 @@ class TestExchProgram:
         energy_after = get_player_energy(result.observation)
 
         # According to implementation, cost is 4C, and you gain 4E
-        assert credits_after == 4, f"Credits should be 4 after EXCH (8 - 4 cost), got {credits_after}"
+        assert (
+            credits_after == 4
+        ), f"Credits should be 4 after EXCH (8 - 4 cost), got {credits_after}"
         assert energy_after == 4, f"Energy should be 4 after EXCH, got {energy_after}"
 
     @pytest.mark.requires_set_state
@@ -625,7 +648,7 @@ class TestExchProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=0),  # Only 3 credits
             owned_programs=[PROGRAM_EXCH],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -635,6 +658,7 @@ class TestExchProgram:
 
 # MARK: - Test 2.29: SHOW Program
 
+
 class TestShowProgram:
     """Test 2.29: SHOW reveals cryptogs and transmission types."""
 
@@ -643,22 +667,28 @@ class TestShowProgram:
         """SHOW should make cryptogs visible."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=2, energy=0),
-            enemies=[Enemy(type="cryptog", row=5, col=5, hp=2, stunned=False)],  # Hidden (different row/col)
+            enemies=[
+                Enemy(type="cryptog", row=5, col=5, hp=2, stunned=False)
+            ],  # Hidden (different row/col)
             showActivated=False,
             owned_programs=[PROGRAM_SHOW],
-            stage=1
+            stage=1,
         )
 
         # Before SHOW, cryptog at (5,5) should be hidden
         obs_before = env.set_state(state)
         enemies_before = find_enemies(obs_before)
-        assert len(enemies_before) == 0, f"Cryptog should be hidden before SHOW, found {len(enemies_before)}"
+        assert (
+            len(enemies_before) == 0
+        ), f"Cryptog should be hidden before SHOW, found {len(enemies_before)}"
 
         result = env.step(PROGRAM_SHOW)
 
         # After SHOW, cryptog should be visible
         enemies_after = find_enemies(result.observation)
-        assert len(enemies_after) == 1, f"Cryptog should be visible after SHOW, found {len(enemies_after)}"
+        assert (
+            len(enemies_after) == 1
+        ), f"Cryptog should be visible after SHOW, found {len(enemies_after)}"
 
     @pytest.mark.requires_set_state
     def test_show_requires_not_activated(self, env):
@@ -667,7 +697,7 @@ class TestShowProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             showActivated=True,  # Already activated
             owned_programs=[PROGRAM_SHOW],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -676,6 +706,7 @@ class TestShowProgram:
 
 
 # MARK: - Test 2.31: CALM Program
+
 
 class TestCalmProgram:
     """Test 2.31: CALM disables scheduled spawns."""
@@ -687,7 +718,7 @@ class TestCalmProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=2, energy=4),
             scheduledTasksDisabled=False,
             owned_programs=[PROGRAM_CALM],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -709,7 +740,7 @@ class TestCalmProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
             scheduledTasksDisabled=True,  # Already disabled
             owned_programs=[PROGRAM_CALM],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -718,6 +749,7 @@ class TestCalmProgram:
 
 
 # MARK: - Test 2.32: D_BOM Program
+
 
 class TestDBomProgram:
     """Test 2.32: D_BOM destroys nearest daemon."""
@@ -732,7 +764,7 @@ class TestDBomProgram:
                 Enemy(type="virus", row=4, col=4, hp=2, stunned=False),  # Not a daemon
             ],
             owned_programs=[PROGRAM_D_BOM],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -746,7 +778,9 @@ class TestDBomProgram:
         # (4,4) is adjacent to (5,5) diagonally
         enemy_at_4_4 = get_enemy_at(result.observation, 4, 4)
         if enemy_at_4_4:
-            assert enemy_at_4_4["hp"] <= 1, f"Virus should take splash damage, hp={enemy_at_4_4['hp']}"
+            assert (
+                enemy_at_4_4["hp"] <= 1
+            ), f"Virus should take splash damage, hp={enemy_at_4_4['hp']}"
 
     @pytest.mark.requires_set_state
     def test_d_bom_requires_daemon(self, env):
@@ -755,7 +789,7 @@ class TestDBomProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             enemies=[Enemy(type="virus", row=5, col=5, hp=2)],  # Not a daemon
             owned_programs=[PROGRAM_D_BOM],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -764,6 +798,7 @@ class TestDBomProgram:
 
 
 # MARK: - Test 2.33: DELAY Program
+
 
 class TestDelayProgram:
     """Test 2.33: DELAY extends transmission timers."""
@@ -777,7 +812,7 @@ class TestDelayProgram:
                 Transmission(row=5, col=5, turnsRemaining=2, enemyType="virus"),
             ],
             owned_programs=[PROGRAM_DELAY],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -787,7 +822,9 @@ class TestDelayProgram:
         # Check transmission at (5,5)
         trans_countdown = result.observation.grid[5, 5, 36]  # Transmission countdown channel
         # Original was 2, +3 = 5, normalized by /10 = 0.5
-        assert trans_countdown > 0.3, f"Transmission countdown should increase, got {trans_countdown}"
+        assert (
+            trans_countdown > 0.3
+        ), f"Transmission countdown should increase, got {trans_countdown}"
 
     @pytest.mark.requires_set_state
     def test_delay_requires_transmissions(self, env):
@@ -796,7 +833,7 @@ class TestDelayProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
             transmissions=[],  # No transmissions
             owned_programs=[PROGRAM_DELAY],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -805,6 +842,7 @@ class TestDelayProgram:
 
 
 # MARK: - Test 2.34: ANTI-V Program
+
 
 class TestAntiVProgram:
     """Test 2.34: ANTI-V damages all viruses."""
@@ -815,12 +853,12 @@ class TestAntiVProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=3, energy=0),
             enemies=[
-                Enemy(type="virus", row=4, col=3, hp=1, stunned=False),   # Will die
-                Enemy(type="virus", row=5, col=5, hp=2, stunned=False),   # Will survive
+                Enemy(type="virus", row=4, col=3, hp=1, stunned=False),  # Will die
+                Enemy(type="virus", row=5, col=5, hp=2, stunned=False),  # Will survive
                 Enemy(type="daemon", row=0, col=0, hp=3, stunned=False),  # Not a virus
             ],
             owned_programs=[PROGRAM_ANTI_V],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -847,7 +885,7 @@ class TestAntiVProgram:
             player=PlayerState(row=3, col=3, hp=3, credits=10),
             enemies=[Enemy(type="daemon", row=5, col=5, hp=3)],  # Not a virus
             owned_programs=[PROGRAM_ANTI_V],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -856,6 +894,7 @@ class TestAntiVProgram:
 
 
 # MARK: - Test 2.35: SCORE Program
+
 
 class TestScoreProgram:
     """Test 2.35: SCORE gains points equal to stages left."""
@@ -895,6 +934,7 @@ class TestScoreProgram:
 
 # MARK: - Test 2.36: REDUC Program
 
+
 class TestReducProgram:
     """Test 2.36: REDUC reduces block spawn counts."""
 
@@ -908,7 +948,7 @@ class TestReducProgram:
                 Block(row=4, col=4, type="data", points=2, spawnCount=2, siphoned=True),  # Siphoned
             ],
             owned_programs=[PROGRAM_REDUC],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -929,10 +969,12 @@ class TestReducProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
             blocks=[
-                Block(row=4, col=3, type="data", points=0, spawnCount=0, siphoned=False),  # spawnCount=0
+                Block(
+                    row=4, col=3, type="data", points=0, spawnCount=0, siphoned=False
+                ),  # spawnCount=0
             ],
             owned_programs=[PROGRAM_REDUC],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -941,6 +983,7 @@ class TestReducProgram:
 
 
 # MARK: - Test 2.37: ATK+ Program
+
 
 class TestAtkPlusProgram:
     """Test 2.37: ATK+ increases attack damage (can be used twice per stage)."""
@@ -951,7 +994,7 @@ class TestAtkPlusProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=4, energy=4, attackDamage=1),
             owned_programs=[PROGRAM_ATK_PLUS],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -973,7 +1016,7 @@ class TestAtkPlusProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=20, energy=20, attackDamage=1),
             owned_programs=[PROGRAM_ATK_PLUS],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -997,7 +1040,7 @@ class TestAtkPlusProgram:
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=50, energy=50, attackDamage=1),
             owned_programs=[PROGRAM_ATK_PLUS],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -1012,6 +1055,7 @@ class TestAtkPlusProgram:
 
 # MARK: - Test 2.38: HACK Program
 
+
 class TestHackProgram:
     """Test 2.38: HACK damages enemies on siphoned cells."""
 
@@ -1025,11 +1069,13 @@ class TestHackProgram:
                 Enemy(type="virus", row=5, col=5, hp=2, stunned=False),  # Not on siphoned block
             ],
             blocks=[
-                Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=True),   # Siphoned
-                Block(row=5, col=4, type="data", points=3, spawnCount=3, siphoned=False),  # Not siphoned
+                Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=True),  # Siphoned
+                Block(
+                    row=5, col=4, type="data", points=3, spawnCount=3, siphoned=False
+                ),  # Not siphoned
             ],
             owned_programs=[PROGRAM_HACK],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -1042,16 +1088,20 @@ class TestHackProgram:
         # Enemy not on siphoned block should be untouched
         enemy_at_5_5 = get_enemy_at(result.observation, 5, 5)
         assert enemy_at_5_5 is not None, "Enemy not on siphoned block should survive"
-        assert enemy_at_5_5["hp"] == 2, f"Enemy not on siphoned block should be unhurt, hp={enemy_at_5_5['hp']}"
+        assert (
+            enemy_at_5_5["hp"] == 2
+        ), f"Enemy not on siphoned block should be unhurt, hp={enemy_at_5_5['hp']}"
 
     @pytest.mark.requires_set_state
     def test_hack_requires_siphoned_blocks(self, env):
         """HACK requires siphoned blocks to exist."""
         state = GameState(
             player=PlayerState(row=3, col=3, hp=3, credits=10, energy=10),
-            blocks=[Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)],  # Not siphoned
+            blocks=[
+                Block(row=4, col=3, type="data", points=5, spawnCount=5, siphoned=False)
+            ],  # Not siphoned
             owned_programs=[PROGRAM_HACK],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -1060,6 +1110,7 @@ class TestHackProgram:
 
 
 # MARK: - Test 2.25: UNDO Program
+
 
 class TestUndoProgram:
     """Test 2.25: UNDO reverses the last action.
@@ -1076,15 +1127,16 @@ class TestUndoProgram:
             owned_programs=[PROGRAM_UNDO],
             enemies=[],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         valid = env.get_valid_actions()
-        assert PROGRAM_UNDO not in valid, f"UNDO requires history, should be masked initially"
+        assert PROGRAM_UNDO not in valid, "UNDO requires history, should be masked initially"
 
 
 # MARK: - Test 2.26: STEP Program
+
 
 class TestStepProgram:
     """Test 2.26: STEP prevents enemy movement for one turn."""
@@ -1096,7 +1148,7 @@ class TestStepProgram:
             player=PlayerState(row=0, col=0, hp=3, energy=3),
             enemies=[Enemy(type="daemon", row=4, col=0, hp=3, stunned=False)],
             owned_programs=[PROGRAM_STEP],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -1106,7 +1158,9 @@ class TestStepProgram:
         # Enemy should still be at (4,0) - STEP doesn't end turn
         enemies1 = find_enemies(result1.observation)
         assert len(enemies1) == 1, f"Should have 1 enemy, got {len(enemies1)}"
-        assert enemies1[0]["row"] == 4, f"Enemy should stay at row 4 after STEP, got {enemies1[0]['row']}"
+        assert (
+            enemies1[0]["row"] == 4
+        ), f"Enemy should stay at row 4 after STEP, got {enemies1[0]['row']}"
 
         # Now move (ends turn) - enemy should NOT move due to STEP effect
         result2 = env.step(ACTION_MOVE_UP)
@@ -1114,8 +1168,9 @@ class TestStepProgram:
         enemies2 = find_enemies(result2.observation)
         assert len(enemies2) == 1, f"Should have 1 enemy, got {len(enemies2)}"
         # With STEP active, enemy should not move
-        assert enemies2[0]["row"] == 4, \
-            f"Enemy should not move due to STEP effect, got row {enemies2[0]['row']}"
+        assert (
+            enemies2[0]["row"] == 4
+        ), f"Enemy should not move due to STEP effect, got row {enemies2[0]['row']}"
 
     @pytest.mark.requires_set_state
     def test_step_always_applicable(self, env):
@@ -1125,7 +1180,7 @@ class TestStepProgram:
             owned_programs=[PROGRAM_STEP],
             enemies=[],  # No enemies
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
@@ -1140,9 +1195,9 @@ class TestStepProgram:
             owned_programs=[PROGRAM_STEP],
             enemies=[],
             blocks=[],
-            stage=1
+            stage=1,
         )
         env.set_state(state)
 
         valid = env.get_valid_actions()
-        assert PROGRAM_STEP not in valid, f"STEP requires 3 energy, should be masked with 2"
+        assert PROGRAM_STEP not in valid, "STEP requires 3 energy, should be masked with 2"

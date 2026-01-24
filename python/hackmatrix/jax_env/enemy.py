@@ -7,13 +7,12 @@ import jax
 import jax.numpy as jnp
 
 from .state import (
-    EnvState,
-    GRID_SIZE,
     BLOCK_EMPTY,
+    ENEMY_GLITCH,
     ENEMY_MAX_HP,
     ENEMY_VIRUS,
-    ENEMY_GLITCH,
-    ENEMY_SPEED,
+    GRID_SIZE,
+    EnvState,
 )
 
 
@@ -85,10 +84,10 @@ def tick_transmissions(state: EnvState) -> EnvState:
 
         # Create enemy data
         enemy_hp = ENEMY_MAX_HP[enemy_type]
-        enemy_data = jnp.array([
-            enemy_type, row, col, enemy_hp, 0,
-            0, spawned_from_siphon, is_from_scheduled_task
-        ], dtype=jnp.int32)
+        enemy_data = jnp.array(
+            [enemy_type, row, col, enemy_hp, 0, 0, spawned_from_siphon, is_from_scheduled_task],
+            dtype=jnp.int32,
+        )
 
         # Add enemy if spawning and space available
         new_enemies = jax.lax.cond(
@@ -141,12 +140,8 @@ def move_enemies(state: EnvState) -> EnvState:
         # Check if enemy can move
         can_move = is_active & ~is_stunned & (disabled_turns <= 0)
 
-        # Calculate direction toward player
-        row_diff = state.player.row - row
-        col_diff = state.player.col - col
-
-        # Get movement speed for this enemy type
-        speed = ENEMY_SPEED[enemy_type]
+        # Note: Direction and speed are computed inside do_move to avoid
+        # JAX tracing issues with unused intermediate values
 
         # Move function - moves one step toward player
         def do_move(state_row_col):
@@ -183,8 +178,9 @@ def move_enemies(state: EnvState) -> EnvState:
 
             # Check for blocking block (unless glitch)
             is_glitch = enemy_type == ENEMY_GLITCH
-            has_block = (s.grid_block_type[new_row, new_col] != BLOCK_EMPTY) & \
-                       (~s.grid_block_siphoned[new_row, new_col])
+            has_block = (s.grid_block_type[new_row, new_col] != BLOCK_EMPTY) & (
+                ~s.grid_block_siphoned[new_row, new_col]
+            )
             blocked = has_block & ~is_glitch
 
             # If blocked, try alternate direction
@@ -248,6 +244,7 @@ def move_enemies(state: EnvState) -> EnvState:
 
 def enemy_attacks(state: EnvState) -> EnvState:
     """Adjacent enemies attack player."""
+
     # Count adjacent non-stunned enemies
     def count_adjacent_attackers(carry, idx):
         count, state = carry
@@ -289,9 +286,9 @@ def check_scheduled_tasks(state: EnvState) -> EnvState:
     """
     # Check if we should spawn
     should_spawn = (
-        ~state.scheduled_tasks_disabled &
-        (state.scheduled_task_interval > 0) &
-        (state.turn >= state.next_scheduled_task_turn)
+        ~state.scheduled_tasks_disabled
+        & (state.scheduled_task_interval > 0)
+        & (state.turn >= state.next_scheduled_task_turn)
     )
 
     def spawn_scheduled_transmission(s: EnvState) -> EnvState:

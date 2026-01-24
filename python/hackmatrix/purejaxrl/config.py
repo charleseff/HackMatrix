@@ -6,7 +6,7 @@ device detection utilities for CPU/GPU/TPU.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+
 import jax
 
 
@@ -16,6 +16,7 @@ class TrainConfig:
 
     Default values are tuned for HackMatrix environment.
     """
+
     # Environment
     num_envs: int = 256
     num_steps: int = 128  # Steps per rollout
@@ -25,25 +26,25 @@ class TrainConfig:
 
     # PPO hyperparameters
     learning_rate: float = 2.5e-4
-    gamma: float = 0.99           # Discount factor
-    gae_lambda: float = 0.95      # GAE lambda
+    gamma: float = 0.99  # Discount factor
+    gae_lambda: float = 0.95  # GAE lambda
     num_minibatches: int = 4
     update_epochs: int = 4
-    clip_eps: float = 0.2         # PPO clipping epsilon
-    vf_coef: float = 0.5          # Value function loss coefficient
-    ent_coef: float = 0.1         # Entropy bonus (0.1+ prevents collapse)
-    max_grad_norm: float = 0.5    # Gradient clipping
+    clip_eps: float = 0.2  # PPO clipping epsilon
+    vf_coef: float = 0.5  # Value function loss coefficient
+    ent_coef: float = 0.1  # Entropy bonus (0.1+ prevents collapse)
+    max_grad_norm: float = 0.5  # Gradient clipping
 
     # Network architecture
     hidden_dim: int = 256
     num_layers: int = 2
 
     # Logging
-    log_interval: int = 10        # Log every N updates
-    eval_interval: int = 100      # Evaluate every N updates
+    log_interval: int = 10  # Log every N updates
+    eval_interval: int = 100  # Evaluate every N updates
 
     # Checkpointing
-    save_interval: int = 1000     # Save every N updates
+    save_interval: int = 1000  # Save every N updates
     checkpoint_dir: str = "checkpoints"
 
     # Random seed

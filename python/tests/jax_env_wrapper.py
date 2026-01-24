@@ -10,40 +10,36 @@ Why this design:
 - The interface matches SwiftEnvWrapper for test compatibility
 """
 
-import numpy as np
 import jax
 import jax.numpy as jnp
-
-from .env_interface import (
-    EnvInterface,
-    GameState,
-    Observation,
-    StepResult,
-    InternalState,
-    InternalEnemy,
-    GRID_SIZE,
-)
+import numpy as np
 
 # Import the JAX environment modules
 from hackmatrix import jax_env
 from hackmatrix.jax_env import (
-    EnvState,
-    Player,
-    create_empty_state,
-    get_observation,
-    MAX_ENEMIES,
-    MAX_TRANSMISSIONS,
-    NUM_PROGRAMS,
-    ENEMY_TYPE_TO_INT,
-    ENEMY_INT_TO_TYPE,
-    BLOCK_EMPTY,
     BLOCK_DATA,
     BLOCK_PROGRAM,
     BLOCK_QUESTION,
-    PLAYER_MAX_HP,
+    ENEMY_INT_TO_TYPE,
+    ENEMY_TYPE_TO_INT,
+    MAX_ENEMIES,
+    MAX_TRANSMISSIONS,
+    NUM_PROGRAMS,
+    Player,
+    create_empty_state,
+    get_observation,
 )
-from hackmatrix.jax_env.state import DEFAULT_SCHEDULED_TASK_INTERVAL
 from hackmatrix.jax_env.observation import Observation as JaxObservation
+from hackmatrix.jax_env.state import DEFAULT_SCHEDULED_TASK_INTERVAL
+
+from .env_interface import (
+    GRID_SIZE,
+    GameState,
+    InternalEnemy,
+    InternalState,
+    Observation,
+    StepResult,
+)
 
 
 class JaxEnvWrapper:
@@ -86,15 +82,13 @@ class JaxEnvWrapper:
             raise RuntimeError("Environment not initialized. Call reset() first.")
 
         self.key, subkey = jax.random.split(self.key)
-        self.state, jax_obs, reward, done = jax_env.step(
-            self.state, jnp.int32(action), subkey
-        )
+        self.state, jax_obs, reward, done = jax_env.step(self.state, jnp.int32(action), subkey)
 
         return StepResult(
             observation=self._convert_observation(jax_obs),
             reward=float(reward),
             done=bool(done),
-            info={}
+            info={},
         )
 
     def get_valid_actions(self) -> list[int]:
@@ -133,16 +127,19 @@ class JaxEnvWrapper:
 
         for i, e in enumerate(state.enemies[:MAX_ENEMIES]):
             enemy_type = ENEMY_TYPE_TO_INT.get(e.type, 0)
-            enemy_data = jnp.array([
-                enemy_type,
-                e.row,
-                e.col,
-                e.hp,
-                0,  # disabled_turns
-                int(e.stunned),
-                int(e.spawnedFromSiphon),
-                int(e.isFromScheduledTask),
-            ], dtype=jnp.int32)
+            enemy_data = jnp.array(
+                [
+                    enemy_type,
+                    e.row,
+                    e.col,
+                    e.hp,
+                    0,  # disabled_turns
+                    int(e.stunned),
+                    int(e.spawnedFromSiphon),
+                    int(e.isFromScheduledTask),
+                ],
+                dtype=jnp.int32,
+            )
             enemies = enemies.at[i].set(enemy_data)
             enemy_mask = enemy_mask.at[i].set(True)
 
@@ -152,14 +149,17 @@ class JaxEnvWrapper:
 
         for i, t in enumerate(state.transmissions[:MAX_TRANSMISSIONS]):
             enemy_type = ENEMY_TYPE_TO_INT.get(t.enemyType, 0)
-            trans_data = jnp.array([
-                t.row,
-                t.col,
-                t.turnsRemaining,
-                enemy_type,
-                0,  # spawned_from_siphon (not in interface)
-                0,  # is_from_scheduled_task (not in interface)
-            ], dtype=jnp.int32)
+            trans_data = jnp.array(
+                [
+                    t.row,
+                    t.col,
+                    t.turnsRemaining,
+                    enemy_type,
+                    0,  # spawned_from_siphon (not in interface)
+                    0,  # is_from_scheduled_task (not in interface)
+                ],
+                dtype=jnp.int32,
+            )
             transmissions = transmissions.at[i].set(trans_data)
             trans_mask = trans_mask.at[i].set(True)
 
@@ -268,16 +268,18 @@ class JaxEnvWrapper:
             if self.state.enemy_mask[i]:
                 enemy_data = self.state.enemies[i]
                 enemy_type_int = int(enemy_data[0])
-                enemies.append(InternalEnemy(
-                    row=int(enemy_data[1]),
-                    col=int(enemy_data[2]),
-                    type=ENEMY_INT_TO_TYPE.get(enemy_type_int, "unknown"),
-                    hp=int(enemy_data[3]),
-                    disabled_turns=int(enemy_data[4]),
-                    is_stunned=bool(enemy_data[5]),
-                    spawned_from_siphon=bool(enemy_data[6]),
-                    is_from_scheduled_task=bool(enemy_data[7]),
-                ))
+                enemies.append(
+                    InternalEnemy(
+                        row=int(enemy_data[1]),
+                        col=int(enemy_data[2]),
+                        type=ENEMY_INT_TO_TYPE.get(enemy_type_int, "unknown"),
+                        hp=int(enemy_data[3]),
+                        disabled_turns=int(enemy_data[4]),
+                        is_stunned=bool(enemy_data[5]),
+                        spawned_from_siphon=bool(enemy_data[6]),
+                        is_from_scheduled_task=bool(enemy_data[7]),
+                    )
+                )
 
         return InternalState(
             scheduled_task_interval=int(self.state.scheduled_task_interval),

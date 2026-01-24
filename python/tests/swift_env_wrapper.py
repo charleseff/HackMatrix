@@ -13,25 +13,23 @@ Why this design:
 import json
 import os
 import subprocess
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
 from .env_interface import (
-    EnvInterface,
     GameState,
+    InternalEnemy,
+    InternalState,
     Observation,
     StepResult,
-    InternalState,
-    InternalEnemy,
     game_state_to_json,
 )
 
 # Paths relative to this file
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_APP_PATH = os.environ.get(
-    "HACKMATRIX_BINARY",
-    os.path.join(_SCRIPT_DIR, "..", "..", ".build", "debug", "HackMatrix")
+    "HACKMATRIX_BINARY", os.path.join(_SCRIPT_DIR, "..", "..", ".build", "debug", "HackMatrix")
 )
 
 
@@ -48,7 +46,7 @@ class SwiftEnvWrapper:
         """
         self.app_path = app_path or _DEFAULT_APP_PATH
         self.debug = debug
-        self.process: Optional[subprocess.Popen] = None
+        self.process: subprocess.Popen | None = None
         self.stderr_log = None
         self._start_process()
 
@@ -75,7 +73,7 @@ class SwiftEnvWrapper:
             stdout=subprocess.PIPE,
             stderr=self.stderr_log,
             text=True,
-            bufsize=1
+            bufsize=1,
         )
 
     def _send_command(self, command: dict[str, Any]) -> dict[str, Any]:
@@ -101,18 +99,21 @@ class SwiftEnvWrapper:
     def _parse_observation(self, obs_dict: dict[str, Any]) -> Observation:
         """Convert JSON observation to Observation dataclass."""
         # Player state (10 values, normalized to [0, 1])
-        player = np.array([
-            obs_dict["playerRow"] / 5.0,
-            obs_dict["playerCol"] / 5.0,
-            obs_dict["playerHP"] / 3.0,
-            min(obs_dict["credits"] / 50.0, 1.0),
-            min(obs_dict["energy"] / 50.0, 1.0),
-            (obs_dict["stage"] - 1) / 7.0,
-            obs_dict["dataSiphons"] / 10.0,
-            (obs_dict["baseAttack"] - 1) / 2.0,  # 1-3 → 0-1
-            1.0 if obs_dict.get("showActivated", False) else 0.0,
-            1.0 if obs_dict.get("scheduledTasksDisabled", False) else 0.0
-        ], dtype=np.float32)
+        player = np.array(
+            [
+                obs_dict["playerRow"] / 5.0,
+                obs_dict["playerCol"] / 5.0,
+                obs_dict["playerHP"] / 3.0,
+                min(obs_dict["credits"] / 50.0, 1.0),
+                min(obs_dict["energy"] / 50.0, 1.0),
+                (obs_dict["stage"] - 1) / 7.0,
+                obs_dict["dataSiphons"] / 10.0,
+                (obs_dict["baseAttack"] - 1) / 2.0,  # 1-3 → 0-1
+                1.0 if obs_dict.get("showActivated", False) else 0.0,
+                1.0 if obs_dict.get("scheduledTasksDisabled", False) else 0.0,
+            ],
+            dtype=np.float32,
+        )
 
         # Program inventory (23 values, binary vector)
         programs = np.zeros(23, dtype=np.int32)
@@ -132,15 +133,17 @@ class SwiftEnvWrapper:
                 if "enemy" in cell:
                     enemy = cell["enemy"]
                     enemy_type = enemy["type"]
-                    features.extend([
-                        1.0 if enemy_type == "virus" else 0.0,
-                        1.0 if enemy_type == "daemon" else 0.0,
-                        1.0 if enemy_type == "glitch" else 0.0,
-                        1.0 if enemy_type == "cryptog" else 0.0,
-                        enemy["hp"] / 3.0,
-                        1.0 if enemy["isStunned"] else 0.0,
-                        1.0 if enemy.get("spawnedFromSiphon", False) else 0.0
-                    ])
+                    features.extend(
+                        [
+                            1.0 if enemy_type == "virus" else 0.0,
+                            1.0 if enemy_type == "daemon" else 0.0,
+                            1.0 if enemy_type == "glitch" else 0.0,
+                            1.0 if enemy_type == "cryptog" else 0.0,
+                            enemy["hp"] / 3.0,
+                            1.0 if enemy["isStunned"] else 0.0,
+                            1.0 if enemy.get("spawnedFromSiphon", False) else 0.0,
+                        ]
+                    )
                 else:
                     features.extend([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
@@ -148,13 +151,15 @@ class SwiftEnvWrapper:
                 if "block" in cell:
                     block = cell["block"]
                     block_type = block["blockType"]
-                    features.extend([
-                        1.0 if block_type == "data" else 0.0,
-                        1.0 if block_type == "program" else 0.0,
-                        1.0 if block_type == "question" else 0.0,
-                        block.get("points", 0) / 9.0,
-                        1.0 if block["isSiphoned"] else 0.0
-                    ])
+                    features.extend(
+                        [
+                            1.0 if block_type == "data" else 0.0,
+                            1.0 if block_type == "program" else 0.0,
+                            1.0 if block_type == "question" else 0.0,
+                            block.get("points", 0) / 9.0,
+                            1.0 if block["isSiphoned"] else 0.0,
+                        ]
+                    )
                 else:
                     features.extend([0.0, 0.0, 0.0, 0.0, 0.0])
 
@@ -179,23 +184,19 @@ class SwiftEnvWrapper:
                     trans = cell["transmission"]
                     transmission_turns = trans["turnsUntilSpawn"]
 
-                features.extend([
-                    transmission_spawncount / 9.0,
-                    min(transmission_turns / 4.0, 1.0)
-                ])
+                features.extend([transmission_spawncount / 9.0, min(transmission_turns / 4.0, 1.0)])
 
                 # Resources (2 features)
-                features.extend([
-                    cell.get("credits", 0) / 3.0,
-                    cell.get("energy", 0) / 3.0
-                ])
+                features.extend([cell.get("credits", 0) / 3.0, cell.get("energy", 0) / 3.0])
 
                 # Special cells (3 features)
-                features.extend([
-                    1.0 if cell.get("isDataSiphon", False) else 0.0,
-                    1.0 if cell.get("isExit", False) else 0.0,
-                    1.0 if cell.get("siphonCenter", False) else 0.0
-                ])
+                features.extend(
+                    [
+                        1.0 if cell.get("isDataSiphon", False) else 0.0,
+                        1.0 if cell.get("isExit", False) else 0.0,
+                        1.0 if cell.get("siphonCenter", False) else 0.0,
+                    ]
+                )
 
                 grid[row_idx, col_idx, :] = features[:42]
 
@@ -210,22 +211,14 @@ class SwiftEnvWrapper:
 
     def step(self, action: int) -> StepResult:
         """Execute an action in the environment."""
-        response = self._send_command({
-            "action": "step",
-            "actionIndex": int(action)
-        })
+        response = self._send_command({"action": "step", "actionIndex": int(action)})
 
         observation = self._parse_observation(response["observation"])
         reward = float(response["reward"])
         done = bool(response["done"])
         info = response.get("info", {})
 
-        return StepResult(
-            observation=observation,
-            reward=reward,
-            done=done,
-            info=info
-        )
+        return StepResult(observation=observation, reward=reward, done=done, info=info)
 
     def get_valid_actions(self) -> list[int]:
         """Get list of valid action indices for current state."""
@@ -235,10 +228,7 @@ class SwiftEnvWrapper:
     def set_state(self, state: GameState) -> Observation:
         """Set the complete game state for test setup."""
         state_json = game_state_to_json(state)
-        response = self._send_command({
-            "action": "setState",
-            "state": state_json
-        })
+        response = self._send_command({"action": "setState", "state": state_json})
         return self._parse_observation(response["observation"])
 
     def get_internal_state(self) -> InternalState:

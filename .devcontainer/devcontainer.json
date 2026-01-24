@@ -25,7 +25,7 @@
 		"source=hack-matrix-zsh-history,target=/commandhistory,type=volume"
 	],
 	"updateRemoteUserUID": true,
-	"postCreateCommand": "sudo chown -R $(whoami) /commandhistory && swift build -c release",
+	"postCreateCommand": "sudo chown -R $(whoami) /commandhistory && swift build -c release && cd python && pip install -r requirements.txt && pre-commit install",
 	"postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
 	"customizations": {
 		"vscode": {

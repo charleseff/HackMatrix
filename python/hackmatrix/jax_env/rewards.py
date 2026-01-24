@@ -5,7 +5,7 @@ Reward calculation for HackMatrix JAX environment.
 import jax
 import jax.numpy as jnp
 
-from .state import EnvState, STAGE_COMPLETION_REWARDS
+from .state import STAGE_COMPLETION_REWARDS, EnvState
 
 
 def calculate_reward(

@@ -14,20 +14,22 @@ Key adaptations:
 import jax
 import jax.numpy as jnp
 from flax import struct
-from typing import Tuple, Any
 
 from hackmatrix.jax_env import (
-    reset as jax_reset,
-    step as jax_step,
-    get_valid_actions,
+    GRID_SIZE,
+    NUM_ACTIONS,
+    NUM_PROGRAMS,
     EnvState,
     Observation,
-    NUM_ACTIONS,
-    GRID_SIZE,
-    NUM_PROGRAMS,
+    get_valid_actions,
+)
+from hackmatrix.jax_env import (
+    reset as jax_reset,
+)
+from hackmatrix.jax_env import (
+    step as jax_step,
 )
 from hackmatrix.jax_env.state import GRID_FEATURES, PLAYER_STATE_SIZE
-
 
 # Observation dimensions
 # player_state: 10, programs: 23, grid: 6*6*42 = 1512
@@ -37,12 +39,14 @@ OBS_SIZE = PLAYER_STATE_SIZE + NUM_PROGRAMS + GRID_SIZE * GRID_SIZE * GRID_FEATU
 @struct.dataclass
 class EnvParams:
     """Environment parameters (empty for HackMatrix, but required by Gymnax interface)."""
+
     pass
 
 
 @struct.dataclass
 class GymnaxEnvState:
     """Wrapper state that includes the underlying EnvState and extra info."""
+
     env_state: EnvState
     key: jax.Array
 
@@ -66,9 +70,7 @@ class HackMatrixGymnax:
     def default_params(self) -> EnvParams:
         return EnvParams()
 
-    def reset(
-        self, key: jax.Array, params: EnvParams = None
-    ) -> Tuple[jax.Array, GymnaxEnvState]:
+    def reset(self, key: jax.Array, params: EnvParams = None) -> tuple[jax.Array, GymnaxEnvState]:
         """Reset environment and return (obs, state).
 
         Args:
@@ -93,7 +95,7 @@ class HackMatrixGymnax:
         state: GymnaxEnvState,
         action: jnp.int32,
         params: EnvParams = None,
-    ) -> Tuple[jax.Array, GymnaxEnvState, jnp.float32, jnp.bool_, dict]:
+    ) -> tuple[jax.Array, GymnaxEnvState, jnp.float32, jnp.bool_, dict]:
         """Execute action and return (obs, state, reward, done, info).
 
         Args:
@@ -144,11 +146,13 @@ class HackMatrixGymnax:
 
         Total: 1545 features
         """
-        return jnp.concatenate([
-            obs.player_state,                      # (10,)
-            obs.programs.astype(jnp.float32),      # (23,)
-            obs.grid.ravel(),                      # (1512,)
-        ])
+        return jnp.concatenate(
+            [
+                obs.player_state,  # (10,)
+                obs.programs.astype(jnp.float32),  # (23,)
+                obs.grid.ravel(),  # (1512,)
+            ]
+        )
 
     def observation_space(self, params: EnvParams = None):
         """Return observation space specification."""

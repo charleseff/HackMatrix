@@ -23,43 +23,52 @@ class ObservationValidator:
         """Validate a single observation and track what we've seen."""
 
         # Check top-level structure
-        expected_keys = {'player', 'programs', 'grid'}
+        expected_keys = {"player", "programs", "grid"}
         if set(obs.keys()) != expected_keys:
-            self.issues.append(f"Ep{episode_num} Step{step_num}: Missing keys! Expected {expected_keys}, got {set(obs.keys())}")
+            self.issues.append(
+                f"Ep{episode_num} Step{step_num}: Missing keys! Expected {expected_keys}, got {set(obs.keys())}"
+            )
             return
 
         # Validate player array (10 values)
         # [row, col, hp, credits, energy, stage, siphons, attack, showActivated, scheduledTasksDisabled]
-        player = obs['player']
+        player = obs["player"]
         if len(player) != 10:
-            self.issues.append(f"Ep{episode_num} Step{step_num}: Player array should be length 10, got {len(player)}")
+            self.issues.append(
+                f"Ep{episode_num} Step{step_num}: Player array should be length 10, got {len(player)}"
+            )
         else:
             # Track observed values (denormalized for readability)
             # Note: Values are normalized in [0,1], need to denormalize to check
-            row = player[0] * 5  # 0-5
-            col = player[1] * 5  # 0-5
-            hp = player[2] * 3   # 0-3
+            # Row and col (player[0], player[1]) not tracked here
+            hp = player[2] * 3  # 0-3
 
-            self.observed_states['player_hp'].add(round(hp))
-            self.observed_states['player_show_activated'].add(int(player[8] > 0.5))
-            self.observed_states['player_scheduled_tasks_disabled'].add(int(player[9] > 0.5))
+            self.observed_states["player_hp"].add(round(hp))
+            self.observed_states["player_show_activated"].add(int(player[8] > 0.5))
+            self.observed_states["player_scheduled_tasks_disabled"].add(int(player[9] > 0.5))
 
             # Validate normalized ranges [0, 1]
             for i, value in enumerate(player):
                 if not (0.0 <= value <= 1.0):
-                    self.issues.append(f"Ep{episode_num} Step{step_num}: Player[{i}] = {value} out of range [0,1]")
+                    self.issues.append(
+                        f"Ep{episode_num} Step{step_num}: Player[{i}] = {value} out of range [0,1]"
+                    )
 
         # Validate programs array (23 programs)
-        programs = obs['programs']
+        programs = obs["programs"]
         if len(programs) != 23:
-            self.issues.append(f"Ep{episode_num} Step{step_num}: Programs array should be length 23, got {len(programs)}")
+            self.issues.append(
+                f"Ep{episode_num} Step{step_num}: Programs array should be length 23, got {len(programs)}"
+            )
         else:
             # Track which programs we've seen owned
             for i, owned in enumerate(programs):
                 if owned == 1:
-                    self.observed_states['owned_programs'].add(i)
+                    self.observed_states["owned_programs"].add(i)
                 elif owned != 0:
-                    self.issues.append(f"Ep{episode_num} Step{step_num}: Programs[{i}] should be 0 or 1, got {owned}")
+                    self.issues.append(
+                        f"Ep{episode_num} Step{step_num}: Programs[{i}] should be 0 or 1, got {owned}"
+                    )
 
         # Validate grid (6x6x40)
         # Enemy: one-hot types (4) + hp + stunned = 6
@@ -68,14 +77,16 @@ class ObservationValidator:
         # Resources: credits + energy = 2
         # Special: is_data_siphon + is_exit + siphon_center = 3
         # Total: 42 channels
-        grid = obs['grid']
+        grid = obs["grid"]
         if grid.shape != (6, 6, 42):
-            self.issues.append(f"Ep{episode_num} Step{step_num}: Grid should be (6,6,42), got {grid.shape}")
+            self.issues.append(
+                f"Ep{episode_num} Step{step_num}: Grid should be (6,6,42), got {grid.shape}"
+            )
         else:
             # Check for non-zero values in each channel to track coverage
             for channel in range(42):
                 if np.any(grid[:, :, channel] != 0):
-                    self.observed_states['active_grid_channels'].add(channel)
+                    self.observed_states["active_grid_channels"].add(channel)
 
             # Validate normalized ranges [0, 1]
             if np.any(grid < 0) or np.any(grid > 1):
@@ -84,31 +95,44 @@ class ObservationValidator:
     def validate_info(self, info, step_num, episode_num):
         """Validate info dict structure."""
 
-        if 'reward_breakdown' in info:
-            breakdown = info['reward_breakdown']
+        if "reward_breakdown" in info:
+            breakdown = info["reward_breakdown"]
 
             # Check all 14 reward components are present
             expected_components = [
-                'stage', 'score', 'kills', 'dataSiphon', 'distance', 'victory', 'death',
-                'resourceGain', 'resourceHolding', 'damagePenalty', 'hpRecovery',
-                'siphonQuality', 'programWaste', 'siphonDeathPenalty'
+                "stage",
+                "score",
+                "kills",
+                "dataSiphon",
+                "distance",
+                "victory",
+                "death",
+                "resourceGain",
+                "resourceHolding",
+                "damagePenalty",
+                "hpRecovery",
+                "siphonQuality",
+                "programWaste",
+                "siphonDeathPenalty",
             ]
 
             missing = [c for c in expected_components if c not in breakdown]
             if missing:
-                self.issues.append(f"Ep{episode_num} Step{step_num}: Missing reward components: {missing}")
+                self.issues.append(
+                    f"Ep{episode_num} Step{step_num}: Missing reward components: {missing}"
+                )
 
             # Track which components have been non-zero
             for component, value in breakdown.items():
                 if value != 0:
-                    self.observed_states['nonzero_reward_components'].add(component)
+                    self.observed_states["nonzero_reward_components"].add(component)
 
     def report(self):
         """Print comprehensive validation report."""
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("OBSERVATION SPACE VALIDATION REPORT")
-        print("="*80)
+        print("=" * 80)
 
         # Issues
         if self.issues:
@@ -121,41 +145,52 @@ class ObservationValidator:
             print("\n✅ NO ISSUES FOUND")
 
         # Coverage statistics
-        print("\n" + "-"*80)
+        print("\n" + "-" * 80)
         print("COVERAGE STATISTICS")
-        print("-"*80)
+        print("-" * 80)
 
         print("\n📊 Player State Coverage:")
         print(f"  HP values seen: {sorted(self.observed_states['player_hp'])}")
         print(f"  Show activated: {sorted(self.observed_states['player_show_activated'])}")
-        print(f"  Scheduled tasks disabled: {sorted(self.observed_states['player_scheduled_tasks_disabled'])}")
+        print(
+            f"  Scheduled tasks disabled: {sorted(self.observed_states['player_scheduled_tasks_disabled'])}"
+        )
 
         print("\n📚 Programs Coverage:")
-        owned_programs = sorted(self.observed_states['owned_programs'])
+        owned_programs = sorted(self.observed_states["owned_programs"])
         print(f"  Programs owned: {len(owned_programs)}/23")
         if owned_programs:
             print(f"  Program indices: {owned_programs}")
 
         print("\n🗺️  Grid Coverage:")
-        active_channels = sorted(self.observed_states['active_grid_channels'])
+        active_channels = sorted(self.observed_states["active_grid_channels"])
         print(f"  Active grid channels: {len(active_channels)}/40")
         print(f"  Channel indices: {active_channels}")
 
         channel_names = [
             # Enemy (6 channels)
-            "0: Enemy virus (one-hot)", "1: Enemy daemon (one-hot)",
-            "2: Enemy glitch (one-hot)", "3: Enemy cryptog (one-hot)",
-            "4: Enemy HP (normalized)", "5: Enemy stunned (binary)",
+            "0: Enemy virus (one-hot)",
+            "1: Enemy daemon (one-hot)",
+            "2: Enemy glitch (one-hot)",
+            "3: Enemy cryptog (one-hot)",
+            "4: Enemy HP (normalized)",
+            "5: Enemy stunned (binary)",
             # Block (5 channels)
-            "6: Block data (one-hot)", "7: Block program (one-hot)", "8: Block question (one-hot)",
-            "9: Block points (normalized)", "10: Block siphoned (binary)",
+            "6: Block data (one-hot)",
+            "7: Block program (one-hot)",
+            "8: Block question (one-hot)",
+            "9: Block points (normalized)",
+            "10: Block siphoned (binary)",
             # Program (25 channels: 23 one-hot + 2 transmission)
             "11-33: Program types (23 one-hot)",
-            "34: Transmission spawn count", "35: Transmission turns remaining",
+            "34: Transmission spawn count",
+            "35: Transmission turns remaining",
             # Resources (2 channels)
-            "36: Credits (normalized)", "37: Energy (normalized)",
+            "36: Credits (normalized)",
+            "37: Energy (normalized)",
             # Special (2 channels)
-            "38: Is data siphon (binary)", "39: Is exit (binary)"
+            "38: Is data siphon (binary)",
+            "39: Is exit (binary)",
         ]
 
         if active_channels != list(range(40)):
@@ -170,30 +205,41 @@ class ObservationValidator:
                         print(f"    - Channel {i}")
 
         print("\n💰 Reward Components Coverage:")
-        active_rewards = sorted(self.observed_states['nonzero_reward_components'])
+        active_rewards = sorted(self.observed_states["nonzero_reward_components"])
         print(f"  Non-zero components: {len(active_rewards)}/14")
         for component in active_rewards:
             print(f"    ✓ {component}")
 
         all_rewards = [
-            'stage', 'score', 'kills', 'dataSiphon', 'distance', 'victory', 'death',
-            'resourceGain', 'resourceHolding', 'damagePenalty', 'hpRecovery',
-            'siphonQuality', 'programWaste', 'siphonDeathPenalty'
+            "stage",
+            "score",
+            "kills",
+            "dataSiphon",
+            "distance",
+            "victory",
+            "death",
+            "resourceGain",
+            "resourceHolding",
+            "damagePenalty",
+            "hpRecovery",
+            "siphonQuality",
+            "programWaste",
+            "siphonDeathPenalty",
         ]
         missing_rewards = [r for r in all_rewards if r not in active_rewards]
         if missing_rewards:
-            print(f"\n  Never non-zero (may be expected):")
+            print("\n  Never non-zero (may be expected):")
             for component in missing_rewards:
                 print(f"    - {component}")
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
 
 
 def run_validation(num_episodes=20, max_steps=200):
     """Run validation across multiple episodes."""
 
     print(f"Running observation validation for {num_episodes} episodes...")
-    print(f"This will test different game scenarios to maximize coverage.\n")
+    print("This will test different game scenarios to maximize coverage.\n")
 
     validator = ObservationValidator()
     env = HackEnv(debug=False)

@@ -8,11 +8,12 @@ Usage:
     pytest tests/ -k "not jax"     # runs only [swift] tests (alternative)
 """
 
-import pytest
-from typing import Generator
+from collections.abc import Generator
 
-from .swift_env_wrapper import SwiftEnvWrapper
+import pytest
+
 from .jax_env_wrapper import JaxEnvWrapper
+from .swift_env_wrapper import SwiftEnvWrapper
 
 
 def pytest_configure(config):

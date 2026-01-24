@@ -13,9 +13,9 @@ Usage:
     train_state = train_fn(jax.random.PRNGKey(0))
 """
 
-from .env_wrapper import HackMatrixGymnax, EnvParams
-from .masked_ppo import ActorCritic, Transition, masked_categorical, MaskedCategorical
 from .config import TrainConfig, get_device_config
+from .env_wrapper import EnvParams, HackMatrixGymnax
+from .masked_ppo import ActorCritic, MaskedCategorical, Transition, masked_categorical
 from .train import make_train
 
 __all__ = [

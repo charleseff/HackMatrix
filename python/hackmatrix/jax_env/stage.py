@@ -6,13 +6,13 @@ import jax
 import jax.numpy as jnp
 
 from .state import (
-    EnvState,
-    GRID_SIZE,
-    PLAYER_MAX_HP,
     BLOCK_DATA,
     BLOCK_PROGRAM,
-    NUM_PROGRAMS,
+    GRID_SIZE,
     MAX_TRANSMISSIONS,
+    NUM_PROGRAMS,
+    PLAYER_MAX_HP,
+    EnvState,
 )
 
 
@@ -194,9 +194,7 @@ def generate_stage_content(state: EnvState, stage: jnp.int32) -> EnvState:
 
     # Set block types
     grid_block_type = jnp.where(
-        block_placement & is_data,
-        BLOCK_DATA,
-        jnp.where(block_placement, BLOCK_PROGRAM, 0)
+        block_placement & is_data, BLOCK_DATA, jnp.where(block_placement, BLOCK_PROGRAM, 0)
     )
 
     # Set points (for data blocks, spawnCount == points)
@@ -204,7 +202,7 @@ def generate_stage_content(state: EnvState, stage: jnp.int32) -> EnvState:
     grid_block_spawn_count = jnp.where(
         block_placement & is_data,
         points,  # Data: spawnCount == points
-        jnp.where(block_placement, 2, 0)  # Program: spawnCount = 2
+        jnp.where(block_placement, 2, 0),  # Program: spawnCount = 2
     )
 
     # Set program indices
@@ -224,17 +222,18 @@ def generate_stage_content(state: EnvState, stage: jnp.int32) -> EnvState:
     # Resource amounts: 45% 1, 45% 2, 10% 3
     key, subkey = jax.random.split(key)
     amount_roll = jax.random.uniform(subkey, (GRID_SIZE, GRID_SIZE))
-    resource_amount = jnp.where(
-        amount_roll < 0.45, 1,
-        jnp.where(amount_roll < 0.9, 2, 3)
-    )
+    resource_amount = jnp.where(amount_roll < 0.45, 1, jnp.where(amount_roll < 0.9, 2, 3))
 
     # 50% credits, 50% energy
     key, subkey = jax.random.split(key)
     is_credits = jax.random.uniform(subkey, (GRID_SIZE, GRID_SIZE)) < 0.5
 
-    grid_resources_credits = jnp.where(empty_cells & is_credits, resource_amount, state.grid_resources_credits)
-    grid_resources_energy = jnp.where(empty_cells & ~is_credits, resource_amount, state.grid_resources_energy)
+    grid_resources_credits = jnp.where(
+        empty_cells & is_credits, resource_amount, state.grid_resources_credits
+    )
+    grid_resources_energy = jnp.where(
+        empty_cells & ~is_credits, resource_amount, state.grid_resources_energy
+    )
 
     state = state.replace(
         grid_resources_credits=grid_resources_credits,

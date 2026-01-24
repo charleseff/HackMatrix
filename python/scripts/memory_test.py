@@ -78,7 +78,6 @@ import gc
 import os
 import subprocess
 import sys
-import time
 import tracemalloc
 
 # Add parent directory to path
@@ -89,7 +88,7 @@ from hackmatrix import HackEnv
 
 def format_bytes(size):
     """Format bytes as human-readable string."""
-    for unit in ['B', 'KB', 'MB', 'GB']:
+    for unit in ["B", "KB", "MB", "GB"]:
         if size < 1024.0:
             return f"{size:.1f} {unit}"
         size /= 1024.0
@@ -100,8 +99,7 @@ def get_swift_memory_mb(pid):
     """Get memory usage of Swift process in MB."""
     try:
         result = subprocess.run(
-            ['ps', '-o', 'rss=', '-p', str(pid)],
-            capture_output=True, text=True
+            ["ps", "-o", "rss=", "-p", str(pid)], capture_output=True, text=True
         )
         if result.returncode == 0 and result.stdout.strip():
             # rss is in KB
@@ -165,13 +163,15 @@ def run_memory_test(num_episodes: int = 100, steps_per_episode: int = 100):
             swift_growth = swift_mb - initial_swift_mb
             swift_memory_history.append(swift_mb)
 
-            py_status = '📈' if py_growth > 1024*1024 else '✓'
-            swift_status = '📈' if swift_growth > 10 else '✓'
+            py_status = "📈" if py_growth > 1024 * 1024 else "✓"
+            swift_status = "📈" if swift_growth > 10 else "✓"
 
-            print(f"Episode {episode + 1:3d}: "
-                  f"Python={format_bytes(current):>10s} ({py_status}) | "
-                  f"Swift={swift_mb:>6.1f} MB ({swift_status}) | "
-                  f"Swift Growth={swift_growth:+.1f} MB")
+            print(
+                f"Episode {episode + 1:3d}: "
+                f"Python={format_bytes(current):>10s} ({py_status}) | "
+                f"Swift={swift_mb:>6.1f} MB ({swift_status}) | "
+                f"Swift Growth={swift_growth:+.1f} MB"
+            )
 
     env.close()
 
@@ -183,8 +183,12 @@ def run_memory_test(num_episodes: int = 100, steps_per_episode: int = 100):
     print("=" * 80)
     print("FINAL RESULTS")
     print("=" * 80)
-    print(f"Python - Initial: {format_bytes(initial_current)}, Final: {format_bytes(final_current)}, Peak: {format_bytes(final_peak)}")
-    print(f"Swift  - Initial: {initial_swift_mb:.1f} MB, Final: {swift_memory_history[-1]:.1f} MB, Peak: {max(swift_memory_history):.1f} MB")
+    print(
+        f"Python - Initial: {format_bytes(initial_current)}, Final: {format_bytes(final_current)}, Peak: {format_bytes(final_peak)}"
+    )
+    print(
+        f"Swift  - Initial: {initial_swift_mb:.1f} MB, Final: {swift_memory_history[-1]:.1f} MB, Peak: {max(swift_memory_history):.1f} MB"
+    )
     print()
 
     # Analyze Swift memory trend
@@ -192,21 +196,25 @@ def run_memory_test(num_episodes: int = 100, steps_per_episode: int = 100):
         early_avg = sum(swift_memory_history[:5]) / 5
         late_avg = sum(swift_memory_history[-5:]) / 5
         trend = late_avg - early_avg
-        print(f"Swift memory trend: {trend:+.1f} MB (early avg: {early_avg:.1f} MB, late avg: {late_avg:.1f} MB)")
+        print(
+            f"Swift memory trend: {trend:+.1f} MB (early avg: {early_avg:.1f} MB, late avg: {late_avg:.1f} MB)"
+        )
 
         if trend > 10:
-            print(f"\n⚠️  SWIFT MEMORY LEAK DETECTED: {trend:.1f} MB growth over {num_episodes} episodes")
+            print(
+                f"\n⚠️  SWIFT MEMORY LEAK DETECTED: {trend:.1f} MB growth over {num_episodes} episodes"
+            )
             return False
 
     # Show top Python memory consumers
     print("\nTop 5 Python memory allocations:")
-    top_stats = final_snapshot.compare_to(initial_snapshot, 'lineno')
+    top_stats = final_snapshot.compare_to(initial_snapshot, "lineno")
     for i, stat in enumerate(top_stats[:5], 1):
         print(f"  {i}. {stat}")
 
     tracemalloc.stop()
 
-    print(f"\n✓ Memory usage appears stable")
+    print("\n✓ Memory usage appears stable")
     return True
 
 
@@ -214,10 +222,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Memory profiling test for HackMatrix")
-    parser.add_argument("--episodes", type=int, default=100,
-                        help="Number of episodes to run (default: 100)")
-    parser.add_argument("--steps", type=int, default=100,
-                        help="Max steps per episode (default: 100)")
+    parser.add_argument(
+        "--episodes", type=int, default=100, help="Number of episodes to run (default: 100)"
+    )
+    parser.add_argument(
+        "--steps", type=int, default=100, help="Max steps per episode (default: 100)"
+    )
 
     args = parser.parse_args()
 

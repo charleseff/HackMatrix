@@ -5,8 +5,8 @@ Provides console output and optional WandB integration.
 """
 
 import time
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -15,9 +15,10 @@ class TrainingLogger:
 
     Handles console output and optional WandB integration.
     """
+
     use_wandb: bool = False
     project_name: str = "hackmatrix-purejaxrl"
-    run_name: Optional[str] = None
+    run_name: str | None = None
     _wandb_run: Any = None
     _start_time: float = 0.0
     _last_log_time: float = 0.0
@@ -29,6 +30,7 @@ class TrainingLogger:
         if self.use_wandb:
             try:
                 import wandb
+
                 self._wandb_run = wandb.init(
                     project=self.project_name,
                     name=self.run_name,
@@ -39,7 +41,7 @@ class TrainingLogger:
 
     def log_metrics(
         self,
-        metrics: Dict[str, float],
+        metrics: dict[str, float],
         step: int,
         prefix: str = "train",
     ):
@@ -61,13 +63,14 @@ class TrainingLogger:
         # WandB logging
         if self.use_wandb and self._wandb_run is not None:
             import wandb
+
             wandb_metrics = {f"{prefix}/{k}": v for k, v in metrics.items()}
             wandb_metrics["steps_per_second"] = sps
             wandb.log(wandb_metrics, step=step)
 
         self._last_log_time = current_time
 
-    def log_eval(self, metrics: Dict[str, float], step: int):
+    def log_eval(self, metrics: dict[str, float], step: int):
         """Log evaluation metrics.
 
         Args:
@@ -78,6 +81,7 @@ class TrainingLogger:
 
         if self.use_wandb and self._wandb_run is not None:
             import wandb
+
             wandb_metrics = {f"eval/{k}": v for k, v in metrics.items()}
             wandb.log(wandb_metrics, step=step)
 
@@ -88,6 +92,7 @@ class TrainingLogger:
 
         if self.use_wandb and self._wandb_run is not None:
             import wandb
+
             wandb.finish()
 
 

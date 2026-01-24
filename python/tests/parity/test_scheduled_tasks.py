@@ -11,26 +11,23 @@ Internal mechanics (scheduledTaskInterval, nextScheduledTaskTurn)
 are tested in implementation/ tests using get_internal_state().
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from ..env_interface import (
-    GameState,
-    PlayerState,
-    Block,
-    Observation,
-    ACTION_MOVE_UP,
-    ACTION_MOVE_DOWN,
-    ACTION_MOVE_LEFT,
     ACTION_MOVE_RIGHT,
+    ACTION_MOVE_UP,
     ACTION_SIPHON,
-    PROGRAM_WAIT,
     PROGRAM_CALM,
-    GRID_SIZE,
+    PROGRAM_WAIT,
+    Block,
+    GameState,
+    Observation,
+    PlayerState,
 )
 
-
 # MARK: - Helper Functions
+
 
 def count_transmissions(obs: Observation) -> int:
     """Count transmissions visible in observation grid.
@@ -63,6 +60,7 @@ def has_scheduled_tasks_disabled(obs: Observation) -> bool:
 
 
 # MARK: - Test Classes
+
 
 class TestScheduledTransmissionSpawns:
     """Verify transmissions spawn from scheduled tasks."""
@@ -164,7 +162,8 @@ class TestSiphonDelaysScheduledSpawn:
             if result.done:
                 break
 
-        transmissions_no_siphon = count_transmissions(obs)
+        # Note: transmissions_no_siphon value not needed for comparison,
+        # this test just validates the siphon path completes without error
 
         # Test WITH siphon
         state_with_siphon = GameState(
@@ -271,6 +270,6 @@ class TestCalmDisablesScheduledTasks:
             obs = result.observation
 
         # On new stage, scheduledTasksDisabled should be reset
-        assert not has_scheduled_tasks_disabled(obs), (
-            "scheduledTasksDisabled should reset to false on stage transition"
-        )
+        assert not has_scheduled_tasks_disabled(
+            obs
+        ), "scheduledTasksDisabled should reset to false on stage transition"

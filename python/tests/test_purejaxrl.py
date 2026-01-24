@@ -7,26 +7,23 @@ Tests that:
 3. Action masking correctly prevents invalid actions
 """
 
-import pytest
 import jax
 import jax.numpy as jnp
+import pytest
 
+from hackmatrix.jax_env import NUM_ACTIONS
 from hackmatrix.purejaxrl import (
     HackMatrixGymnax,
-    EnvParams,
-    ActorCritic,
-    Transition,
-    masked_categorical,
     TrainConfig,
     make_train,
+    masked_categorical,
 )
 from hackmatrix.purejaxrl.env_wrapper import OBS_SIZE, GymnaxEnvState
 from hackmatrix.purejaxrl.masked_ppo import (
-    init_network,
     compute_gae,
+    init_network,
     ppo_loss,
 )
-from hackmatrix.jax_env import NUM_ACTIONS
 
 
 class TestEnvWrapper:
@@ -55,9 +52,7 @@ class TestEnvWrapper:
         action_mask = env.get_action_mask(state)
         valid_action = jnp.argmax(action_mask.astype(jnp.int32))
 
-        next_obs, next_state, reward, done, info = env.step(
-            step_key, state, valid_action
-        )
+        next_obs, next_state, reward, done, info = env.step(step_key, state, valid_action)
 
         assert next_obs.shape == (OBS_SIZE,)
         assert isinstance(next_state, GymnaxEnvState)
@@ -127,9 +122,7 @@ class TestMaskedPPO:
         """Actor-critic should output correct shapes."""
         key = jax.random.PRNGKey(0)
 
-        network, params = init_network(
-            key, obs_shape=(OBS_SIZE,), hidden_dim=64, num_layers=2
-        )
+        network, params = init_network(key, obs_shape=(OBS_SIZE,), hidden_dim=64, num_layers=2)
 
         # Single observation
         obs = jnp.zeros(OBS_SIZE)
@@ -154,9 +147,7 @@ class TestMaskedPPO:
         values = jax.random.uniform(jax.random.PRNGKey(1), (num_steps + 1, num_envs))
         dones = jnp.zeros((num_steps, num_envs))
 
-        advantages, returns = compute_gae(
-            rewards, values, dones, gamma=0.99, gae_lambda=0.95
-        )
+        advantages, returns = compute_gae(rewards, values, dones, gamma=0.99, gae_lambda=0.95)
 
         assert advantages.shape == (num_steps, num_envs)
         assert returns.shape == (num_steps, num_envs)
@@ -168,9 +159,7 @@ class TestMaskedPPO:
         key = jax.random.PRNGKey(0)
         batch_size = 8
 
-        network, params = init_network(
-            key, obs_shape=(OBS_SIZE,), hidden_dim=64, num_layers=2
-        )
+        network, params = init_network(key, obs_shape=(OBS_SIZE,), hidden_dim=64, num_layers=2)
 
         # Create dummy batch
         obs = jnp.zeros((batch_size, OBS_SIZE))
@@ -255,9 +244,7 @@ class TestActionMaskingIntegration:
         env = HackMatrixGymnax()
         key = jax.random.PRNGKey(42)
 
-        network, params = init_network(
-            key, obs_shape=(OBS_SIZE,), hidden_dim=64, num_layers=2
-        )
+        network, params = init_network(key, obs_shape=(OBS_SIZE,), hidden_dim=64, num_layers=2)
 
         # Run several steps
         key, reset_key = jax.random.split(key)

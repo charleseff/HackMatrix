@@ -12,16 +12,18 @@ Why this design:
 
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
-import numpy as np
 
+import numpy as np
 
 # =============================================================================
 # State Dataclasses (for set_state)
 # =============================================================================
 
+
 @dataclass
 class PlayerState:
     """Player state for test setup."""
+
     row: int
     col: int
     hp: int = 3
@@ -35,6 +37,7 @@ class PlayerState:
 @dataclass
 class Enemy:
     """Enemy state for test setup."""
+
     type: str  # "virus", "daemon", "glitch", "cryptog"
     row: int
     col: int
@@ -47,6 +50,7 @@ class Enemy:
 @dataclass
 class Transmission:
     """Transmission (pending enemy spawn) for test setup."""
+
     row: int
     col: int
     turnsRemaining: int
@@ -60,6 +64,7 @@ class Block:
     For data blocks: points == spawnCount (invariant)
     For program blocks: programType and programActionIndex identify the program
     """
+
     row: int
     col: int
     type: str  # "data" or "program"
@@ -79,6 +84,7 @@ class Resource:
     Data siphons are collected by walking onto cells.
     Credits/energy are collected by siphoning blocks.
     """
+
     row: int
     col: int
     credits: int = 0
@@ -93,6 +99,7 @@ class GameState:
     This dataclass represents all the information needed to set up
     a specific game scenario for testing.
     """
+
     player: PlayerState
     enemies: list[Enemy] = field(default_factory=list)
     transmissions: list[Transmission] = field(default_factory=list)
@@ -109,6 +116,7 @@ class GameState:
 # Observation Dataclass
 # =============================================================================
 
+
 @dataclass
 class Observation:
     """Observation returned from environment.
@@ -118,6 +126,7 @@ class Observation:
     - programs: 23-element int32 array with binary ownership flags
     - grid: (6, 6, 42) float32 array with cell features
     """
+
     player: np.ndarray  # shape (10,), dtype float32
     programs: np.ndarray  # shape (23,), dtype int32
     grid: np.ndarray  # shape (6, 6, 42), dtype float32
@@ -133,9 +142,11 @@ class Observation:
 # Step Result
 # =============================================================================
 
+
 @dataclass
 class StepResult:
     """Result of executing a step in the environment."""
+
     observation: Observation
     reward: float
     done: bool
@@ -146,9 +157,11 @@ class StepResult:
 # Internal State (for implementation-level tests)
 # =============================================================================
 
+
 @dataclass
 class InternalEnemy:
     """Internal enemy state including hidden fields."""
+
     row: int
     col: int
     type: str
@@ -165,6 +178,7 @@ class InternalState:
 
     Exposes hidden state not visible in observations.
     """
+
     scheduled_task_interval: int
     next_scheduled_task_turn: int
     pending_siphon_transmissions: int
@@ -175,6 +189,7 @@ class InternalState:
 # =============================================================================
 # Environment Interface Protocol
 # =============================================================================
+
 
 @runtime_checkable
 class EnvInterface(Protocol):
@@ -297,6 +312,7 @@ ENEMY_CRYPTOG = "cryptog"
 # Helper functions
 # =============================================================================
 
+
 def game_state_to_json(state: GameState) -> dict:
     """Convert GameState dataclass to JSON-serializable dict.
 
@@ -342,8 +358,11 @@ def game_state_to_json(state: GameState) -> dict:
                 "points": b.points,
                 "spawnCount": b.spawnCount,
                 "siphoned": b.siphoned,
-                **({"programType": b.programType, "programActionIndex": b.programActionIndex}
-                   if b.type == "program" else {}),
+                **(
+                    {"programType": b.programType, "programActionIndex": b.programActionIndex}
+                    if b.type == "program"
+                    else {}
+                ),
             }
             for b in state.blocks
         ],

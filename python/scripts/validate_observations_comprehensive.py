@@ -24,22 +24,24 @@ class ComprehensiveValidator:
         """Validate observation structure and track coverage."""
 
         # Check top-level structure
-        expected_keys = {'player', 'programs', 'grid'}
+        expected_keys = {"player", "programs", "grid"}
         if set(obs.keys()) != expected_keys:
-            self.issues.append(f"{context}: Missing keys! Expected {expected_keys}, got {set(obs.keys())}")
+            self.issues.append(
+                f"{context}: Missing keys! Expected {expected_keys}, got {set(obs.keys())}"
+            )
             return False
 
         # Validate player array
-        player = obs['player']
+        player = obs["player"]
         if len(player) != 10:
             self.issues.append(f"{context}: Player array should be length 10, got {len(player)}")
             return False
 
         # Track player states
         hp = round(player[2] * 3)
-        self.observed_states['player_hp'].add(hp)
-        self.observed_states['player_show_activated'].add(int(player[8] > 0.5))
-        self.observed_states['player_scheduled_tasks_disabled'].add(int(player[9] > 0.5))
+        self.observed_states["player_hp"].add(hp)
+        self.observed_states["player_show_activated"].add(int(player[8] > 0.5))
+        self.observed_states["player_scheduled_tasks_disabled"].add(int(player[9] > 0.5))
 
         # Validate ranges
         for i, value in enumerate(player):
@@ -48,17 +50,17 @@ class ComprehensiveValidator:
                 return False
 
         # Validate programs
-        programs = obs['programs']
+        programs = obs["programs"]
         if len(programs) != 23:
             self.issues.append(f"{context}: Programs should be length 23, got {len(programs)}")
             return False
 
         for i, owned in enumerate(programs):
             if owned == 1:
-                self.observed_states['owned_programs'].add(i)
+                self.observed_states["owned_programs"].add(i)
 
         # Validate grid
-        grid = obs['grid']
+        grid = obs["grid"]
         if grid.shape != (6, 6, 42):
             self.issues.append(f"{context}: Grid should be (6,6,42), got {grid.shape}")
             return False
@@ -70,22 +72,33 @@ class ComprehensiveValidator:
         # Track active channels
         for channel in range(40):
             if np.any(grid[:, :, channel] != 0):
-                self.observed_states['active_grid_channels'].add(channel)
+                self.observed_states["active_grid_channels"].add(channel)
 
         return True
 
     def validate_reward(self, info, context=""):
         """Validate reward breakdown structure."""
 
-        if 'reward_breakdown' not in info:
+        if "reward_breakdown" not in info:
             self.issues.append(f"{context}: Missing reward_breakdown in info")
             return False
 
-        breakdown = info['reward_breakdown']
+        breakdown = info["reward_breakdown"]
         expected_components = [
-            'stage', 'score', 'kills', 'dataSiphon', 'distance', 'victory', 'death',
-            'resourceGain', 'resourceHolding', 'damagePenalty', 'hpRecovery',
-            'siphonQuality', 'programWaste', 'siphonDeathPenalty'
+            "stage",
+            "score",
+            "kills",
+            "dataSiphon",
+            "distance",
+            "victory",
+            "death",
+            "resourceGain",
+            "resourceHolding",
+            "damagePenalty",
+            "hpRecovery",
+            "siphonQuality",
+            "programWaste",
+            "siphonDeathPenalty",
         ]
 
         missing = [c for c in expected_components if c not in breakdown]
@@ -96,7 +109,7 @@ class ComprehensiveValidator:
         # Track non-zero components
         for component, value in breakdown.items():
             if value != 0:
-                self.observed_states['nonzero_reward_components'].add(component)
+                self.observed_states["nonzero_reward_components"].add(component)
 
         return True
 
@@ -106,21 +119,21 @@ class ComprehensiveValidator:
 
         obs, info = env.reset()
         if not self.validate_observation(obs, "Reset"):
-            self.test_results['basic_movement'] = "❌ Failed"
+            self.test_results["basic_movement"] = "❌ Failed"
             return
 
         # Take a few movement actions
         for direction in [0, 1, 2, 3]:  # up, down, left, right
             obs, reward, done, truncated, info = env.step(direction)
             if not self.validate_observation(obs, f"Move {direction}"):
-                self.test_results['basic_movement'] = "❌ Failed"
+                self.test_results["basic_movement"] = "❌ Failed"
                 return
             self.validate_reward(info, f"Move {direction}")
 
             if done or truncated:
                 break
 
-        self.test_results['basic_movement'] = "✅ Passed"
+        self.test_results["basic_movement"] = "✅ Passed"
         print("  ✓ Movement actions work correctly")
 
     def test_siphon_mechanics(self, env):
@@ -130,11 +143,11 @@ class ComprehensiveValidator:
         obs, info = env.reset()
 
         # Look for data blocks or program blocks in observation
-        grid = obs['grid']
+        grid = obs["grid"]
         has_blocks = (
-            np.any(grid[:, :, 6] > 0) or  # Data blocks
-            np.any(grid[:, :, 7] > 0) or  # Program blocks
-            np.any(grid[:, :, 8] > 0)     # Question blocks
+            np.any(grid[:, :, 6] > 0)  # Data blocks
+            or np.any(grid[:, :, 7] > 0)  # Program blocks
+            or np.any(grid[:, :, 8] > 0)  # Question blocks
         )
 
         if not has_blocks:
@@ -148,9 +161,9 @@ class ComprehensiveValidator:
         for i in range(max_attempts):
             obs, reward, done, truncated, info = env.step(4)  # Siphon action
 
-            grid = obs['grid']
+            grid = obs["grid"]
             if np.any(grid[:, :, 10] > 0):  # Block siphoned channel
-                self.observed_states['active_grid_channels'].add(10)
+                self.observed_states["active_grid_channels"].add(10)
                 siphoned = True
                 print(f"  ✓ Block siphoned successfully (step {i+1})")
                 break
@@ -159,9 +172,9 @@ class ComprehensiveValidator:
                 obs, info = env.reset()
 
         if siphoned:
-            self.test_results['siphon_mechanics'] = "✅ Passed"
+            self.test_results["siphon_mechanics"] = "✅ Passed"
         else:
-            self.test_results['siphon_mechanics'] = "⚠️  Partial (no blocks siphoned)"
+            self.test_results["siphon_mechanics"] = "⚠️  Partial (no blocks siphoned)"
             print("  ⚠️  Could not trigger block siphoning")
 
     def test_program_acquisition(self, env):
@@ -179,7 +192,7 @@ class ComprehensiveValidator:
             action = 4 if i % 2 == 0 else (i % 4)
             obs, reward, done, truncated, info = env.step(action)
 
-            programs = obs['programs']
+            programs = obs["programs"]
             if np.any(programs == 1):
                 programs_acquired = True
                 print(f"  ✓ Program acquired (step {i+1})")
@@ -197,9 +210,9 @@ class ComprehensiveValidator:
                 obs, info = env.reset()
 
         if programs_acquired:
-            self.test_results['program_acquisition'] = "✅ Passed"
+            self.test_results["program_acquisition"] = "✅ Passed"
         else:
-            self.test_results['program_acquisition'] = "⚠️  No programs acquired"
+            self.test_results["program_acquisition"] = "⚠️  No programs acquired"
             print("  ⚠️  Could not acquire programs")
 
     def test_enemy_interactions(self, env):
@@ -209,7 +222,7 @@ class ComprehensiveValidator:
         obs, info = env.reset()
 
         # Check for enemies in grid
-        grid = obs['grid']
+        grid = obs["grid"]
         enemy_channels = [0, 1, 2, 3]  # virus, daemon, glitch, cryptog
 
         has_enemies = any(np.any(grid[:, :, ch] > 0) for ch in enemy_channels)
@@ -221,9 +234,9 @@ class ComprehensiveValidator:
             if np.any(grid[:, :, 4] > 0):
                 print("  ✓ Enemy HP data present")
 
-            self.test_results['enemy_interactions'] = "✅ Passed"
+            self.test_results["enemy_interactions"] = "✅ Passed"
         else:
-            self.test_results['enemy_interactions'] = "⚠️  No enemies found"
+            self.test_results["enemy_interactions"] = "⚠️  No enemies found"
             print("  ⚠️  No enemies in observation")
 
     def test_reward_components(self, env):
@@ -243,24 +256,24 @@ class ComprehensiveValidator:
 
             if done or truncated:
                 # Check if we got death penalty
-                if info.get('reward_breakdown', {}).get('death', 0) != 0:
+                if info.get("reward_breakdown", {}).get("death", 0) != 0:
                     print("  ✓ Death penalty triggered")
                 obs, info = env.reset()
 
-        active_rewards = len(self.observed_states['nonzero_reward_components'])
+        active_rewards = len(self.observed_states["nonzero_reward_components"])
         print(f"  ✓ Triggered {active_rewards}/14 reward components")
 
         if active_rewards >= 5:
-            self.test_results['reward_components'] = "✅ Passed"
+            self.test_results["reward_components"] = "✅ Passed"
         else:
-            self.test_results['reward_components'] = "⚠️  Limited coverage"
+            self.test_results["reward_components"] = "⚠️  Limited coverage"
 
     def test_special_cells(self, env):
         """Test data siphon and exit cells."""
         print("\n🧪 Test 6: Special Cells")
 
         obs, info = env.reset()
-        grid = obs['grid']
+        grid = obs["grid"]
 
         has_data_siphon = np.any(grid[:, :, 38] > 0)
         has_exit = np.any(grid[:, :, 39] > 0)
@@ -276,9 +289,9 @@ class ComprehensiveValidator:
             print("  ⚠️  No exit in initial state")
 
         if has_data_siphon or has_exit:
-            self.test_results['special_cells'] = "✅ Passed"
+            self.test_results["special_cells"] = "✅ Passed"
         else:
-            self.test_results['special_cells'] = "⚠️  No special cells found"
+            self.test_results["special_cells"] = "⚠️  No special cells found"
 
     def test_transmissions(self, env):
         """Test transmission observations."""
@@ -291,7 +304,7 @@ class ComprehensiveValidator:
         found_transmission = False
 
         for i in range(max_steps):
-            grid = obs['grid']
+            grid = obs["grid"]
 
             # Check transmission spawn count and turns channels
             if np.any(grid[:, :, 34] > 0) or np.any(grid[:, :, 35] > 0):
@@ -306,9 +319,9 @@ class ComprehensiveValidator:
                 obs, info = env.reset()
 
         if found_transmission:
-            self.test_results['transmissions'] = "✅ Passed"
+            self.test_results["transmissions"] = "✅ Passed"
         else:
-            self.test_results['transmissions'] = "⚠️  No transmissions observed"
+            self.test_results["transmissions"] = "⚠️  No transmissions observed"
             print("  ⚠️  No transmissions spawned")
 
     def test_resources(self, env):
@@ -316,7 +329,7 @@ class ComprehensiveValidator:
         print("\n🧪 Test 8: Resources")
 
         obs, info = env.reset()
-        grid = obs['grid']
+        grid = obs["grid"]
 
         has_credits = np.any(grid[:, :, 36] > 0)
         has_energy = np.any(grid[:, :, 37] > 0)
@@ -327,17 +340,17 @@ class ComprehensiveValidator:
             print("  ✓ Energy detected in grid")
 
         if has_credits or has_energy:
-            self.test_results['resources'] = "✅ Passed"
+            self.test_results["resources"] = "✅ Passed"
         else:
-            self.test_results['resources'] = "⚠️  No resources found"
+            self.test_results["resources"] = "⚠️  No resources found"
             print("  ⚠️  No resources in grid")
 
     def run_all_tests(self, use_debug_scenario=True):
         """Run all validation tests."""
 
-        print("="*80)
+        print("=" * 80)
         print("COMPREHENSIVE OBSERVATION SPACE VALIDATION")
-        print("="*80)
+        print("=" * 80)
         print(f"\nDebug Scenario Mode: {'ENABLED' if use_debug_scenario else 'DISABLED'}")
         print("This creates predictable game states for systematic testing.\n")
 
@@ -364,9 +377,9 @@ class ComprehensiveValidator:
     def print_report(self):
         """Print comprehensive validation report."""
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("VALIDATION REPORT")
-        print("="*80)
+        print("=" * 80)
 
         # Test results summary
         print("\n📋 Test Results:")
@@ -384,36 +397,48 @@ class ComprehensiveValidator:
             print("\n✅ NO STRUCTURAL ISSUES FOUND")
 
         # Coverage statistics
-        print("\n" + "-"*80)
+        print("\n" + "-" * 80)
         print("COVERAGE STATISTICS")
-        print("-"*80)
+        print("-" * 80)
 
         # Player state
         print("\n📊 Player State Coverage:")
         print(f"  HP values: {sorted(self.observed_states['player_hp'])}")
         print(f"  Show activated: {sorted(self.observed_states['player_show_activated'])}")
-        print(f"  Scheduled tasks disabled: {sorted(self.observed_states['player_scheduled_tasks_disabled'])}")
+        print(
+            f"  Scheduled tasks disabled: {sorted(self.observed_states['player_scheduled_tasks_disabled'])}"
+        )
 
         # Programs
         print("\n📚 Programs:")
-        owned = sorted(self.observed_states['owned_programs'])
+        owned = sorted(self.observed_states["owned_programs"])
         print(f"  Owned: {len(owned)}/23")
         if owned:
             print(f"  Indices: {owned}")
 
         # Grid channels
         print("\n🗺️  Grid Channels:")
-        active = sorted(self.observed_states['active_grid_channels'])
+        active = sorted(self.observed_states["active_grid_channels"])
         print(f"  Active: {len(active)}/40")
 
         channel_map = {
-            0: "Enemy virus", 1: "Enemy daemon", 2: "Enemy glitch", 3: "Enemy cryptog",
-            4: "Enemy HP", 5: "Enemy stunned",
-            6: "Block data", 7: "Block program", 8: "Block question",
-            9: "Block points", 10: "Block siphoned",
-            34: "Transmission spawn count", 35: "Transmission turns",
-            36: "Credits", 37: "Energy",
-            38: "Data siphon cell", 39: "Exit cell"
+            0: "Enemy virus",
+            1: "Enemy daemon",
+            2: "Enemy glitch",
+            3: "Enemy cryptog",
+            4: "Enemy HP",
+            5: "Enemy stunned",
+            6: "Block data",
+            7: "Block program",
+            8: "Block question",
+            9: "Block points",
+            10: "Block siphoned",
+            34: "Transmission spawn count",
+            35: "Transmission turns",
+            36: "Credits",
+            37: "Energy",
+            38: "Data siphon cell",
+            39: "Exit cell",
         }
 
         missing = [i for i in range(40) if i not in active]
@@ -429,23 +454,34 @@ class ComprehensiveValidator:
 
         # Rewards
         print("\n💰 Reward Components:")
-        active_rewards = sorted(self.observed_states['nonzero_reward_components'])
+        active_rewards = sorted(self.observed_states["nonzero_reward_components"])
         print(f"  Active: {len(active_rewards)}/14")
         for comp in active_rewards:
             print(f"    ✓ {comp}")
 
         all_rewards = [
-            'stage', 'score', 'kills', 'dataSiphon', 'distance', 'victory', 'death',
-            'resourceGain', 'resourceHolding', 'damagePenalty', 'hpRecovery',
-            'siphonQuality', 'programWaste', 'siphonDeathPenalty'
+            "stage",
+            "score",
+            "kills",
+            "dataSiphon",
+            "distance",
+            "victory",
+            "death",
+            "resourceGain",
+            "resourceHolding",
+            "damagePenalty",
+            "hpRecovery",
+            "siphonQuality",
+            "programWaste",
+            "siphonDeathPenalty",
         ]
         missing_rewards = [r for r in all_rewards if r not in active_rewards]
         if missing_rewards:
-            print(f"\n  Never Triggered:")
+            print("\n  Never Triggered:")
             for comp in missing_rewards:
                 print(f"    - {comp}")
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
 
         # Final verdict
         issues_count = len(self.issues)
@@ -467,7 +503,7 @@ class ComprehensiveValidator:
             print("\n❌ VALIDATION FAILED")
             print("   Fix issues before training!")
 
-        print("="*80)
+        print("=" * 80)
 
 
 if __name__ == "__main__":

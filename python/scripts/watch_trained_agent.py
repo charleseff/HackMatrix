@@ -12,7 +12,13 @@ from sb3_contrib import MaskablePPO
 from hackmatrix import HackEnv
 
 
-def watch_agent(model_path: str, episodes: int = 3, max_steps: int = 500, debug: bool = False, info: bool = False):
+def watch_agent(
+    model_path: str,
+    episodes: int = 3,
+    max_steps: int = 500,
+    debug: bool = False,
+    info: bool = False,
+):
     """
     Load a trained agent and watch it play in visual mode.
 
@@ -54,7 +60,7 @@ def watch_agent(model_path: str, episodes: int = 3, max_steps: int = 500, debug:
         for episode in range(episodes):
             print(f"\n{'='*60}")
             print(f"Episode {episode + 1}/{episodes}")
-            print('='*60)
+            print("=" * 60)
 
             obs, info = env.reset()
             action_mask = info.get("action_mask")
@@ -83,15 +89,15 @@ def watch_agent(model_path: str, episodes: int = 3, max_steps: int = 500, debug:
             # Try to get additional info if available
             try:
                 # Info might not have these fields depending on when episode ended
-                if hasattr(env, 'unwrapped'):
+                if hasattr(env, "unwrapped"):
                     game_state = env.unwrapped._get_game_state()
                     if game_state:
                         print(f"  Final score: {game_state.get('score', 'N/A')}")
                         print(f"  Stage reached: {game_state.get('stage', 'N/A')}")
-            except:
+            except Exception:
                 pass
 
-            print('─'*60)
+            print("─" * 60)
 
     except KeyboardInterrupt:
         print("\n\nInterrupted by user")
@@ -118,41 +124,22 @@ Examples:
 
   # Auto-find latest model
   python watch_agent.py --latest
-        """
+        """,
     )
 
+    parser.add_argument("model_path", type=str, nargs="?", help="Path to saved model (.zip file)")
     parser.add_argument(
-        "model_path",
-        type=str,
-        nargs="?",
-        help="Path to saved model (.zip file)"
+        "--episodes", type=int, default=3, help="Number of episodes to watch (default: 3)"
     )
     parser.add_argument(
-        "--episodes",
-        type=int,
-        default=3,
-        help="Number of episodes to watch (default: 3)"
+        "--max-steps", type=int, default=500, help="Maximum steps per episode (default: 500)"
     )
     parser.add_argument(
-        "--max-steps",
-        type=int,
-        default=500,
-        help="Maximum steps per episode (default: 500)"
+        "--latest", action="store_true", help="Automatically use the latest best_model.zip"
     )
+    parser.add_argument("--debug", action="store_true", help="Enable verbose debug logging")
     parser.add_argument(
-        "--latest",
-        action="store_true",
-        help="Automatically use the latest best_model.zip"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable verbose debug logging"
-    )
-    parser.add_argument(
-        "--info",
-        action="store_true",
-        help="Enable info-level logging (important events only)"
+        "--info", action="store_true", help="Enable info-level logging (important events only)"
     )
 
     args = parser.parse_args()
@@ -167,7 +154,7 @@ Examples:
         # Find latest run directory
         run_dirs = sorted(
             [d for d in models_dir.iterdir() if d.is_dir() and d.name.startswith("maskable_ppo_")],
-            reverse=True
+            reverse=True,
         )
 
         if not run_dirs:

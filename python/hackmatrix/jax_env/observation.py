@@ -27,21 +27,19 @@ import jax.numpy as jnp
 from flax import struct
 
 from .state import (
-    EnvState,
-    GRID_SIZE,
-    GRID_FEATURES,
-    PLAYER_STATE_SIZE,
-    NUM_PROGRAMS,
-    MAX_ENEMIES,
-    MAX_TRANSMISSIONS,
-    ENEMY_VIRUS,
-    ENEMY_DAEMON,
-    ENEMY_GLITCH,
-    ENEMY_CRYPTOG,
-    BLOCK_EMPTY,
     BLOCK_DATA,
     BLOCK_PROGRAM,
     BLOCK_QUESTION,
+    ENEMY_CRYPTOG,
+    ENEMY_DAEMON,
+    ENEMY_GLITCH,
+    ENEMY_VIRUS,
+    GRID_FEATURES,
+    GRID_SIZE,
+    MAX_ENEMIES,
+    MAX_TRANSMISSIONS,
+    NUM_PROGRAMS,
+    EnvState,
 )
 
 
@@ -51,9 +49,10 @@ class Observation:
 
     Matches the structure from Swift for parity testing.
     """
+
     player_state: jax.Array  # (10,) float32
-    programs: jax.Array      # (23,) int32
-    grid: jax.Array          # (6, 6, 42) float32
+    programs: jax.Array  # (23,) int32
+    grid: jax.Array  # (6, 6, 42) float32
 
 
 def get_observation(state: EnvState) -> Observation:
@@ -89,18 +88,21 @@ def _encode_player(state: EnvState) -> jax.Array:
     """
     player = state.player
 
-    return jnp.array([
-        player.row / 5.0,
-        player.col / 5.0,
-        player.hp / 3.0,
-        jnp.minimum(player.credits / 50.0, 1.0),
-        jnp.minimum(player.energy / 50.0, 1.0),
-        (state.stage - 1) / 7.0,
-        player.data_siphons / 10.0,
-        (player.attack_damage - 1) / 2.0,
-        jnp.float32(state.show_activated),
-        jnp.float32(state.scheduled_tasks_disabled),
-    ], dtype=jnp.float32)
+    return jnp.array(
+        [
+            player.row / 5.0,
+            player.col / 5.0,
+            player.hp / 3.0,
+            jnp.minimum(player.credits / 50.0, 1.0),
+            jnp.minimum(player.energy / 50.0, 1.0),
+            (state.stage - 1) / 7.0,
+            player.data_siphons / 10.0,
+            (player.attack_damage - 1) / 2.0,
+            jnp.float32(state.show_activated),
+            jnp.float32(state.scheduled_tasks_disabled),
+        ],
+        dtype=jnp.float32,
+    )
 
 
 def _encode_grid(state: EnvState) -> jax.Array:
@@ -139,6 +141,7 @@ def _encode_enemies(grid: jax.Array, state: EnvState) -> jax.Array:
     - [5]: Is stunned
     - [6]: Spawned from siphon
     """
+
     def encode_single_enemy(carry, idx):
         grid, state = carry
         is_active = state.enemy_mask[idx]
@@ -243,7 +246,9 @@ def _encode_blocks(grid: jax.Array, state: EnvState) -> jax.Array:
 
     # Program type one-hot (channels 12-34)
     # Only for program blocks
-    has_program = (state.grid_block_type == BLOCK_PROGRAM) | (state.grid_block_type == BLOCK_QUESTION)
+    has_program = (state.grid_block_type == BLOCK_PROGRAM) | (
+        state.grid_block_type == BLOCK_QUESTION
+    )
 
     # Create program one-hot encoding for each cell
     def encode_program_for_cell(row_col):
@@ -261,7 +266,7 @@ def _encode_blocks(grid: jax.Array, state: EnvState) -> jax.Array:
         return one_hot
 
     # Generate all row/col combinations
-    rows, cols = jnp.meshgrid(jnp.arange(GRID_SIZE), jnp.arange(GRID_SIZE), indexing='ij')
+    rows, cols = jnp.meshgrid(jnp.arange(GRID_SIZE), jnp.arange(GRID_SIZE), indexing="ij")
     row_col_pairs = jnp.stack([rows.ravel(), cols.ravel()], axis=1)
 
     # Vectorize program encoding

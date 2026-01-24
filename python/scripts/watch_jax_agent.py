@@ -6,16 +6,15 @@ Watch a trained JAX/PureJaxRL agent play HackMatrix in visual mode.
 import argparse
 import sys
 from pathlib import Path
-from typing import Optional
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 from hackmatrix import HackEnv
-from hackmatrix.purejaxrl.checkpointing import load_params_npz, unflatten_params, infer_architecture
-from hackmatrix.purejaxrl.masked_ppo import ActorCritic
 from hackmatrix.jax_env import NUM_ACTIONS
+from hackmatrix.purejaxrl.checkpointing import infer_architecture, load_params_npz, unflatten_params
+from hackmatrix.purejaxrl.masked_ppo import ActorCritic
 
 
 def flatten_observation(obs_dict: dict) -> jnp.ndarray:
@@ -39,8 +38,8 @@ def watch_agent(
     model_path: str,
     episodes: int = 3,
     max_steps: int = 500,
-    hidden_dim: Optional[int] = None,
-    num_layers: Optional[int] = None,
+    hidden_dim: int | None = None,
+    num_layers: int | None = None,
     debug: bool = False,
     info: bool = False,
 ):
@@ -101,7 +100,9 @@ def watch_agent(
         print(f"Network initialized: {logits.shape[0]} actions, value={value:.3f}")
     except Exception as e:
         print(f"Error: Parameters don't match network architecture: {e}")
-        print(f"  Detected: hidden_dim={detected['hidden_dim']}, num_layers={detected['num_layers']}")
+        print(
+            f"  Detected: hidden_dim={detected['hidden_dim']}, num_layers={detected['num_layers']}"
+        )
         return
 
     # JIT compile the forward pass for speed
@@ -142,7 +143,9 @@ def watch_agent(
                 # Take step
                 obs_dict, reward, terminated, truncated, info_dict = env.step(action)
                 obs = flatten_observation(obs_dict)
-                action_mask = jnp.array(info_dict.get("action_mask", np.ones(NUM_ACTIONS, dtype=bool)))
+                action_mask = jnp.array(
+                    info_dict.get("action_mask", np.ones(NUM_ACTIONS, dtype=bool))
+                )
 
                 episode_reward += reward
                 step_count += 1
