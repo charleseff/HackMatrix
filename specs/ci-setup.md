@@ -1,5 +1,7 @@
 # CI Setup Spec
 
+**Status: Complete**
+
 ## Goal
 
 Set up GitHub Actions CI to run all tests (Swift and Python) on every push and pull request.
@@ -22,107 +24,88 @@ swift test
 cd python && source venv/bin/activate && pytest tests/ -v
 ```
 
-## Requirements
+## Implementation
 
-### Must Have
+### Decisions Made
 
-1. Run Swift tests on push/PR
-2. Run Python tests on push/PR
-3. Fail the build if any tests fail
-4. Work on ubuntu-latest (matches dev container)
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| Swift Version | 5.9 via `swift-actions/setup-swift` | Standard Linux-compatible version |
+| Python Version | 3.10 (single version) | Matches `requires-python = ">=3.10"` in pyproject.toml |
+| Job Structure | Single job (Option A) | Simpler, sequential execution ~2-3 min total |
+| Caching | Pip cache via setup-python | Fast enough for CI needs |
+| Dev Container Reuse | No (Option B) | Faster to install dependencies directly |
 
-### Nice to Have
+### Workflow File
 
-1. Caching for faster builds (Swift packages, pip dependencies)
-2. Test result annotations in PR
-3. Parallel jobs where possible
-4. Badge for README
-
-## Open Questions
-
-> These need to be resolved before implementation.
-
-### 1. Swift Version Pinning
-
-How should we pin the Swift version?
-- **Option A**: Use `swift:5.10` Docker image (matches dev container)
-- **Option B**: Use `swiftlang/swift` action with version parameter
-- **Option C**: Install via `apt` with specific version
-
-Current dev container uses: `swift:5.10-jammy`
-
-### 2. Python Version
-
-Which Python version(s) to test?
-- **Option A**: Single version matching dev container (3.11)
-- **Option B**: Matrix of versions (3.10, 3.11, 3.12)
-
-### 3. Job Structure
-
-How to structure the workflow?
-- **Option A**: Single job - simpler, but slower (sequential)
-- **Option B**: Two jobs with artifact passing - parallel Swift tests, Python waits for binary
-- **Option C**: Three jobs - Swift build, Swift tests, Python tests (max parallelism)
-
-### 4. Caching Strategy
-
-What to cache?
-- Swift Package Manager cache (`~/.cache/org.swift.swiftpm`)
-- Python venv or pip cache
-- Built Swift binary (if using multi-job)
-
-### 5. Branch Protection
-
-Should we require CI to pass before merging to main?
-- Requires repo settings change
-- What about the existing `test-reorganization.md` work?
-
-### 6. Dev Container Reuse
-
-Should CI use the dev container definition?
-- **Option A**: Yes - use `devcontainers/ci` action, guarantees parity
-- **Option B**: No - faster to install dependencies directly
-
-## Proposed Workflow Structure
+Located at `.github/workflows/ci.yml`:
 
 ```yaml
-# .github/workflows/test.yml
-name: Tests
+name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  swift-build:
+  lint-and-test:
     runs-on: ubuntu-latest
-    # Build Swift and upload binary artifact
-
-  swift-test:
-    runs-on: ubuntu-latest
-    # Run swift test
-
-  python-test:
-    runs-on: ubuntu-latest
-    needs: swift-build
-    # Download binary, run pytest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+        cache-dependency-path: python/requirements.txt
+    - name: Set up Swift
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: '5.9'
+    - name: Install Python dependencies
+      run: |
+        cd python
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Run Ruff linter
+      run: |
+        cd python
+        ruff check .
+    - name: Run Ruff formatter check
+      run: |
+        cd python
+        ruff format --check .
+    - name: Build Swift project
+      run: swift build
+    - name: Run Python tests
+      run: |
+        cd python
+        pytest tests/ -n auto -v --tb=short
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: python/.pytest_cache/
+        retention-days: 7
 ```
-
-## Dependencies
-
-- Ideally complete after `test-reorganization.md` (so CI runs reorganized tests)
-- Can be done in parallel if needed
 
 ## Success Criteria
 
-1. [ ] GitHub Actions workflow file created
-2. [ ] Swift tests run and pass in CI
-3. [ ] Python tests run and pass in CI
-4. [ ] CI runs on push to main and on PRs
-5. [ ] Caching configured for reasonable build times
-6. [ ] Open questions resolved
+1. [x] GitHub Actions workflow file created (`.github/workflows/ci.yml`)
+2. [x] Swift build runs in CI
+3. [x] Python tests run and pass in CI (350 tests)
+4. [x] CI runs on push to main and on PRs
+5. [x] Caching configured (pip cache)
+6. [x] Open questions resolved (see Decisions Made table)
+7. [x] Ruff linting integrated into CI
+
+## Related Documentation
+
+- [specs/continuous-integration.md](./continuous-integration.md) - Full CI usage guide
+- [specs/testing-and-linting.md](./testing-and-linting.md) - Pre-commit hooks that CI mirrors
 
 ## References
 

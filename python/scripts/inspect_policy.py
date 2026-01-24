@@ -80,9 +80,9 @@ def inspect_policy(model_path: str, num_steps: int = 10):
     print("=" * 80)
 
     for step in range(num_steps):
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"STEP {step + 1}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Get action mask
         action_mask = env.action_masks()
@@ -138,7 +138,7 @@ def inspect_policy(model_path: str, num_steps: int = 10):
                 else f"Action {action_idx}"
             )
             bar = "█" * int(prob * 50)  # Visual bar
-            print(f"{action_name:<15} {prob*100:>10.2f}%  {bar}")
+            print(f"{action_name:<15} {prob * 100:>10.2f}%  {bar}")
 
         # Show entropy (measure of randomness)
         # High entropy = exploring, low entropy = deterministic
@@ -157,7 +157,7 @@ def inspect_policy(model_path: str, num_steps: int = 10):
         )
         chosen_prob = action_probs[action]
 
-        print(f"\nChosen Action: {chosen_action_name} (probability: {chosen_prob*100:.1f}%)")
+        print(f"\nChosen Action: {chosen_action_name} (probability: {chosen_prob * 100:.1f}%)")
 
         # Step environment
         obs, reward, terminated, truncated, info = env.step(action)
@@ -166,10 +166,10 @@ def inspect_policy(model_path: str, num_steps: int = 10):
         print(f"Reward: {reward:.2f}")
 
         if done:
-            print(f"\n{'='*80}")
+            print(f"\n{'=' * 80}")
             print(f"EPISODE ENDED after {step + 1} steps")
             print(f"Total reward: {reward:.2f}")
-            print(f"{'='*80}")
+            print(f"{'=' * 80}")
             break
 
     env.close()

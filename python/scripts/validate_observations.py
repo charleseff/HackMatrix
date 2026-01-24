@@ -198,7 +198,7 @@ class ObservationValidator:
             for i in range(40):
                 if i not in active_channels:
                     if i >= 11 and i <= 33:
-                        print(f"    - Channel {i}: Program type {i-11} (one-hot)")
+                        print(f"    - Channel {i}: Program type {i - 11} (one-hot)")
                     elif i < len(channel_names):
                         print(f"    - {channel_names[i]}")
                     else:

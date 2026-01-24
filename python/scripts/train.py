@@ -126,7 +126,7 @@ class EpisodeStatsCallback(BaseCallback):
 
                 def pct(key, label=None):
                     label = label or key
-                    return f"{label}:{breakdown.get(key,0)/abs_total*100:.0f}%"
+                    return f"{label}:{breakdown.get(key, 0) / abs_total * 100:.0f}%"
 
                 # print(f"Ep {self.episode_count} | R={total_reward:.2f} | "
                 #       f"{pct('stage')} {pct('kills')} {pct('distance', 'dist')} {pct('score')} {pct('dataSiphon', 'siphon')} {pct('death')} | "

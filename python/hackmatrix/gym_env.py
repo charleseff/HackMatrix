@@ -274,7 +274,7 @@ class HackEnv(gym.Env):
 
             # Decode player state for display
             player = observation["player"]
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"ACTION: {action_name} (index={action})")
             print(f"REWARD: {reward:+.3f}")
             print(
@@ -289,7 +289,7 @@ class HackEnv(gym.Env):
             print(f"Owned Programs: {list(owned_programs)}")
             if terminated:
                 print(f"TERMINATED: {'Victory!' if player[5] > 0.875 else 'Defeated'}")
-            print(f"{'='*60}\n")
+            print(f"{'=' * 60}\n")
             sys.stdout.flush()
 
         return observation, reward, terminated, truncated, info

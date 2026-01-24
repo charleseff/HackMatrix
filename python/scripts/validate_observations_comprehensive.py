@@ -165,7 +165,7 @@ class ComprehensiveValidator:
             if np.any(grid[:, :, 10] > 0):  # Block siphoned channel
                 self.observed_states["active_grid_channels"].add(10)
                 siphoned = True
-                print(f"  ✓ Block siphoned successfully (step {i+1})")
+                print(f"  ✓ Block siphoned successfully (step {i + 1})")
                 break
 
             if done or truncated:
@@ -195,7 +195,7 @@ class ComprehensiveValidator:
             programs = obs["programs"]
             if np.any(programs == 1):
                 programs_acquired = True
-                print(f"  ✓ Program acquired (step {i+1})")
+                print(f"  ✓ Program acquired (step {i + 1})")
 
                 # Try to use the program
                 for prog_idx in range(23):
@@ -448,7 +448,7 @@ class ComprehensiveValidator:
                 if i in channel_map:
                     print(f"    - Channel {i}: {channel_map[i]}")
                 elif 11 <= i <= 33:
-                    print(f"    - Channel {i}: Program type {i-11}")
+                    print(f"    - Channel {i}: Program type {i - 11}")
                 else:
                     print(f"    - Channel {i}")
 

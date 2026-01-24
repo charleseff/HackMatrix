@@ -225,7 +225,7 @@ def print_observation_detailed(
         "HACK",
     ]
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"STEP {step}")
     print("=" * 80)
 
@@ -320,7 +320,7 @@ def print_observation_detailed(
                             nonzero_cells.append(f"({r},{c})={val:.2f}")
             cells_str = ", ".join(nonzero_cells[:8])  # First 8 cells
             if len(nonzero_cells) > 8:
-                cells_str += f", ...+{len(nonzero_cells)-8} more"
+                cells_str += f", ...+{len(nonzero_cells) - 8} more"
             print(f"    - {ch:2d}: {name:24s} → {cells_str}")
 
     # REWARD
@@ -352,7 +352,7 @@ def print_observation_detailed(
         # Map action indices to names
         action_names = {0: "Up(W)", 1: "Down(S)", 2: "Left(A)", 3: "Right(D)", 4: "Siphon"}
         for i in range(5, 28):
-            action_names[i] = f"Prog{i-5}"
+            action_names[i] = f"Prog{i - 5}"
 
         valid_names = [action_names.get(a, f"Action{a}") for a in valid_actions]
 

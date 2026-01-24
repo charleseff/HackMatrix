@@ -39,7 +39,7 @@ def test_basic_functionality(visual=False, steps=5, delay=0.0):
 
     # Take random steps
     for i in range(steps):
-        print(f"Attempting  step {i+1}. Getting valid actions...")
+        print(f"Attempting  step {i + 1}. Getting valid actions...")
         valid_actions = env.get_valid_actions()
         print(f"Valid actions: {valid_actions}")
         if not valid_actions:
@@ -50,7 +50,7 @@ def test_basic_functionality(visual=False, steps=5, delay=0.0):
         print(f"Attempting action {action}")
         obs, reward, terminated, truncated, info = env.step(action)
 
-        print(f"  Step {i+1}: action={action}, reward={reward}, done={terminated}")
+        print(f"  Step {i + 1}: action={action}, reward={reward}, done={terminated}")
 
         if delay > 0:
             time.sleep(delay)

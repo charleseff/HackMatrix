@@ -75,8 +75,8 @@ class TestScheduledTaskInterval:
         # Each subsequent stage should have equal or lower interval
         for i in range(1, len(intervals)):
             assert intervals[i] <= intervals[i - 1], (
-                f"Stage {[1,3,5,7][i]} interval ({intervals[i]}) should be <= "
-                f"stage {[1,3,5,7][i-1]} interval ({intervals[i-1]})"
+                f"Stage {[1, 3, 5, 7][i]} interval ({intervals[i]}) should be <= "
+                f"stage {[1, 3, 5, 7][i - 1]} interval ({intervals[i - 1]})"
             )
 
 

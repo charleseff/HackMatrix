@@ -58,7 +58,7 @@ def watch_agent(
 
     try:
         for episode in range(episodes):
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"Episode {episode + 1}/{episodes}")
             print("=" * 60)
 
@@ -81,7 +81,7 @@ def watch_agent(
                 step_count += 1
                 done = terminated or truncated
 
-            print(f"\n{'─'*60}")
+            print(f"\n{'─' * 60}")
             print(f"Episode {episode + 1} Results:")
             print(f"  Steps taken: {step_count}")
             print(f"  Total reward: {episode_reward:.3f}")

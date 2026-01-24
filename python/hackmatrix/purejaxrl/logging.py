@@ -99,9 +99,9 @@ class TrainingLogger:
 def format_number(n: float) -> str:
     """Format large numbers with K/M suffixes."""
     if n >= 1e6:
-        return f"{n/1e6:.1f}M"
+        return f"{n / 1e6:.1f}M"
     elif n >= 1e3:
-        return f"{n/1e3:.1f}K"
+        return f"{n / 1e3:.1f}K"
     else:
         return f"{n:.0f}"
 

@@ -4,9 +4,9 @@ Design documents and implementation specifications for HackMatrix. As part of st
 
 ## Current Focus
 
-**Active spec:** [ci-setup.md](./ci-setup.md)
+**No active spec** - All specs are complete.
 
-GitHub Actions CI for automated testing on push/PR.
+Create a new spec document when starting a major feature or architectural change.
 
 **When starting work, read the active spec first (and any related specs needed for context) without asking.** When creating or editing specs, link to other specs where useful for cross-referencing.
 
@@ -23,7 +23,8 @@ GitHub Actions CI for automated testing on push/PR.
 | [jax-implementation.md](./jax-implementation.md) | **Complete** | Full JAX port of game logic for TPU training |
 | [purejaxrl-integration.md](./purejaxrl-integration.md) | **Complete** | PureJaxRL integration with action-masked PPO for TPU training |
 | [testing-and-linting.md](./testing-and-linting.md) | **Complete** | Pre-commit hooks, parallel pytest, ruff linting |
-| [ci-setup.md](./ci-setup.md) | **Active** | GitHub Actions CI for Swift and Python tests |
+| [ci-setup.md](./ci-setup.md) | **Complete** | GitHub Actions CI for Swift and Python tests |
+| [continuous-integration.md](./continuous-integration.md) | **Complete** | CI documentation and usage guide |
 
 ## Usage
 

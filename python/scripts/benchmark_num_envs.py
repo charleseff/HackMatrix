@@ -20,9 +20,9 @@ def benchmark_num_envs(num_envs: int, timesteps: int = 10_000) -> float:
     Benchmark training speed with given number of environments.
     Returns steps per second.
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Benchmarking num_envs={num_envs} for {timesteps:,} timesteps...")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Create environments
     if num_envs > 1:
@@ -104,7 +104,7 @@ def main():
 
     print("=" * 60)
     print(f"\nOptimal: --num-envs {best_envs} ({results[best_envs]:.1f} steps/sec)")
-    print(f"Speedup vs single env: {results[best_envs]/baseline:.2f}x")
+    print(f"Speedup vs single env: {results[best_envs] / baseline:.2f}x")
 
 
 if __name__ == "__main__":
