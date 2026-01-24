@@ -31,7 +31,7 @@ class TrainConfig:
     update_epochs: int = 4
     clip_eps: float = 0.2         # PPO clipping epsilon
     vf_coef: float = 0.5          # Value function loss coefficient
-    ent_coef: float = 0.01        # Entropy bonus coefficient
+    ent_coef: float = 0.1         # Entropy bonus (0.1+ prevents collapse)
     max_grad_norm: float = 0.5    # Gradient clipping
 
     # Network architecture
