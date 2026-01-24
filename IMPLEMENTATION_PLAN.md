@@ -30,7 +30,7 @@ All components implemented:
 - `python/scripts/train_purejaxrl.py` - CLI with full argument parsing
 - Dependencies in requirements.txt - jax, flax, optax, chex
 
-**Note:** The PureJaxRL spec status in `specs/README.md` should be updated to "Complete".
+**Note:** `specs/README.md` has been updated to mark this spec as Complete.
 
 ## Spec Discrepancies
 
@@ -46,7 +46,10 @@ All components implemented:
 
 - [ ] Migrate ruff config from `python/ruff.toml` to `python/pyproject.toml` for centralization
 - [ ] Add `B` (bugbear) and `C4` (comprehensions) lint rules to match spec recommendations
-- [ ] Update `specs/README.md` to mark PureJaxRL as Complete
+
+### Next Active Spec
+
+The next active spec is **ci-setup.md** (GitHub Actions CI). `specs/README.md` has been updated to reflect this.
 
 ## Completed Success Criteria
 
@@ -64,4 +67,4 @@ All components implemented:
 | `python/requirements.txt` | ✓ Modified | Added pre-commit>=3.0.0 and pytest-xdist>=3.0.0 |
 | `.devcontainer/devcontainer.json` | ✓ Modified | Added pre-commit install to postCreateCommand |
 | Multiple Python files | ✓ Auto-fixed | Import sorting and formatting fixes applied during pre-commit setup |
-| `specs/README.md` | Pending | Update PureJaxRL status to Complete |
+| `specs/README.md` | ✓ Updated | Marked PureJaxRL and testing-and-linting as Complete, ci-setup as Active |

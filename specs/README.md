@@ -4,9 +4,9 @@ Design documents and implementation specifications for HackMatrix. As part of st
 
 ## Current Focus
 
-**Active spec:** [testing-and-linting.md](./testing-and-linting.md)
+**Active spec:** [ci-setup.md](./ci-setup.md)
 
-Pre-commit hooks using the `pre-commit` framework, parallel pytest, and ruff linting.
+GitHub Actions CI for automated testing on push/PR.
 
 **When starting work, read the active spec first (and any related specs needed for context) without asking.** When creating or editing specs, link to other specs where useful for cross-referencing.
 
@@ -21,9 +21,9 @@ Pre-commit hooks using the `pre-commit` framework, parallel pytest, and ruff lin
 | [observation-and-attack-fixes.md](./observation-and-attack-fixes.md) | **Complete** | Add siphonCenter to obs space, ATK+ usable twice per stage |
 | [test-reorganization.md](./test-reorganization.md) | **Complete** | Reorganize tests, add scheduled task testing (depends on observation-and-attack-fixes) |
 | [jax-implementation.md](./jax-implementation.md) | **Complete** | Full JAX port of game logic for TPU training |
-| [purejaxrl-integration.md](./purejaxrl-integration.md) | **Active** | PureJaxRL integration with action-masked PPO for TPU training |
-| [testing-and-linting.md](./testing-and-linting.md) | **Active** | Pre-commit hooks, parallel pytest, ruff linting |
-| [ci-setup.md](./ci-setup.md) | **Deferred** | GitHub Actions CI for Swift and Python tests |
+| [purejaxrl-integration.md](./purejaxrl-integration.md) | **Complete** | PureJaxRL integration with action-masked PPO for TPU training |
+| [testing-and-linting.md](./testing-and-linting.md) | **Complete** | Pre-commit hooks, parallel pytest, ruff linting |
+| [ci-setup.md](./ci-setup.md) | **Active** | GitHub Actions CI for Swift and Python tests |
 
 ## Usage
 
