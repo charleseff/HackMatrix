@@ -22,7 +22,7 @@
 - Uses Python 3.10 and Swift 5.9 for Linux compatibility
 - Pip caching enabled for faster builds
 - Test artifacts uploaded with 7-day retention
-- Mirrors pre-commit hooks configuration
+- Mirrors prek hooks configuration
 
 ### Testing and Linting Spec (testing-and-linting.md) - **Complete**
 
@@ -31,7 +31,7 @@
 | Ruff config | ✓ Complete | `python/ruff.toml` - complete with lint rules and isort |
 | pytest config | ✓ Complete | `python/pyproject.toml` - test paths and markers |
 | `.pre-commit-config.yaml` | ✓ Complete | Configured with ruff, swift build, and pytest hooks |
-| Dev container pre-commit setup | ✓ Complete | postCreateCommand installs pre-commit hooks |
+| Dev container prek setup | ✓ Complete | postCreateCommand installs prek hooks |
 
 ### PureJaxRL Integration Spec (purejaxrl-integration.md) - **Complete**
 
@@ -42,10 +42,10 @@ All components implemented:
 
 ## Success Criteria Met
 
-1. ✓ `pre-commit run --all-files` executes without errors
-2. ✓ Git commits automatically run pre-commit hooks
+1. ✓ `prek run --all-files` executes without errors
+2. ✓ Git commits automatically run prek hooks
 3. ✓ `pytest -n auto` runs tests in parallel (350 tests pass)
-4. ✓ Dev container automatically installs and configures pre-commit hooks
+4. ✓ Dev container automatically installs and configures prek hooks
 5. ✓ Ruff linting catches and auto-fixes common issues
 6. ✓ GitHub Actions CI workflow configured and working
 7. ✓ All specs marked Complete in `specs/README.md`

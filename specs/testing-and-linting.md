@@ -1,6 +1,6 @@
 # Testing and Linting Spec
 
-Unified testing and linting infrastructure using the `pre-commit` framework.
+Unified testing and linting infrastructure using `prek` (a faster, Rust-based drop-in replacement for pre-commit).
 
 ## Current State
 
@@ -22,13 +22,14 @@ Unified testing and linting infrastructure using the `pre-commit` framework.
 
 ## Implementation
 
-### 1. Install pre-commit Framework
+### 1. Install prek
 
-Add to `python/requirements.txt`:
+prek is installed via standalone installer (single binary, no Python dependency):
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/j178/prek/releases/latest/download/prek-installer.sh | sh
 ```
-pre-commit
-pytest-xdist  # for parallel tests
-```
+
+pytest-xdist is still needed for parallel tests (in `python/requirements.txt`).
 
 ### 2. Pre-commit Configuration
 
@@ -113,27 +114,26 @@ For now, `swift build` serves as the Swift validation step.
 
 **One-time setup after clone:**
 ```bash
-cd python && source venv/bin/activate
-pip install pre-commit pytest-xdist
-pre-commit install
+# Install prek (single binary, no Python needed)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/j178/prek/releases/latest/download/prek-installer.sh | sh
+
+# Install hooks
+prek install
 ```
 
 This creates `.git/hooks/pre-commit` automatically.
 
-**For dev container**, add to `.devcontainer/postCreateCommand.sh`:
-```bash
-cd python && source venv/bin/activate && pre-commit install
-```
+**For dev container**, prek is automatically installed in `postCreateCommand`.
 
 ## Usage
 
 ```bash
 # Run all hooks manually (same as pre-commit runs)
-pre-commit run --all-files
+prek run --all-files
 
 # Run specific hook
-pre-commit run ruff --all-files
-pre-commit run pytest --all-files
+prek run ruff --all-files
+prek run pytest --all-files
 
 # Fix Python formatting
 ruff format python/
@@ -166,17 +166,18 @@ Tests run in parallel using `pytest-xdist` with `-n auto` (uses all CPU cores). 
 
 ```
 hack-matrix/
-├── .pre-commit-config.yaml     # Hook configuration (version-controlled)
+├── .pre-commit-config.yaml     # Hook configuration (version-controlled, compatible with prek)
 └── python/
     ├── pyproject.toml          # Ruff config
-    └── requirements.txt        # Add: pre-commit, pytest-xdist
+    └── requirements.txt        # pytest-xdist for parallel tests
 ```
 
 ## Notes
 
-- `pre-commit install` must be run once after clone (creates `.git/hooks/pre-commit`)
+- `prek install` must be run once after clone (creates `.git/hooks/pre-commit`)
 - Hooks run automatically on `git commit`
 - Use `git commit --no-verify` to bypass in emergencies (not recommended)
 - Ruff hooks auto-fix issues; if they modify files, the commit is blocked so you can review
 - Swift tests don't exist yet - when added, include them as a local hook
 - `pytest-xdist` enables parallel test execution (`-n auto`)
+- prek is a faster, Rust-based drop-in replacement for pre-commit (https://github.com/j178/prek)

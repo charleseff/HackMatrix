@@ -27,5 +27,4 @@ ruff>=0.1.0
 pytest>=7.0.0
 pytest-xdist>=3.0.0  # parallel test execution
 
-# Pre-commit hooks
-pre-commit>=3.0.0
+# Pre-commit hooks (using prek - installed separately)

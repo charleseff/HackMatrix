@@ -1,6 +1,6 @@
 # Continuous Integration (CI) Spec
 
-GitHub Actions CI configuration that mirrors the pre-commit hooks for automated testing on push and pull requests.
+GitHub Actions CI configuration that mirrors the prek hooks for automated testing on push and pull requests.
 
 ## Status
 
@@ -8,7 +8,7 @@ GitHub Actions CI configuration that mirrors the pre-commit hooks for automated 
 
 ## Overview
 
-The CI pipeline runs the same checks as the pre-commit hooks to ensure code quality and test coverage before merging changes to the main branch.
+The CI pipeline runs the same checks as the prek hooks to ensure code quality and test coverage before merging changes to the main branch.
 
 ## CI Workflow
 
@@ -45,11 +45,11 @@ Expected total runtime: **~2-3 minutes** (on GitHub runners)
 | Swift build | ~10-15s |
 | Python tests (parallel) | ~20-30s |
 
-## Comparison with Pre-commit Hooks
+## Comparison with Prek Hooks
 
-The CI workflow mirrors the pre-commit configuration in `.pre-commit-config.yaml`:
+The CI workflow mirrors the prek configuration in `.pre-commit-config.yaml`:
 
-| Check | Pre-commit Hook | CI Workflow | Notes |
+| Check | Prek Hook | CI Workflow | Notes |
 |-------|----------------|-------------|-------|
 | Ruff linter | `ruff --fix` | `ruff check .` | CI uses check-only (no auto-fix) |
 | Ruff format | `ruff-format` | `ruff format --check .` | CI uses check-only |
@@ -58,7 +58,7 @@ The CI workflow mirrors the pre-commit configuration in `.pre-commit-config.yaml
 
 ### Why CI doesn't auto-fix
 
-Pre-commit hooks can auto-fix issues (e.g., `ruff --fix`) because they run locally and can modify files before commit. CI runs in read-only mode and should only report issues, not modify code.
+Prek hooks can auto-fix issues (e.g., `ruff --fix`) because they run locally and can modify files before commit. CI runs in read-only mode and should only report issues, not modify code.
 
 ## Usage
 
@@ -81,9 +81,9 @@ CI runs automatically on:
 If CI fails on your PR:
 
 1. **Check the logs** in the Actions tab to see which step failed
-2. **Run pre-commit hooks locally** to catch issues before pushing:
+2. **Run prek hooks locally** to catch issues before pushing:
    ```bash
-   pre-commit run --all-files
+   prek run --all-files
    ```
 3. **Fix the issues** and push again
 4. **CI will re-run automatically** on the new push
@@ -101,30 +101,30 @@ If CI fails on your PR:
 
 **Recommended workflow** to avoid CI failures:
 
-1. **Install pre-commit hooks** (one-time setup):
+1. **Install prek hooks** (one-time setup):
    ```bash
-   cd python && source venv/bin/activate
-   pip install pre-commit
-   pre-commit install
+   # Install prek (single binary, no Python needed)
+   curl --proto '=https' --tlsv1.2 -LsSf https://github.com/j178/prek/releases/latest/download/prek-installer.sh | sh
+   prek install
    ```
 
 2. **Develop normally** - hooks run automatically on `git commit`
 
 3. **If hooks fail**, fix issues and commit again
 
-4. **Push to GitHub** - CI will pass if pre-commit passed
+4. **Push to GitHub** - CI will pass if prek passed
 
-### Manual Pre-commit Checks
+### Manual Prek Checks
 
 Run all hooks without committing:
 ```bash
-pre-commit run --all-files
+prek run --all-files
 ```
 
 Run specific hook:
 ```bash
-pre-commit run ruff --all-files
-pre-commit run pytest --all-files
+prek run ruff --all-files
+prek run pytest --all-files
 ```
 
 ## CI Configuration Details
@@ -168,7 +168,7 @@ hack-matrix/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                  # CI workflow configuration
-├── .pre-commit-config.yaml         # Pre-commit hooks (mirrors CI)
+├── .pre-commit-config.yaml         # Prek hooks config (mirrors CI)
 └── specs/
     ├── testing-and-linting.md      # Testing framework spec
     └── continuous-integration.md   # This file
@@ -180,4 +180,5 @@ hack-matrix/
 - **No macOS runner** currently configured (Swift builds on Linux only)
 - **GUI builds** are not tested in CI (requires macOS with Xcode)
 - **Headless Swift builds** are validated (used for ML training)
-- CI uses the same tools and versions as the pre-commit hooks for consistency
+- CI uses the same tools and versions as the prek hooks for consistency
+- prek is a faster, Rust-based drop-in replacement for pre-commit (https://github.com/j178/prek)

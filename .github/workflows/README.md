@@ -23,16 +23,16 @@ This directory contains GitHub Actions CI/CD workflows for the HackMatrix projec
 
 **Expected runtime**: ~2-3 minutes
 
-**Mirrors**: Pre-commit hooks in `.pre-commit-config.yaml`
+**Mirrors**: Prek hooks in `.pre-commit-config.yaml`
 
 ## Development Workflow
 
-**To avoid CI failures**, install pre-commit hooks locally:
+**To avoid CI failures**, install prek hooks locally:
 
 ```bash
-cd python && source venv/bin/activate
-pip install pre-commit
-pre-commit install
+# Install prek (single binary, no Python needed)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/j178/prek/releases/latest/download/prek-installer.sh | sh
+prek install
 ```
 
 This runs the same checks locally before you commit.
@@ -40,7 +40,7 @@ This runs the same checks locally before you commit.
 ## Debugging Failed CI
 
 1. Check the Actions tab for detailed logs
-2. Run `pre-commit run --all-files` locally to reproduce
+2. Run `prek run --all-files` locally to reproduce
 3. Fix issues and push again
 
 ## Documentation
