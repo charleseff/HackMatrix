@@ -75,7 +75,9 @@ for domain in \
     "update.code.visualstudio.com" \
     "pypi.org" \
     "files.pythonhosted.org" \
-    "storage.googleapis.com"; do
+    "storage.googleapis.com" \
+    "api.wandb.ai" \
+    "cdn.wandb.ai"; do
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
     if [ -z "$ips" ]; then

@@ -20,7 +20,8 @@ def save_checkpoint(
     path: str,
     step: int,
     metrics: dict[str, float] | None = None,
-):
+    logger: Any = None,
+) -> str:
     """Save training checkpoint.
 
     Args:
@@ -28,6 +29,10 @@ def save_checkpoint(
         path: Directory to save checkpoint
         step: Current training step
         metrics: Optional metrics to save with checkpoint
+        logger: Optional TrainingLogger for wandb artifact upload
+
+    Returns:
+        checkpoint_path: Path to saved checkpoint file
     """
     os.makedirs(path, exist_ok=True)
 
@@ -48,6 +53,12 @@ def save_checkpoint(
     np.savez(params_path, **flat_params)
 
     print(f"Saved checkpoint to {checkpoint_path}")
+
+    # Upload to wandb if logger provided
+    if logger is not None and hasattr(logger, "log_checkpoint_artifact"):
+        logger.log_checkpoint_artifact(checkpoint_path, step)
+
+    return checkpoint_path
 
 
 def load_checkpoint(

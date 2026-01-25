@@ -16,7 +16,13 @@ Usage:
 from .config import TrainConfig, get_device_config
 from .env_wrapper import EnvParams, HackMatrixGymnax
 from .masked_ppo import ActorCritic, MaskedCategorical, Transition, masked_categorical
-from .train import make_train
+from .train import (
+    RunnerState,
+    init_runner_state,
+    make_chunked_train,
+    make_train,
+    make_train_chunk,
+)
 
 __all__ = [
     # Environment
@@ -31,4 +37,8 @@ __all__ = [
     "TrainConfig",
     "get_device_config",
     "make_train",
+    "make_train_chunk",
+    "make_chunked_train",
+    "init_runner_state",
+    "RunnerState",
 ]

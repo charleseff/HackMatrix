@@ -1,43 +1,122 @@
 """
 Logging utilities for PureJaxRL training.
 
-Provides console output and optional WandB integration.
+Provides console output and optional WandB integration with:
+- Full config logging
+- Auto-generated run names with resume support
+- Checkpoint artifact uploads
 """
 
+import hashlib
+import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
+
+
+def generate_run_name(
+    checkpoint_dir: str = "checkpoints",
+    run_suffix: str | None = None,
+) -> tuple[str, str]:
+    """Generate auto-incrementing run name and ID.
+
+    Format: hackmatrix-jax-{month}{day}-{year}-{N}[-suffix]
+    Example: hackmatrix-jax-jan25-26-1, hackmatrix-jax-jan25-26-2-bignet
+
+    Args:
+        checkpoint_dir: Directory to scan for existing runs
+        run_suffix: Optional suffix (e.g., 'test' -> hackmatrix-jax-jan25-26-1-test)
+
+    Returns:
+        run_name: Generated run name
+        run_id: MD5-derived run ID for resume support
+    """
+    # Generate date prefix: hackmatrix-jax-jan25-26
+    date_prefix = datetime.now().strftime("hackmatrix-jax-%b%d-%y").lower()
+
+    # Find next available number by scanning checkpoint_dir
+    next_num = 1
+    if os.path.exists(checkpoint_dir):
+        existing = [d for d in os.listdir(checkpoint_dir) if d.startswith(date_prefix)]
+        if existing:
+            # Extract numbers from existing run names
+            nums = []
+            for name in existing:
+                parts = name.replace(date_prefix + "-", "").split("-")
+                if parts and parts[0].isdigit():
+                    nums.append(int(parts[0]))
+            if nums:
+                next_num = max(nums) + 1
+
+    run_name = f"{date_prefix}-{next_num}"
+    if run_suffix:
+        run_name = f"{run_name}-{run_suffix}"
+
+    # Derive run_id from run_name for consistent resume across Colab disconnects
+    run_id = hashlib.md5(run_name.encode()).hexdigest()[:8]
+
+    return run_name, run_id
 
 
 @dataclass
 class TrainingLogger:
-    """Logger for training progress.
+    """Logger for training progress with enhanced WandB support.
 
-    Handles console output and optional WandB integration.
+    Features:
+    - Console output with timing info
+    - Full hyperparameter config logging to WandB
+    - Auto-generated run names with resume support
+    - Checkpoint artifact uploads
     """
 
     use_wandb: bool = False
-    project_name: str = "hackmatrix-purejaxrl"
+    project_name: str = "hackmatrix"
+    entity: str | None = None
     run_name: str | None = None
+    run_id: str | None = None
+    resume_run: str | None = None
+    config: dict[str, Any] | None = None
+    upload_artifacts: bool = True
     _wandb_run: Any = None
-    _start_time: float = 0.0
-    _last_log_time: float = 0.0
+    _start_time: float = field(default=0.0, init=False)
+    _last_log_time: float = field(default=0.0, init=False)
+    _total_steps: int = field(default=0, init=False)
 
     def __post_init__(self):
         self._start_time = time.time()
         self._last_log_time = self._start_time
 
         if self.use_wandb:
-            try:
-                import wandb
+            self._init_wandb()
 
-                self._wandb_run = wandb.init(
-                    project=self.project_name,
-                    name=self.run_name,
-                )
-            except ImportError:
-                print("Warning: wandb not installed, disabling wandb logging")
-                self.use_wandb = False
+    def _init_wandb(self):
+        """Initialize WandB with full configuration."""
+        try:
+            import wandb
+
+            # Handle resume: use provided resume_run ID, or derived run_id
+            effective_id = self.resume_run or self.run_id
+            resume_mode = "allow" if effective_id else None
+
+            self._wandb_run = wandb.init(
+                project=self.project_name,
+                entity=self.entity,
+                name=self.run_name,
+                id=effective_id,
+                resume=resume_mode,
+                config=self.config,
+            )
+
+            if self._wandb_run and self.config:
+                print(f"WandB run initialized: {self._wandb_run.url}")
+
+        except ImportError:
+            print("Warning: wandb not installed, disabling wandb logging")
+            self.use_wandb = False
+        except Exception as e:
+            print(f"Warning: wandb init failed ({e}), disabling wandb logging")
+            self.use_wandb = False
 
     def log_metrics(
         self,
@@ -49,23 +128,26 @@ class TrainingLogger:
 
         Args:
             metrics: Dictionary of metric names to values
-            step: Current training step
+            step: Current training step (update number)
             prefix: Prefix for metric names
         """
         current_time = time.time()
         elapsed = current_time - self._start_time
+
+        # Calculate steps per second based on update steps
         sps = step / elapsed if elapsed > 0 else 0
 
         # Console output
         metric_strs = [f"{k}: {v:.4f}" for k, v in metrics.items()]
-        print(f"[Step {step:6d}] [{elapsed:.1f}s] [{sps:.0f} steps/s] {', '.join(metric_strs)}")
+        print(f"[Update {step:6d}] [{elapsed:.1f}s] [{sps:.1f} updates/s] {', '.join(metric_strs)}")
 
         # WandB logging
         if self.use_wandb and self._wandb_run is not None:
             import wandb
 
             wandb_metrics = {f"{prefix}/{k}": v for k, v in metrics.items()}
-            wandb_metrics["steps_per_second"] = sps
+            wandb_metrics[f"{prefix}/updates_per_second"] = sps
+            wandb_metrics[f"{prefix}/update_step"] = step
             wandb.log(wandb_metrics, step=step)
 
         self._last_log_time = current_time
@@ -84,6 +166,37 @@ class TrainingLogger:
 
             wandb_metrics = {f"eval/{k}": v for k, v in metrics.items()}
             wandb.log(wandb_metrics, step=step)
+
+    def log_checkpoint_artifact(
+        self,
+        checkpoint_path: str,
+        step: int,
+        artifact_name: str | None = None,
+    ):
+        """Upload checkpoint as WandB artifact.
+
+        Args:
+            checkpoint_path: Path to checkpoint file
+            step: Training step when checkpoint was saved
+            artifact_name: Optional custom artifact name
+        """
+        if not self.use_wandb or not self.upload_artifacts:
+            return
+
+        if self._wandb_run is None:
+            return
+
+        try:
+            import wandb
+
+            name = artifact_name or f"checkpoint-{step}"
+            artifact = wandb.Artifact(name, type="model")
+            artifact.add_file(checkpoint_path)
+            wandb.log_artifact(artifact)
+            print(f"Uploaded checkpoint artifact: {name}")
+
+        except Exception as e:
+            print(f"Warning: Failed to upload artifact ({e})")
 
     def finish(self):
         """Clean up logging resources."""

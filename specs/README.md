@@ -4,7 +4,7 @@ Design documents and implementation specifications for HackMatrix. As part of st
 
 ## Current Focus
 
-**No active spec** - All specs are complete.
+**Active spec:** [wandb-purejaxrl.md](./wandb-purejaxrl.md) - Wandb integration for PureJaxRL training
 
 Create a new spec document when starting a major feature or architectural change.
 
@@ -14,6 +14,7 @@ Create a new spec document when starting a major feature or architectural change
 
 | Spec | Status | Description |
 |------|--------|-------------|
+| [wandb-purejaxrl.md](./wandb-purejaxrl.md) | **Active** | Wandb integration for PureJaxRL training on Colab/TRC |
 | [game-mechanics.md](./game-mechanics.md) | **Reference** | Authoritative game mechanics reference (single source of truth) |
 | [training-reference.md](./training-reference.md) | **Reference** | RL training commands, monitoring, and troubleshooting |
 | [jax-dummy-env.md](./jax-dummy-env.md) | **Complete** | Minimal JAX dummy environment for plug-and-play testing with Swift env |

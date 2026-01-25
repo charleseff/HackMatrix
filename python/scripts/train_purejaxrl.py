@@ -5,10 +5,17 @@ PureJaxRL Training Script for HackMatrix.
 This script trains an action-masked PPO agent on the HackMatrix environment
 using pure JAX for maximum performance on TPU/GPU.
 
+Features:
+- Chunked training loop for real-time WandB logging
+- Auto-generated run names with resume support
+- Checkpoint artifacts upload to WandB
+- Performance benchmarking mode
+
 Usage:
     python scripts/train_purejaxrl.py
     python scripts/train_purejaxrl.py --num-envs 512 --total-timesteps 100000000
     python scripts/train_purejaxrl.py --wandb --project hackmatrix
+    python scripts/train_purejaxrl.py --wandb --resume-run abc123
 
 Example TPU usage:
     python scripts/train_purejaxrl.py --num-envs 2048 --total-timesteps 1000000000
@@ -35,11 +42,12 @@ from hackmatrix.purejaxrl import (
     HackMatrixGymnax,
     TrainConfig,
     get_device_config,
+    make_chunked_train,
     make_train,
 )
-from hackmatrix.purejaxrl.checkpointing import save_params_npz
+from hackmatrix.purejaxrl.checkpointing import save_checkpoint, save_params_npz
 from hackmatrix.purejaxrl.config import auto_tune_for_device
-from hackmatrix.purejaxrl.logging import TrainingLogger, print_config
+from hackmatrix.purejaxrl.logging import TrainingLogger, generate_run_name, print_config
 
 
 def parse_args():
@@ -87,22 +95,127 @@ def parse_args():
     # Logging
     parser.add_argument("--log-interval", type=int, default=10, help="Log every N updates")
     parser.add_argument("--wandb", action="store_true", help="Enable WandB logging")
+    parser.add_argument("--project", type=str, default="hackmatrix", help="WandB project name")
+    parser.add_argument("--entity", type=str, default="charles-team", help="WandB entity/team")
     parser.add_argument(
-        "--project", type=str, default="hackmatrix-purejaxrl", help="WandB project name"
+        "--run-name", type=str, default=None, help="WandB run name (auto-generated if not provided)"
     )
-    parser.add_argument("--run-name", type=str, default=None, help="WandB run name")
+    parser.add_argument(
+        "--run-suffix",
+        type=str,
+        default=None,
+        help="Optional suffix for auto-generated run name (e.g., 'test' -> hackmatrix-jax-jan25-26-1-test)",
+    )
+    parser.add_argument(
+        "--resume-run",
+        type=str,
+        default=None,
+        help="WandB run ID to resume (for Colab disconnect recovery)",
+    )
 
     # Checkpointing
     parser.add_argument("--save-interval", type=int, default=1000, help="Save every N updates")
     parser.add_argument(
         "--checkpoint-dir", type=str, default="checkpoints", help="Checkpoint directory"
     )
+    parser.add_argument(
+        "--no-artifact", action="store_true", help="Disable checkpoint artifact uploads to WandB"
+    )
 
     # Misc
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument("--auto-tune", action="store_true", help="Auto-tune config for device")
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="Run performance benchmark (compare wandb vs no-wandb overhead)",
+    )
+    parser.add_argument(
+        "--monolithic",
+        action="store_true",
+        help="Use monolithic training loop (no real-time logging, for comparison)",
+    )
 
     return parser.parse_args()
+
+
+def run_benchmark(config: TrainConfig, env: HackMatrixGymnax, key: jax.Array):
+    """Run performance benchmark comparing monolithic vs chunked training.
+
+    Args:
+        config: Training configuration
+        env: Environment instance
+        key: JAX random key
+
+    Returns:
+        overhead_percent: Percentage overhead of chunked vs monolithic
+    """
+    print("\n" + "=" * 50)
+    print("Performance Benchmark")
+    print("=" * 50)
+
+    # Use fewer updates for benchmark (100 updates = ~10 chunks of 10)
+    benchmark_config = TrainConfig(
+        **{**config.__dict__, "total_timesteps": config.batch_size * 100}
+    )
+    print(f"Benchmark config: {benchmark_config.num_updates} updates")
+
+    # Monolithic timing
+    print("\nRunning monolithic training...")
+    train_mono = make_train(benchmark_config, env)
+    key1, key2, key3, key4 = jax.random.split(key, 4)
+
+    # Warmup (compile) - block until complete
+    print("  Warmup (compiling)...")
+    warmup_state, _ = train_mono(key1)
+    jax.tree.map(lambda x: x.block_until_ready(), warmup_state)
+
+    # Timed run with fresh key
+    print("  Timing monolithic...")
+    start = time.time()
+    state, _ = train_mono(key2)
+    # Block until computation actually completes
+    jax.tree.map(lambda x: x.block_until_ready(), state)
+    mono_time = time.time() - start
+    print(f"  Monolithic: {mono_time:.2f}s")
+
+    # Chunked timing (with dummy log_fn to simulate overhead)
+    print("\nRunning chunked training...")
+
+    def dummy_log(metrics, step):
+        pass  # Just the callback overhead
+
+    train_chunked = make_chunked_train(benchmark_config, env, log_fn=dummy_log)
+
+    # Warmup (compile) - chunked compiles on first run
+    print("  Warmup (compiling)...")
+    warmup_state2, _ = train_chunked(key3)
+    jax.tree.map(lambda x: x.block_until_ready(), warmup_state2.train_state)
+
+    # Timed run
+    print("  Timing chunked...")
+    start = time.time()
+    state2, _ = train_chunked(key4)
+    # Block until computation actually completes
+    jax.tree.map(lambda x: x.block_until_ready(), state2.train_state)
+    chunked_time = time.time() - start
+    print(f"  Chunked: {chunked_time:.2f}s")
+
+    # Calculate overhead
+    if mono_time > 0.01:  # Avoid division by near-zero
+        overhead = (chunked_time - mono_time) / mono_time * 100
+        print(f"\nOverhead: {overhead:.2f}%")
+
+        if overhead < 5.0:  # Relaxed from 1% since CPU has more overhead
+            print("PASS: Overhead acceptable")
+        else:
+            print("Note: Some overhead expected on CPU. GPU/TPU should be <1%")
+    else:
+        print("\nMonolithic time too short for accurate measurement")
+        overhead = 0
+
+    print("=" * 50)
+    return overhead
 
 
 def main():
@@ -142,62 +255,149 @@ def main():
         print("Config auto-tuned for device")
 
     # Check that total_timesteps is sufficient for meaningful training
-    # Need at least 3 updates to see any learning signal
     min_updates = 3
     min_timesteps = config.batch_size * min_updates
     if config.total_timesteps < min_timesteps:
-        print(f"\n⚠️  Warning: total_timesteps ({config.total_timesteps:,}) is very small")
+        print(f"\nWarning: total_timesteps ({config.total_timesteps:,}) is very small")
         print(f"   batch_size = {config.batch_size:,} (num_envs × num_steps)")
         print(f"   Increasing to {min_timesteps:,} for at least {min_updates} updates")
         config = TrainConfig(**{**config.__dict__, "total_timesteps": min_timesteps})
 
     print_config(config)
 
+    # Create environment
+    env = HackMatrixGymnax()
+    key = jax.random.PRNGKey(args.seed)
+
+    # Run benchmark if requested
+    if args.benchmark:
+        run_benchmark(config, env, key)
+        return
+
+    # Generate run name if not provided (for wandb)
+    run_name = args.run_name
+    run_id = args.resume_run  # Use resume_run as run_id if resuming
+    if args.wandb and run_name is None and not args.resume_run:
+        run_name, run_id = generate_run_name(
+            checkpoint_dir=config.checkpoint_dir,
+            run_suffix=args.run_suffix,
+        )
+        print(f"Generated run name: {run_name}")
+
+    # Build wandb config dict
+    wandb_config = {
+        # Training config
+        "num_envs": config.num_envs,
+        "num_steps": config.num_steps,
+        "total_timesteps": config.total_timesteps,
+        "learning_rate": config.learning_rate,
+        "gamma": config.gamma,
+        "gae_lambda": config.gae_lambda,
+        "num_minibatches": config.num_minibatches,
+        "update_epochs": config.update_epochs,
+        "clip_eps": config.clip_eps,
+        "vf_coef": config.vf_coef,
+        "ent_coef": config.ent_coef,
+        "max_grad_norm": config.max_grad_norm,
+        "hidden_dim": config.hidden_dim,
+        "num_layers": config.num_layers,
+        "seed": config.seed,
+        # Device info
+        "device_type": device_info["device_type"],
+        "device_count": device_info["device_count"],
+        "backend": device_info["backend"],
+    }
+
     # Initialize logger
     logger = TrainingLogger(
         use_wandb=args.wandb,
         project_name=args.project,
-        run_name=args.run_name,
+        entity=args.entity,
+        run_name=run_name,
+        run_id=run_id,
+        resume_run=args.resume_run,
+        config=wandb_config,
+        upload_artifacts=not args.no_artifact,
     )
 
-    # Create environment and training function
-    env = HackMatrixGymnax()
-    train_fn = make_train(config, env)
+    # Choose training mode
+    if args.monolithic:
+        # Use original monolithic training (no real-time logging)
+        print("\nUsing monolithic training (no real-time logging)")
+        train_fn = make_train(config, env)
 
-    # Run training
-    print("Compiling training function (this may take a moment)...")
-    start_compile = time.time()
+        print("Compiling training function...")
+        start_compile = time.time()
+        final_state, all_metrics = train_fn(key)
+        compile_time = time.time() - start_compile
+        print(f"Compilation + training completed in {compile_time:.1f}s")
 
-    key = jax.random.PRNGKey(args.seed)
+        # Log final metrics only
+        final_metrics = {
+            "total_loss": float(all_metrics["total_loss"][-1]),
+            "pg_loss": float(all_metrics["pg_loss"][-1]),
+            "vf_loss": float(all_metrics["vf_loss"][-1]),
+            "entropy": float(all_metrics["entropy"][-1]),
+            "mean_reward": float(all_metrics["mean_reward"][-1]),
+        }
+        logger.log_metrics(final_metrics, config.num_updates)
 
-    # The training function runs the full loop and returns all metrics
-    # For real-time logging, we need a different approach
-    # Here we just run and log at the end
-    final_state, all_metrics = train_fn(key)
+    else:
+        # Use chunked training with real-time logging
+        print("\nUsing chunked training (real-time logging enabled)")
 
-    compile_time = time.time() - start_compile
-    print(f"Compilation + training completed in {compile_time:.1f}s")
+        # Track last checkpoint step
+        last_checkpoint_step = 0
 
-    # Log final metrics
+        def log_callback(metrics: dict, step: int):
+            """Callback for logging metrics after each chunk."""
+            logger.log_metrics(metrics, step)
+
+        def checkpoint_callback(runner_state, step: int):
+            """Callback for checkpointing (respects save_interval)."""
+            nonlocal last_checkpoint_step
+            if step - last_checkpoint_step >= config.save_interval:
+                save_checkpoint(
+                    runner_state.train_state,
+                    config.checkpoint_dir,
+                    step,
+                    logger=logger if not args.no_artifact else None,
+                )
+                last_checkpoint_step = step
+
+        train_fn = make_chunked_train(
+            config,
+            env,
+            chunk_size=config.log_interval,
+            log_fn=log_callback,
+            checkpoint_fn=checkpoint_callback,
+        )
+
+        print("Compiling training function (first chunk)...")
+        start_time = time.time()
+        final_state, all_metrics = train_fn(key)
+        total_time = time.time() - start_time
+        print(f"\nTraining completed in {total_time:.1f}s")
+
+    # Print final metrics
     total_steps = config.num_updates * config.batch_size
-    final_metrics = {
-        "total_loss": float(all_metrics["total_loss"][-1]),
-        "pg_loss": float(all_metrics["pg_loss"][-1]),
-        "vf_loss": float(all_metrics["vf_loss"][-1]),
-        "entropy": float(all_metrics["entropy"][-1]),
-        "mean_reward": float(all_metrics["mean_reward"][-1]),
-    }
-
     print("\nFinal metrics:")
-    for k, v in final_metrics.items():
-        print(f"  {k}: {v:.4f}")
+    for key_name in ["total_loss", "pg_loss", "vf_loss", "entropy", "mean_reward"]:
+        if key_name in all_metrics:
+            val = all_metrics[key_name]
+            if hasattr(val, "__len__"):
+                print(f"  {key_name}: {float(val[-1]):.4f}")
+            else:
+                print(f"  {key_name}: {float(val):.4f}")
 
     # Save final checkpoint
     os.makedirs(config.checkpoint_dir, exist_ok=True)
-    save_params_npz(
-        final_state.train_state.params,
-        os.path.join(config.checkpoint_dir, "final_params.npz"),
-    )
+    final_params_path = os.path.join(config.checkpoint_dir, "final_params.npz")
+    save_params_npz(final_state.train_state.params, final_params_path)
+
+    # Upload final checkpoint as artifact if enabled
+    if args.wandb and not args.no_artifact:
+        logger.log_checkpoint_artifact(final_params_path, config.num_updates, "final-model")
 
     logger.finish()
 
