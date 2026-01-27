@@ -1,3 +1,5 @@
+**N.B.** This is a heavily AI-assisted codebase.
+
 # HackMatrix
 
 A turn-based tactical game on a 6x6 grid, designed for reinforcement learning research.
